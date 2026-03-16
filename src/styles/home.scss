@@ -185,11 +185,14 @@
 }
 
 .primary-cta {
+    display: inline-flex;
+    align-items: center;
     width: fit-content;
     border: none;
     background: constants.$ink;
     border: 1px solid constants.$paper ;
     color: constants.$paper;
+    text-decoration: none;
     font-weight: 800;
     padding: 14px 20px;
     border-radius: 14px;
