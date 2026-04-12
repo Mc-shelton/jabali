@@ -27,9 +27,9 @@ const AboutSection = ({ heroImg1, heroImg2 }) => (
       </div>
 
       <div className="about-media">
-        <div className="about-strip tall" style={{ backgroundImage: `url(${heroImg1})` }} />
-        <div className="about-strip" style={{ backgroundImage: `url(${heroImg2})` }} />
-        <div className="about-strip warm" style={{ backgroundImage: `url(${heroImg1})` }} />
+        <div className="about-strip tall" style={{ backgroundImage: `url(${heroImg1})`, marginLeft:'1.5rem'}} />
+        <div className="about-strip" style={{ backgroundImage: `url(${heroImg2})`, marginLeft:'9rem' }} />
+        <div className="about-strip warm" style={{ backgroundImage: `url(${heroImg1})`, marginLeft:'5rem'}} />
       </div>
     </div>
   </section>

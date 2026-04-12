@@ -13,7 +13,7 @@ const paths = [
 ];
 
 const BlobShape = ({
-  color = '#ffc56c',
+  color = '#ff9a00',
   image,
   className = '',
   style,

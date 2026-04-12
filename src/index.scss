@@ -1,19 +1,12 @@
 @use './styles/constants';
 @import url('https://fonts.googleapis.com/css2?family=Manrope:wght@400;600;700&family=Playfair+Display:wght@600;700&display=swap');
 
-// Palette
-$ink: #0f172a;
-$paper: #f8fafc;
-$sun: #eab308;
-$amber: #f59e0b;
-$slate: #475569;
-$border: #e2e8f0;
-
 :root {
-  --primary-color:#17497a;
+  --primary-color: #255181;
+  --secondary-color: #ff9a00;
   font-family: 'Manrope', system-ui, -apple-system, sans-serif;
-  color: $ink;
-  background: radial-gradient(circle at 20% 20%, #fef3c7, constants.$paper 40%);
+  color: constants.$ink;
+  background: radial-gradient(circle at 20% 20%, rgba(255, 154, 0, 0.2), constants.$paper 40%);
   line-height: 1.6;
 }
 
@@ -43,9 +36,9 @@ body {
   gap: 24px;
   padding: 16px 20px;
   border-radius: 16px;
-  background: $ink;
-  color: $paper;
-  box-shadow: 0 20px 40px rgba($ink, 0.25);
+  background: constants.$ink;
+  color: constants.$paper;
+  box-shadow: 0 20px 40px rgba(37, 81, 129, 0.25);
 }
 
 .brand {
@@ -60,8 +53,8 @@ body {
     width: 46px;
     height: 46px;
     border-radius: 12px;
-    background: linear-gradient(135deg, $amber, $sun);
-    color: $ink;
+    background: linear-gradient(135deg, constants.$sun, #ffb83d);
+    color: constants.$ink;
     font-weight: 800;
     letter-spacing: 1px;
   }
@@ -96,12 +89,12 @@ body {
     transition: all 0.18s ease;
 
     &:hover {
-      background: rgba(226, 232, 240, 0.15);
+      background: constants.$surface-tint-strong;
     }
 
     &.active {
-      background: $sun;
-      color: $ink;
+      background: constants.$sun;
+      color: constants.$ink;
     }
   }
 }
@@ -117,10 +110,10 @@ body {
 }
 
 .card {
-  border: 1px solid $border;
+  border: 1px solid constants.$border;
   border-radius: 14px;
   padding: 14px 16px;
-  background: $paper;
+  background: constants.$paper;
 }
 
 // .footer {

@@ -1,6 +1,6 @@
 const Choir = () => (
   <section>
-    <h2>Choir & Repertoire</h2>
+    <h2>Chorale & Repertoire</h2>
     <div className="grid-2">
       <div className="card">
         <strong>Sections</strong>
@@ -8,7 +8,7 @@ const Choir = () => (
       </div>
       <div className="card">
         <strong>Sounds</strong>
-        <p>Afrocentric choral works, jazz standards, spirituals, and new commissions.</p>
+        <p>Afrocentric chorale works, jazz standards, spirituals, and new commissions.</p>
       </div>
       <div className="card">
         <strong>Collaborations</strong>

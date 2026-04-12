@@ -1,16 +1,31 @@
+import '../styles/extra-pages.scss';
+import { contactIntro, contactItems } from '../data/contact';
+
 const Contact = () => (
-  <section>
-    <h2>Contact & Booking</h2>
-    <p>To book the chorale or inquire about joining, drop a note:</p>
-    <div className="card">
-      <p><strong>Email:</strong> booking@jabalichorale.org</p>
-      <p><strong>Phone:</strong> (555) 123-4567</p>
-      <p><strong>Rehearsals:</strong> Tuesdays, 7–9 PM, Community Arts Center</p>
-    </div>
-    <p style={{ marginTop: '12px' }}>
-      Replace the placeholder contact details above with real info or wire up your form service.
-    </p>
-  </section>
+  <main className="extra-page contact-page">
+    <section className="contact-shell">
+      <div className="contact-copy">
+        <p className="extra-pill">Contact</p>
+        <h1>{contactIntro.title}</h1>
+        <p className="extra-lead">
+          {contactIntro.lead}
+        </p>
+      </div>
+
+      <div className="contact-panel">
+        {contactItems.map((item) => (
+          <div className="contact-row" key={item.label}>
+            <span>{item.label}</span>
+            <strong>{item.value}</strong>
+          </div>
+        ))}
+      </div>
+
+      <p className="contact-note">
+        {contactIntro.note}
+      </p>
+    </section>
+  </main>
 );
 
 export default Contact;

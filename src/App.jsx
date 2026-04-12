@@ -1,11 +1,18 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import Footer from './components/footer';
+import SiteNav from './components/SiteNav';
 
-const App = () => (
-  <div className="app-shell">
-    <Outlet />
-    <Footer />
-  </div>
-);
+const App = () => {
+  const location = useLocation();
+  const isHome = location.pathname === '/';
+
+  return (
+    <div className="app-shell">
+      {!isHome && <SiteNav variant="page" />}
+      <Outlet />
+      <Footer />
+    </div>
+  );
+};
 
 export default App;

@@ -1,0 +1,113 @@
+const publicGalleryImages = [
+  '/images/jc_1.jpeg',
+  '/images/jc_2.jpeg',
+  '/images/20260111_161459.jpg',
+  '/images/20260111_172001.jpg',
+  '/images/20260111_172052.jpg',
+  '/images/20260111_172207.jpg',
+  '/images/20260131_101159.jpg',
+  '/images/20260208_165048.jpg',
+  '/images/IMG-20260227-WA0010.jpg',
+  '/images/IMG-20260302-WA0011.jpg',
+  '/images/IMG-20260302-WA0014.jpg',
+  '/images/WhatsApp Image 2026-04-09 at 22.31.29 (2).jpeg',
+  '/images/WhatsApp Image 2026-04-09 at 22.31.29 (3).jpeg',
+  '/images/WhatsApp Image 2026-04-09 at 22.31.29 (4).jpeg',
+];
+
+const memberPortraits = [
+  '/images/members/IMG-20221123-WA0019 - Alice Ayieko.jpg',
+  '/images/members/IMG-20230217-WA0004 - anfenee keago.jpg',
+  '/images/members/AGGY1 - Anyes Moh.jpg',
+  '/images/members/IMG-20230216-WA0011 - Beryl Ateng.jpg',
+  '/images/members/IMG-20230216-WA0031 - Beryl Ouya.jpg',
+  '/images/members/IMG-20230216-WA0007 - Brian Odera.jpg',
+  '/images/members/20220625_164403 - Collins Mlamba.jpg',
+  '/images/members/croped - Davis Mogeni.JPG',
+  '/images/members/DSC07591 - Elsie Nyangweso.jpg',
+  '/images/members/Screenshot_20230517-170708 - ELVIS OKOTH DICK.png',
+  '/images/members/IMG_5054~4 - Fidel Lelei.jpg',
+  '/images/members/DSC_6732~3 - LYNN Okumu.jpg',
+  '/images/members/IMG_20220423_135530 - Grace Apondi.jpg',
+  '/images/members/IMG_20220409_144211 - Jerry Collins Otieno (Oti).jpg',
+  '/images/members/_MG_6512 - kevin mose.JPG',
+  '/images/members/20230616_190658 - Midiang\'a Benja.jpg',
+  '/images/members/IMG-20210508-WA0052 - miriam lelei.jpg',
+  '/images/members/IMG_1579 - Mutuku Kennedy.jpg',
+  '/images/members/627FBD83-D251-482E-8F7D-0E9201927474 - olivia akinyi.jpeg',
+  '/images/members/+254 719 636654 20230103_205558 - Ruth Mayenga.jpg',
+  '/images/members/DSC07395 - SAIGON FELIX.jpg',
+  '/images/members/254759086751_status_d29ba009bc444771ba5b6a42bbf2971d - Sarah peris.jpg',
+];
+
+export const galleryBoards = [
+  {
+    title: 'Concert Nights',
+    images: publicGalleryImages.slice(0, 4),
+  },
+  {
+    title: 'Rehearsal Days',
+    images: publicGalleryImages.slice(4, 8),
+  },
+  {
+    title: 'Chorale Portraits',
+    images: memberPortraits.slice(0, 12),
+  },
+];
+
+export const galleryCategories = [
+  {
+    id: 'performances',
+    label: 'Performances',
+    image: publicGalleryImages[0],
+    featureTitle: 'Concert and worship highlights',
+    featureText: 'Live ministry moments, stage presence, and chorale sets captured during recent appearances.',
+    hero: publicGalleryImages[1],
+    images: publicGalleryImages.slice(0, 6),
+  },
+  {
+    id: 'rehearsals',
+    label: 'Rehearsals',
+    image: publicGalleryImages[4],
+    featureTitle: 'Practice sessions and run-throughs',
+    featureText: 'Candid rehearsal coverage with section work, staging, and preparation before ministry.',
+    hero: publicGalleryImages[5],
+    images: publicGalleryImages.slice(4, 10),
+  },
+  {
+    id: 'portraits',
+    label: 'Portraits',
+    image: memberPortraits[0],
+    featureTitle: 'Faces of Jabali Chorale',
+    featureText: 'A portrait-focused collection built from the supplied member photos, using the full set of available chorale portraits.',
+    hero: memberPortraits[1],
+    images: memberPortraits,
+  },
+  {
+    id: 'moments',
+    label: 'Moments',
+    image: publicGalleryImages[10],
+    featureTitle: 'Recent shared memories',
+    featureText: 'Extra photos from the public image folder, kept together as a broader visual archive.',
+    hero: publicGalleryImages[11],
+    images: publicGalleryImages.slice(8),
+  },
+];
+
+export const galleryFeature = {
+  title: 'Jabali visual archive',
+  category: 'Chorale gallery',
+  image: publicGalleryImages[2],
+  artist: 'Jabali Chorale Media Team',
+  size: `${publicGalleryImages.length + memberPortraits.length} photos in set`,
+  location: 'Nairobi, Kenya',
+  note: "Note: All photos are used with permission and sourced from the chorale’s public image folder, which is regularly updated by members and media team contributors. They're not for distribution outside of this site",
+};
+
+export const galleryMarqueeImages = [
+  publicGalleryImages[0],
+  publicGalleryImages[3],
+  publicGalleryImages[6],
+  memberPortraits[2],
+  memberPortraits[5],
+];

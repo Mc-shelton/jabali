@@ -1,0 +1,125 @@
+@use 'constants';
+
+.site-nav-shell {
+  width: 100%;
+  z-index: 20;
+}
+
+.site-nav-shell.is-page {
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  padding: 14px clamp(14px, 4vw, 28px) 0;
+}
+
+.site-nav-shell.is-home {
+  width: min(1240px, 100%);
+  margin: 0 auto;
+}
+
+.site-nav {
+  position: relative;
+  z-index: 1001;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 12px 14px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid constants.$border;
+  box-shadow: 0 18px 40px rgba(37, 81, 129, 0.08);
+  backdrop-filter: blur(14px);
+}
+
+.site-nav-brand {
+  flex: 0 0 auto;
+  text-decoration: none;
+  color: constants.$ink;
+  font-size: clamp(13px, 3vw, 16px);
+  letter-spacing: clamp(4px, 1vw, 10px);
+  text-transform: uppercase;
+}
+
+.site-nav-links {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  gap: 8px;
+  flex-wrap: wrap;
+  position: relative;
+  z-index: 1002;
+}
+
+.site-nav-link {
+  text-decoration: none;
+  color: constants.$ink-soft;
+  font-weight: 700;
+  padding: 10px 14px;
+  border-radius: 999px;
+  position: relative;
+  z-index: 1003;
+  transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+}
+
+.site-nav-link:hover {
+  background: constants.$surface-tint;
+  color: constants.$ink;
+  transform: translateY(-1px);
+}
+
+.site-nav-link.is-active {
+  background: #255181;
+  color: #ffffff;
+  box-shadow: 0 10px 24px rgba(37, 81, 129, 0.22);
+}
+
+body.gallery-overlay-open .site-nav-shell {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .site-nav {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .site-nav-links {
+    justify-content: flex-start;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-bottom: 2px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .site-nav-links::-webkit-scrollbar {
+    display: none;
+  }
+
+  .site-nav-link {
+    white-space: nowrap;
+  }
+}
+
+@media (max-width: 640px) {
+  .site-nav-shell.is-page {
+    padding: 10px 12px 0;
+  }
+
+  .site-nav {
+    padding: 10px;
+    border-radius: 18px;
+  }
+
+  .site-nav-brand {
+    letter-spacing: 0.18em;
+  }
+
+  .site-nav-link {
+    padding: 9px 12px;
+    font-size: 0.92rem;
+  }
+}

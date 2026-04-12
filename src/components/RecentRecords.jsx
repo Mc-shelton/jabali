@@ -1,22 +1,22 @@
 import {
-  PlayCircleFilled,
+  PauseCircleOutlined,
   SoundOutlined,
   YoutubeOutlined,
   CustomerServiceOutlined,
   PlayCircleOutlined,
 } from '@ant-design/icons';
-import micImg from '../../public/graphics/mictrack.png';
-import headphonesImg from '../../public/graphics/headphones.png';
+import { Link } from 'react-router-dom';
 import './../styles/recent.scss';
+import { headphonesImg, mictrackImg } from '../assets';
+import { getTracksByIds, musicPlatformLinks, recentRecordIds } from '../data/music';
+import useAudioPlayer from '../hooks/useAudioPlayer';
 
-const tracks = [
-  { title: 'Heavenly Home', artist: 'Jabali Chraole', time: '00:00' },
-  { title: 'Agnus Dei', artist: 'Jabali Chraole', time: '00:00' },
-  { title: 'Mataifa Yote', artist: 'Jabali Chraole', time: '00:00' },
-  { title: 'Twae Wangu', artist: 'Jabali Chraole', time: '00:00' },
-];
+const tracks = getTracksByIds(recentRecordIds);
 
-const RecentRecords = () => (
+const RecentRecords = () => {
+  const { toggleTrack, isTrackActive, isTrackLoading, getTrackLoadingProgress } = useAudioPlayer();
+
+  return (
   <section className="recent-section" id="records">
 
     <div className="recent-inner">
@@ -34,10 +34,20 @@ const RecentRecords = () => (
               <div className="recent-track-title">{track.title}</div>
               <div className="recent-track-artist">{track.artist}</div>
             </div>
-            <button className="recent-play" aria-label={`Play ${track.title}`}>
-              <PlayCircleOutlined />
+            <button
+              className="recent-play"
+              aria-label={`${isTrackActive(track.id) ? 'Pause' : 'Play'} ${track.title}`}
+              onClick={() => toggleTrack(track)}
+              disabled={!track.audioSrc}
+              data-loading={isTrackLoading(track.id)}
+            >
+              {isTrackLoading(track.id)
+                ? <span className="audio-load-label">{getTrackLoadingProgress(track.id)}%</span>
+                : isTrackActive(track.id)
+                  ? <PauseCircleOutlined />
+                  : <PlayCircleOutlined />}
             </button>
-            <div className="recent-time">{track.time}</div>
+            <div className="recent-time">{track.duration}</div>
             <button className="recent-volume" aria-label={`Volume for ${track.title}`}>
               <SoundOutlined />
             </button>
@@ -46,21 +56,22 @@ const RecentRecords = () => (
       </div>
 
       <div className="recent-ctas">
-        <a className="recent-btn ghost" href="https://spotify.com" aria-label="Open Spotify">
+        <a className="recent-btn ghost" href={musicPlatformLinks.spotify} aria-label="Open Spotify">
           <CustomerServiceOutlined />
         </a>
-        <a className="recent-btn primary" href="#more-music">
+        <Link className="recent-btn primary" to="/music">
           Listen To More Music
-        </a>
-        <a className="recent-btn ghost" href="https://music.youtube.com" aria-label="Open YouTube Music">
+        </Link>
+        <a className="recent-btn ghost" href={musicPlatformLinks.youtubeMusic} aria-label="Open YouTube Music">
           <YoutubeOutlined />
         </a>
       </div>
     </div>
 
-    <img src={micImg} alt="Studio microphone" className="recent-side mic" />
+    <img src={mictrackImg} alt="Studio microphone" className="recent-side mic" />
     <img src={headphonesImg} alt="Headphones" className="recent-side cans" />
   </section>
-);
+  );
+};
 
 export default RecentRecords;
