@@ -1,11 +1,11 @@
 export const contactItems = [
-  { label: 'Email', value: 'booking@jabalichorale.org' },
-  { label: 'Phone', value: '(555) 123-4567' },
-  { label: 'Rehearsals', value: 'Tuesdays, 7-9 PM, Community Arts Center' },
+  { label: 'Email', value: 'outreach@jabalichorale.com' },
+  { label: 'Phone', value: '+254741741381' },
+  { label: 'Rehearsals', value: 'Every Sunday, 3:00 PM to 5:30 PM, Commerce House CBD' },
 ];
 
 export const contactIntro = {
   title: 'Contact & Booking',
   lead: 'To book the chorale or inquire about joining, send a message and we’ll point you to the right next step.',
-  note: 'Replace the placeholder contact details above with real info or wire up your preferred form service.',
+  note: 'Reach out for bookings, ministry invitations, partnership conversations, or membership inquiries.',
 };

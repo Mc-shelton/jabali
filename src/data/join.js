@@ -7,7 +7,7 @@ export const joinPageData = {
   lead:
     'We welcome committed singers and support team members who want to grow in music, discipline, fellowship, and gospel ministry.',
   backgroundImage: mediaUrls.heroImg1,
-  rehearsal: contactItems.find((item) => item.label === 'Rehearsals')?.value ?? 'Tuesdays · 7:00 PM',
+  rehearsal: contactItems.find((item) => item.label === 'Rehearsals')?.value ?? 'Every Sunday, 3:00 PM to 5:30 PM, Commerce House CBD',
   rehearsalNote: 'Come prepared, on time, and ready to learn your part.',
   pathways: [
     {
