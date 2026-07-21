@@ -1,0 +1,10 @@
+# Logs can name order ids and partial phone numbers — never serve them over the
+# web. The parent api/data/.htaccess already denies this tree; this is a second
+# lock in case AllowOverride scoping ever changes.
+<IfModule mod_authz_core.c>
+  Require all denied
+</IfModule>
+<IfModule !mod_authz_core.c>
+  Order allow,deny
+  Deny from all
+</IfModule>

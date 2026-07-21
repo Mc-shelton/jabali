@@ -1,0 +1,269 @@
+@use 'tokens';
+
+// `apply-` prefixed to stay clear of the old `.join-*` rules still living in
+// extra-pages.scss, which is loaded globally by the not-yet-migrated pages.
+.apply-page {
+  background: tokens.$paper;
+}
+
+// ================================================================= hero
+.apply-hero {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: tokens.$navy-deep;
+}
+
+.apply-hero-photo,
+.apply-hero-scrim {
+  position: absolute;
+  inset: 0;
+}
+
+.apply-hero-photo {
+  background-size: cover;
+  background-position: center 30%;
+  z-index: 0;
+}
+
+.apply-hero-scrim {
+  z-index: 1;
+  background: linear-gradient(
+    100deg,
+    rgba(11, 31, 51, 0.9) 0%,
+    rgba(11, 31, 51, 0.66) 48%,
+    rgba(11, 31, 51, 0.4) 100%
+  );
+}
+
+.apply-hero-inner {
+  position: relative;
+  z-index: 2;
+  display: grid;
+  justify-items: start;
+  gap: 22px;
+  padding-block: clamp(120px, 14vw, 180px) clamp(56px, 7vw, 88px);
+}
+
+.apply-title {
+  color: #fff;
+  max-width: 18ch;
+}
+
+.apply-lead {
+  max-width: 56ch;
+  font-size: clamp(1rem, 1.3vw, 1.12rem);
+  line-height: 1.75;
+  color: rgba(255, 255, 255, 0.8);
+}
+
+.apply-values {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 6px 0 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    padding: 9px 16px;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    border-radius: tokens.$r-pill;
+    color: rgba(255, 255, 255, 0.86);
+    font-size: 0.82rem;
+    font-weight: 500;
+  }
+}
+
+// ================================================================= body
+.apply-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(360px, 0.72fr);
+  gap: clamp(32px, 4vw, 64px);
+  align-items: start;
+}
+
+.apply-main {
+  display: grid;
+  align-content: start;
+}
+
+.section-head.apply-steps-head {
+  margin-top: clamp(48px, 6vw, 72px);
+}
+
+// ---------------------------------------------------------------- pathways
+.apply-paths {
+  display: grid;
+  gap: 12px;
+}
+
+.apply-path {
+  display: grid;
+  gap: 8px;
+  padding: clamp(20px, 2.4vw, 28px);
+  border: 1px solid tokens.$line;
+  border-radius: tokens.$r-md;
+  background: tokens.$paper-raised;
+  transition: border-color tokens.$dur tokens.$ease;
+
+  &:hover {
+    border-color: tokens.$line-strong;
+  }
+
+  h3 {
+    font-size: 1.15rem;
+  }
+
+  p {
+    color: tokens.$ink-muted;
+    font-size: 0.94rem;
+    line-height: 1.7;
+  }
+}
+
+// ---------------------------------------------------------------- steps
+.apply-steps {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid tokens.$line;
+
+  li {
+    display: grid;
+    grid-template-columns: 56px minmax(0, 1fr);
+    gap: 16px;
+    align-items: baseline;
+    padding: 20px 0;
+    border-bottom: 1px solid tokens.$line;
+  }
+
+  p {
+    color: tokens.$ink-body;
+    line-height: 1.7;
+  }
+}
+
+.apply-step-index {
+  font-size: 0.85rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: tokens.$brass;
+}
+
+// ---------------------------------------------------------------- rehearsal
+.apply-rehearsal {
+  display: grid;
+  justify-items: start;
+  gap: 10px;
+  margin-top: clamp(32px, 4vw, 48px);
+  padding: clamp(22px, 2.6vw, 32px);
+  border-radius: tokens.$r-md;
+  background: tokens.$navy-deep;
+
+  strong {
+    font-size: 1.1rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: #fff;
+  }
+
+  span {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.66);
+  }
+}
+
+// ================================================================= form
+.apply-sidebar {
+  position: sticky;
+  top: 104px; // clears the fixed nav
+}
+
+.apply-form {
+  display: grid;
+  gap: 16px;
+  padding: clamp(24px, 3vw, 36px);
+  border: 1px solid tokens.$line;
+  border-radius: tokens.$r-lg;
+  background: tokens.$paper-raised;
+  box-shadow: tokens.$shadow-soft;
+}
+
+.apply-form-head {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+  margin-bottom: 4px;
+
+  p {
+    color: tokens.$ink-muted;
+    font-size: 0.92rem;
+    line-height: 1.6;
+  }
+}
+
+.apply-field {
+  display: grid;
+  gap: 7px;
+
+  > span {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: tokens.$ink-body;
+  }
+
+  input,
+  select,
+  textarea {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1px solid tokens.$line-strong;
+    border-radius: tokens.$r-sm;
+    background: tokens.$paper;
+    color: tokens.$ink-body;
+    font-family: tokens.$font-sans;
+    font-size: 0.94rem;
+    transition: border-color tokens.$dur tokens.$ease, box-shadow tokens.$dur tokens.$ease;
+
+    &::placeholder {
+      color: tokens.$ink-muted;
+      opacity: 0.7;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: tokens.$ink;
+      box-shadow: 0 0 0 3px rgba(23, 73, 122, 0.12);
+    }
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 110px;
+  }
+}
+
+.apply-submit {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.apply-form-note {
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: tokens.$ink-muted;
+  text-align: center;
+}
+
+// ================================================================= responsive
+@media (max-width: 1000px) {
+  .apply-body {
+    grid-template-columns: 1fr;
+  }
+
+  .apply-sidebar {
+    position: static;
+  }
+}

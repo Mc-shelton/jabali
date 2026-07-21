@@ -1,0 +1,34 @@
+{
+  "tag": "Jabali @5",
+  "eyebrow": "The Journey · Est. 2022",
+  "title": "Five years. One story.",
+  "intro": "Jabali Chorale turns five. This is the road so far and the road ahead — four chapters, two behind us and two to come, that tell how a few voices became a ministry in song.",
+  "endCard": {
+    "kicker": "The story continues",
+    "line": "Be part of chapter five.",
+    "ctaLabel": "Join the chorale",
+    "ctaHref": "/join"
+  },
+  "chapters": [
+    {
+      "heading": "Where the song began",
+      "tale": "A handful of voices, one conviction, and a season of giving that took the chorale out into the community for the very first time.",
+      "eventSlug": "season-of-giving-2025"
+    },
+    {
+      "heading": "Finding our voice",
+      "tale": "Nightly worship, section by section, until the blend became unmistakable. This was the week Jabali learned to sound like one body.",
+      "eventSlug": "revival-week-2026"
+    },
+    {
+      "heading": "The night ahead",
+      "tale": "The chorale steps into its fullest season yet — a praise night to open the second half of the year and carry the story forward.",
+      "eventSlug": "sunset-praise-night"
+    },
+    {
+      "heading": "The homecoming",
+      "tale": "Five years, gathered into one programme. A cantata on the Second Coming to close the journey where it always pointed — to Christ.",
+      "eventSlug": "songs-of-the-second-coming"
+    }
+  ]
+}

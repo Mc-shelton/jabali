@@ -1,76 +1,72 @@
 import {
-  PauseCircleOutlined,
-  SoundOutlined,
-  YoutubeOutlined,
-  CustomerServiceOutlined,
-  PlayCircleOutlined,
+  PauseCircleFilled,
+  PlayCircleFilled,
+  ArrowRightOutlined,
 } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import './../styles/recent.scss';
-import { headphonesImg, mictrackImg } from '../assets';
-import { getTracksByIds, musicPlatformLinks, recentRecordIds } from '../data/music';
+import { useMusic } from '../hooks/usePublicData';
 import useAudioPlayer from '../hooks/useAudioPlayer';
 
-const tracks = getTracksByIds(recentRecordIds);
-
 const RecentRecords = () => {
+  const { byIds, recentRecordIds } = useMusic();
+  const tracks = byIds(recentRecordIds);
   const { toggleTrack, isTrackActive, isTrackLoading, getTrackLoadingProgress } = useAudioPlayer();
 
   return (
-  <section className="recent-section" id="records">
+    <section className="records section" id="records">
+      <div className="records-inner shell">
+        <header className="records-head reveal">
+          <p className="eyebrow is-centered">Our Music</p>
+          <h2 className="display-lg">Recent Records</h2>
+          <blockquote className="records-quote">
+            Music forms a part of God’s worship in the courts above. We should endeavor in our songs of
+            praise to approach as nearly as possible to the harmony of the heavenly choirs.
+          </blockquote>
+        </header>
 
-    <div className="recent-inner">
-      <div className="recent-eyebrow">Our Music</div>
-      <h2 className="recent-title">Recent Records</h2>
-      <p className="recent-quote">
-        “Music forms a part of God’s worship in the courts above. We should endeavor in
-         our songs of praise to approach as nearly as possible to the harmony of the heavenly choirs.”
-      </p>
+        <ol className="records-list reveal">
+          {tracks.map((track, index) => {
+            const isActive = isTrackActive(track.id);
+            const isLoading = isTrackLoading(track.id);
 
-      <div className="recent-list">
-        {tracks.map((track) => (
-          <div className="recent-row" key={track.title}>
-            <div className="recent-track">
-              <div className="recent-track-title">{track.title}</div>
-              <div className="recent-track-artist">{track.artist}</div>
-            </div>
-            <button
-              className="recent-play"
-              aria-label={`${isTrackActive(track.id) ? 'Pause' : 'Play'} ${track.title}`}
-              onClick={() => toggleTrack(track)}
-              disabled={!track.audioSrc}
-              data-loading={isTrackLoading(track.id)}
-            >
-              {isTrackLoading(track.id)
-                ? <span className="audio-load-label">{getTrackLoadingProgress(track.id)}%</span>
-                : isTrackActive(track.id)
-                  ? <PauseCircleOutlined />
-                  : <PlayCircleOutlined />}
-            </button>
-            <div className="recent-time">{track.duration}</div>
-            <button className="recent-volume" aria-label={`Volume for ${track.title}`}>
-              <SoundOutlined />
-            </button>
-          </div>
-        ))}
+            return (
+              <li className={`records-row ${isActive ? 'is-playing' : ''}`} key={track.id}>
+                <span className="records-index">{String(index + 1).padStart(2, '0')}</span>
+
+                <button
+                  type="button"
+                  className="records-play"
+                  aria-label={`${isActive ? 'Pause' : 'Play'} ${track.title}`}
+                  onClick={() => toggleTrack(track)}
+                  disabled={!track.audioSrc}
+                  data-loading={isLoading}
+                >
+                  {isLoading ? (
+                    <span className="audio-load-label">{getTrackLoadingProgress(track.id)}%</span>
+                  ) : isActive ? (
+                    <PauseCircleFilled />
+                  ) : (
+                    <PlayCircleFilled />
+                  )}
+                </button>
+
+                <span className="records-title">{track.title}</span>
+                <span className="records-mood">{track.mood}</span>
+                <span className="records-time">{track.duration}</span>
+              </li>
+            );
+          })}
+        </ol>
+
+        <div className="records-cta reveal">
+          <Link className="btn btn-light" to="/music">
+            Listen to more music
+            <ArrowRightOutlined />
+          </Link>
+        </div>
       </div>
-
-      <div className="recent-ctas">
-        <a className="recent-btn ghost" href={musicPlatformLinks.spotify} aria-label="Open Spotify">
-          <CustomerServiceOutlined />
-        </a>
-        <Link className="recent-btn primary" to="/music">
-          Listen To More Music
-        </Link>
-        <a className="recent-btn ghost" href={musicPlatformLinks.youtubeMusic} aria-label="Open YouTube Music">
-          <YoutubeOutlined />
-        </a>
-      </div>
-    </div>
-
-    <img src={mictrackImg} alt="Studio microphone" className="recent-side mic" />
-    <img src={headphonesImg} alt="Headphones" className="recent-side cans" />
-  </section>
+    </section>
   );
 };
 

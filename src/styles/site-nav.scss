@@ -1,125 +1,260 @@
-@use 'constants';
-
-.site-nav-shell {
-  width: 100%;
-  z-index: 20;
-}
-
-.site-nav-shell.is-page {
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  padding: 14px clamp(14px, 4vw, 28px) 0;
-}
-
-.site-nav-shell.is-home {
-  width: min(1240px, 100%);
-  margin: 0 auto;
-}
+@use 'tokens';
 
 .site-nav {
-  position: relative;
-  z-index: 1001;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 100;
+  transition: background tokens.$dur tokens.$ease, border-color tokens.$dur tokens.$ease,
+    backdrop-filter tokens.$dur tokens.$ease;
+}
+
+.site-nav.is-over-hero {
+  background: linear-gradient(180deg, rgba(14, 27, 42, 0.55), transparent);
+  border-bottom: 1px solid transparent;
+}
+
+.site-nav.is-solid {
+  background: rgba(251, 251, 252, 0.85);
+  backdrop-filter: blur(16px) saturate(140%);
+  border-bottom: 1px solid tokens.$line;
+}
+
+.site-nav-bar {
+  width: min(#{tokens.$shell}, 100%);
+  margin-inline: auto;
+  padding: 20px tokens.$gutter;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 18px;
-  padding: 12px 14px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.82);
-  border: 1px solid constants.$border;
-  box-shadow: 0 18px 40px rgba(37, 81, 129, 0.08);
-  backdrop-filter: blur(14px);
+  gap: 24px;
 }
 
+// ---------------------------------------------------------------- brand
+// Mark only — the accessible name lives on the link's aria-label.
 .site-nav-brand {
   flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
   text-decoration: none;
-  color: constants.$ink;
-  font-size: clamp(13px, 3vw, 16px);
-  letter-spacing: clamp(4px, 1vw, 10px);
-  text-transform: uppercase;
+  color: tokens.$ink;
+  transition: color tokens.$dur tokens.$ease, opacity tokens.$dur tokens.$ease;
+
+  &:hover {
+    opacity: 0.72;
+  }
+
+  &:focus-visible {
+    outline: 2px solid tokens.$brass-lit;
+    outline-offset: 4px;
+    border-radius: tokens.$r-xs;
+  }
 }
 
+// The mask paints the mark in `currentColor`, so it follows the brand link:
+// white over the hero photo (the sanctioned variant for "blending hard
+// backgrounds"), navy once the bar turns solid and white would vanish.
+.site-nav-mark {
+  flex: 0 0 auto;
+  width: 52px;
+  aspect-ratio: 236 / 175; // the cropped monogram's own proportions
+  background-color: currentColor;
+  -webkit-mask-position: center;
+  mask-position: center;
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-size: contain;
+  mask-size: contain;
+}
+
+.is-over-hero .site-nav-brand {
+  color: #fff;
+}
+
+@media (max-width: 480px) {
+  .site-nav-mark {
+    width: 42px;
+  }
+}
+
+// ---------------------------------------------------------------- links
 .site-nav-links {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  gap: 8px;
-  flex-wrap: wrap;
-  position: relative;
-  z-index: 1002;
+  gap: 4px;
 }
 
 .site-nav-link {
-  text-decoration: none;
-  color: constants.$ink-soft;
-  font-weight: 700;
-  padding: 10px 14px;
-  border-radius: 999px;
   position: relative;
-  z-index: 1003;
-  transition: background 120ms ease, color 120ms ease, transform 120ms ease;
+  text-decoration: none;
+  font-size: 0.88rem;
+  font-weight: 500;
+  color: tokens.$ink-body;
+  padding: 8px 14px;
+  transition: color tokens.$dur tokens.$ease;
+
+  // Hairline underline replaces the old filled pill — quieter, more editorial.
+  &::after {
+    content: '';
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    bottom: 2px;
+    height: 1px;
+    background: tokens.$brass-lit;
+    transform: scaleX(0);
+    transform-origin: left;
+    transition: transform tokens.$dur tokens.$ease;
+  }
+
+  &:hover {
+    color: tokens.$ink;
+  }
+
+  &:hover::after,
+  &.is-active::after {
+    transform: scaleX(1);
+  }
+
+  &.is-active {
+    color: tokens.$ink;
+  }
+
+  &:focus-visible {
+    outline: 2px solid tokens.$brass-lit;
+    outline-offset: 2px;
+    border-radius: tokens.$r-xs;
+  }
 }
 
-.site-nav-link:hover {
-  background: constants.$surface-tint;
-  color: constants.$ink;
-  transform: translateY(-1px);
+.is-over-hero .site-nav-link {
+  color: rgba(255, 255, 255, 0.82);
+
+  &:hover,
+  &.is-active {
+    color: #fff;
+  }
 }
 
-.site-nav-link.is-active {
-  background: #255181;
-  color: #ffffff;
-  box-shadow: 0 10px 24px rgba(37, 81, 129, 0.22);
+// The campaign link reads as a pill so it stands apart from the sections.
+.site-nav-link.is-feature {
+  margin-left: 6px;
+  padding: 8px 15px;
+  border-radius: tokens.$r-pill;
+  border: 1px solid tokens.$brass-lit;
+  color: tokens.$brass;
+  font-weight: 600;
+
+  &::after {
+    display: none; // no underline device on the pill
+  }
+
+  &:hover {
+    background: tokens.$brass-glow;
+    color: tokens.$brass;
+  }
+
+  &.is-active {
+    background: tokens.$brass-lit;
+    border-color: tokens.$brass-lit;
+    color: #fff;
+  }
 }
 
-body.gallery-overlay-open .site-nav-shell {
+.is-over-hero .site-nav-link.is-feature {
+  border-color: tokens.$brass-lit;
+  color: tokens.$brass-lit;
+
+  &:hover {
+    background: rgba(204, 123, 0, 0.16);
+    color: #fff;
+  }
+}
+
+// ---------------------------------------------------------------- mobile
+.site-nav-toggle {
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border: 1px solid tokens.$line-strong;
+  border-radius: tokens.$r-pill;
+  background: transparent;
+  color: tokens.$ink;
+  font-size: 17px;
+  cursor: pointer;
+  transition: border-color tokens.$dur tokens.$ease, color tokens.$dur tokens.$ease;
+
+  &:focus-visible {
+    outline: 2px solid tokens.$brass-lit;
+    outline-offset: 2px;
+  }
+}
+
+.is-over-hero .site-nav-toggle {
+  border-color: rgba(255, 255, 255, 0.42);
+  color: #fff;
+}
+
+.site-nav-menu {
   display: none;
 }
 
-@media (max-width: 900px) {
-  .site-nav {
-    flex-direction: column;
-    align-items: stretch;
-  }
-
+// Raised from 940px: with the Jabali @5 campaign pill the row is 10 items, which
+// starts wrapping to two lines around ~1120px. Switch to the hamburger before it
+// can wrap.
+@media (max-width: 1140px) {
   .site-nav-links {
-    justify-content: flex-start;
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding-bottom: 2px;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .site-nav-links::-webkit-scrollbar {
     display: none;
   }
 
-  .site-nav-link {
-    white-space: nowrap;
+  .site-nav-toggle {
+    display: inline-flex;
+  }
+
+  .site-nav.is-open {
+    background: tokens.$paper;
+    height: 100dvh;
+  }
+
+  .site-nav-menu {
+    display: grid;
+    align-content: start;
+    gap: 2px;
+    padding: 12px tokens.$gutter 40px;
+
+    &[hidden] {
+      display: none;
+    }
+  }
+
+  .site-nav-menu-link {
+    text-decoration: none;
+    font-size: 1.4rem;
+    font-weight: 600;
+    letter-spacing: -0.02em;
+    color: tokens.$ink;
+    padding: 14px 0;
+    border-bottom: 1px solid tokens.$line;
+    transition: color tokens.$dur tokens.$ease, padding-left tokens.$dur tokens.$ease;
+
+    &:hover {
+      padding-left: 8px;
+    }
+
+    &.is-active {
+      color: tokens.$brass;
+    }
+
+    &.is-feature {
+      color: tokens.$brass;
+    }
   }
 }
 
-@media (max-width: 640px) {
-  .site-nav-shell.is-page {
-    padding: 10px 12px 0;
-  }
-
-  .site-nav {
-    padding: 10px;
-    border-radius: 18px;
-  }
-
-  .site-nav-brand {
-    letter-spacing: 0.18em;
-  }
-
-  .site-nav-link {
-    padding: 9px 12px;
-    font-size: 0.92rem;
-  }
+// The gallery lightbox takes over the screen; the bar must not float above it.
+body.gallery-overlay-open .site-nav {
+  display: none;
 }

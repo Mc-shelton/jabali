@@ -1,0 +1,19 @@
+@use 'tokens';
+
+.not-found {
+  min-height: 62vh;
+  display: grid;
+  align-items: center;
+}
+
+.not-found-inner {
+  display: grid;
+  justify-items: start;
+  gap: 24px;
+}
+
+.not-found-title em {
+  display: block;
+  font-style: normal;
+  color: tokens.$ink-muted;
+}

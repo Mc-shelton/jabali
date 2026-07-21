@@ -1,38 +1,54 @@
-import {
-  CalendarOutlined,
-  CreditCardOutlined,
-  IdcardOutlined,
-  TeamOutlined,
-} from '@ant-design/icons';
+import { Link } from 'react-router-dom';
+import { ArrowRightOutlined } from '@ant-design/icons';
 import './../styles/about.scss';
+import { useContent } from '../hooks/usePublicData';
+import { cssUrl } from '../utils/assetPath';
 
-const AboutSection = ({ heroImg1, heroImg2 }) => (
-  <section className="about-section" id="about">
-    <div className="about-inner">
-      <div className="about-copy">
-        <p className="about-eyebrow">Christ Founded</p>
-        <h1 className="about-headline">
-          About Jabali
-          <span>Chorale</span>
-        </h1>
-        <p className="about-lead">
-          We’re committed to bringing Jesus, the transforming power of the gospel, to the life of every soul 
-          for a full reflection of His image without spot or wrinkle.
-        </p>
-        <div className="about-date">
-          <div>
-            <div className="about-date-main">Founded: 18 August 2022</div>
-          </div>
-        </div>
+// `showCta` is off on the About page itself — the button links to /about, and a
+// CTA pointing at the page you're already on is noise.
+const AboutSection = ({ heroImg1, heroImg2, showCta = true }) => {
+  const { data } = useContent('pages');
+  const band = data.aboutBand;
+
+  return (
+  <section className="about-band section" id="about">
+    <div className="about-band-inner shell">
+      <div className="about-band-copy reveal">
+        <p className="eyebrow">{band.eyebrow}</p>
+
+        <h2 className="display-lg about-band-title">
+          {band.title}
+          <em>{band.titleEm}</em>
+        </h2>
+
+        <p className="lead">{band.lead}</p>
+
+        <dl className="about-facts">
+          {band.facts.map((fact) => (
+            <div key={fact.label}>
+              <dt>{fact.label}</dt>
+              <dd>{fact.value}</dd>
+            </div>
+          ))}
+        </dl>
+
+        {showCta && (
+          <Link className="btn btn-ghost" to="/about">
+            {band.ctaLabel}
+            <ArrowRightOutlined />
+          </Link>
+        )}
       </div>
 
-      <div className="about-media">
-        <div className="about-strip tall" style={{ backgroundImage: `url(${heroImg1})`, marginLeft:'1.5rem'}} />
-        <div className="about-strip" style={{ backgroundImage: `url(${heroImg2})`, marginLeft:'9rem' }} />
-        <div className="about-strip warm" style={{ backgroundImage: `url(${heroImg1})`, marginLeft:'5rem'}} />
+      {/* Two overlapping plates, both clipped inside the grid column — the old
+          version used margin hacks that pushed the images off the viewport. */}
+      <div className="about-band-media reveal" aria-hidden="true">
+        <div className="about-plate about-plate-tall" style={{ backgroundImage: cssUrl(heroImg1) }} />
+        <div className="about-plate about-plate-inset" style={{ backgroundImage: cssUrl(heroImg2) }} />
       </div>
     </div>
   </section>
-);
+  );
+};
 
 export default AboutSection;

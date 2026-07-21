@@ -1,0 +1,11 @@
+# Block direct access to the shared includes; only the endpoint scripts should
+# be requested (auth.php, events.php, jabali5.php, upload.php).
+<FilesMatch "^(_bootstrap|_mpesa|_fulfil|_ticket|_mailer|config)\.php$">
+  <IfModule mod_authz_core.c>
+    Require all denied
+  </IfModule>
+  <IfModule !mod_authz_core.c>
+    Order allow,deny
+    Deny from all
+  </IfModule>
+</FilesMatch>

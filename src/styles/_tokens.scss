@@ -1,0 +1,66 @@
+// Design tokens.
+// Cool neutral surfaces, midnight-navy ink, one restrained brass accent.
+// Everything visual in the site resolves back to this file.
+//
+// Type comes from the Jabali Chorale Brand Book: Siwa is Canva-licensed and
+// unavailable as a webfont, so its approved alternatives apply. We use
+// Montserrat — the book's named body type — for everything, and get contrast
+// from weight and scale rather than from a second typeface.
+
+// ---------------------------------------------------------------- palette
+// Cool near-white rather than warm ivory: the warmth was reading as print.
+$paper: #fbfbfc; // page base
+$paper-raised: #ffffff; // cards sitting above the page
+$paper-sunk: #f4f5f7; // wells, hovers, alternating rows
+$paper-dim: rgba(255, 255, 255, 0.72);
+
+// Headlines and primary UI carry the brand blue rather than a near-black.
+// #17497a is the Brand Book's primary — 9.4:1 on white, so it clears AA easily.
+$ink: #17497a; // headlines, primary buttons, the logo mark
+$ink-body: #2a3a4d; // paragraphs — kept neutral so long copy stays readable
+$ink-muted: #5a6875; // captions, meta (AA on $paper)
+$ink-faint: rgba(14, 27, 42, 0.44); // decorative only, never text
+
+$navy: #16324f; // deep brand navy — dark sections
+$navy-deep: #0b1f33; // gradient floor for dark sections
+$azure: #255181; // original brand blue, kept for interactive states
+
+// The accent, #cc7b00. Two values on purpose: the brand colour for decoration,
+// and a darker shade of the same hue for small text — #cc7b00 itself is only
+// 3.3:1 on white, which fails AA for anything but large text.
+$brass-lit: #cc7b00; // the accent — fills, rules, underlines, on-dark accents
+$brass: #a86400; // text-safe shade — ~4.7:1 on $paper, for eyebrows and links
+$brass-glow: rgba(204, 123, 0, 0.14);
+
+$line: rgba(14, 27, 42, 0.1); // hairlines on paper
+$line-strong: rgba(14, 27, 42, 0.18);
+$line-light: rgba(255, 255, 255, 0.16); // hairlines on dark
+
+// ---------------------------------------------------------------- type
+// One family. $font-display is kept as a separate name so a display face can be
+// reintroduced in one edit, but it deliberately resolves to the same stack.
+$font-sans: 'Montserrat', system-ui, -apple-system, 'Segoe UI', sans-serif;
+$font-display: $font-sans;
+
+// ---------------------------------------------------------------- radius
+// One scale. Photography stays near-sharp; only chrome gets soft.
+$r-xs: 4px;
+$r-sm: 8px;
+$r-md: 14px;
+$r-lg: 22px;
+$r-pill: 999px;
+
+// ---------------------------------------------------------------- elevation
+// Two shadows for the entire site. Depth comes from hairlines and space.
+$shadow-soft: 0 2px 4px rgba(14, 27, 42, 0.04), 0 12px 32px -12px rgba(14, 27, 42, 0.14);
+$shadow-lift: 0 4px 8px rgba(14, 27, 42, 0.06), 0 28px 64px -24px rgba(14, 27, 42, 0.26);
+
+// ---------------------------------------------------------------- motion
+$ease: cubic-bezier(0.22, 0.61, 0.36, 1);
+$ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+$dur: 260ms;
+
+// ---------------------------------------------------------------- layout
+$shell: 1240px; // max content width
+$gutter: clamp(20px, 5vw, 64px); // page side padding
+$section-y: clamp(72px, 11vw, 148px); // vertical rhythm between sections

@@ -19,7 +19,7 @@ export const communityPageData = {
     metricCaption: 'A connected space for chorale members, supporters, and the wider Jabali circle.',
     title: 'A new home for the Jabali community.',
     subtitle: 'Music. Fellowship. Growth.',
-    badge: 'NOW BUILDING...',
+    badge: 'COMMING SOON...',
     supportingText:
       'JC Community will gather updates, shared memories, ministry opportunities, and practical ways to stay connected with Jabali Chorale beyond performances.',
   },

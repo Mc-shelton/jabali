@@ -1,7 +1,9 @@
 import { mediaUrls } from './media';
 
 export const partnershipsPageData = {
-  backgroundImage: mediaUrls.desertSunrise,
+  // Was `desertSunrise` — a stock photo of an American desert. The chorale's own
+  // photography is both on-brand and stronger.
+  backgroundImage: mediaUrls.heroImg2,
   eyebrow: 'Partnerships',
   title: 'Build mission-shaped collaborations with Jabali Chorale.',
   lead:
@@ -19,7 +21,7 @@ export const partnershipsPageData = {
   partnerTypes: [
     {
       title: 'Church Partnerships',
-      copy: 'Weekend worship events, camp meetings, revival weeks, and special music ministry collaborations.',
+      copy: 'Sabbath ministries, camp meetings, revival weeks, and special music ministry collaborations.',
       tag: 'Ministry',
     },
     {

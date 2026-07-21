@@ -1,0 +1,127 @@
+[
+  {
+    "id": "seed-sunset-praise",
+    "slug": "sunset-praise-night",
+    "status": "upcoming",
+    "date": "2026-08-15",
+    "time": "6:00 PM",
+    "type": "Concert",
+    "title": "Sunset Praise Night",
+    "venue": "Commerce House, Nairobi CBD",
+    "summary": "An evening of choral worship and testimony as the chorale opens its second-half season.",
+    "about": [
+      "Sunset Praise Night gathers the full chorale for an evening built around worship, testimony, and new arrangements from the current project.",
+      "Doors open at 5:30 PM. Come early for seating; the programme runs about two hours with a short interval."
+    ],
+    "poster": "/images/jc_1.jpeg",
+    "packages": [
+      { "name": "Regular", "price": "KES 500", "note": "General seating", "url": null },
+      { "name": "Couple", "price": "KES 900", "note": "Two seats together", "url": null },
+      { "name": "Group of 5", "price": "KES 2,000", "note": "Best value for a team", "url": null }
+    ],
+    "merch": [
+      { "name": "Jabali @5 T-Shirt", "price": "KES 1,200", "description": "Anniversary tee in chorale navy.", "image": "/images/jc_2.jpeg" },
+      { "name": "Live Album (CD)", "price": "KES 800", "description": "A recording of the chorale's recent set.", "image": "/images/IMG-20260302-WA0014.jpg" }
+    ],
+    "promoCodes": [
+      { "code": "JC10", "type": "percent", "value": 10 }
+    ],
+    "media": ["/images/20260111_172207.jpg", "/images/20260111_161459.jpg", "/images/IMG-20260302-WA0011.jpg"],
+    "createdAt": "2026-07-01T00:00:00+00:00",
+    "updatedAt": "2026-07-01T00:00:00+00:00"
+  },
+  {
+    "id": "seed-camp-meeting",
+    "slug": "regional-camp-meeting",
+    "status": "upcoming",
+    "date": "2026-09-05",
+    "time": "9:00 AM",
+    "type": "Camp Meeting",
+    "title": "Regional Camp Meeting Ministry",
+    "venue": "To be confirmed",
+    "summary": "Jabali joins the regional camp meeting for a weekend of music ministry and outreach.",
+    "about": [
+      "The chorale ministers across the weekend camp meeting programme, supporting worship sessions and joining the outreach effort.",
+      "Entry is free and open to all. Venue details will be confirmed closer to the date."
+    ],
+    "poster": "/images/jc_2.jpeg",
+    "packages": [],
+    "media": [],
+    "createdAt": "2026-07-01T00:00:00+00:00",
+    "updatedAt": "2026-07-01T00:00:00+00:00"
+  },
+  {
+    "id": "seed-second-coming",
+    "slug": "songs-of-the-second-coming",
+    "status": "upcoming",
+    "date": "2026-10-24",
+    "time": "4:00 PM",
+    "type": "Cantata",
+    "title": "Songs of the Second Coming",
+    "venue": "To be confirmed",
+    "summary": "A themed cantata built around the Three Angels’ Message — new arrangements and readings.",
+    "about": [
+      "A full cantata programme themed on the Three Angels’ Message of Revelation 14, weaving choral arrangements with spoken readings.",
+      "Seating is limited for this one — tickets are recommended in advance."
+    ],
+    "poster": "/images/20260111_172052.jpg",
+    "packages": [
+      { "name": "Regular", "price": "KES 300", "note": "General seating", "url": null },
+      { "name": "Front Row", "price": "KES 600", "note": "Reserved seating up front", "url": null }
+    ],
+    "media": [],
+    "createdAt": "2026-07-01T00:00:00+00:00",
+    "updatedAt": "2026-07-01T00:00:00+00:00"
+  },
+  {
+    "id": "seed-revival-week",
+    "slug": "revival-week-2026",
+    "status": "past",
+    "date": "2026-04-12",
+    "time": "",
+    "type": "Revival Week",
+    "title": "Revival Week Music Ministry",
+    "venue": "Nairobi",
+    "summary": "A week of nightly worship and preaching supported by the chorale.",
+    "about": ["The chorale supported a full week of nightly revival meetings with music ministry and special items."],
+    "poster": "/images/IMG-20260227-WA0010.jpg",
+    "packages": [],
+    "media": ["/images/20260111_172001.jpg", "/images/20260131_101159.jpg", "/images/20260208_165048.jpg"],
+    "createdAt": "2026-07-01T00:00:00+00:00",
+    "updatedAt": "2026-07-01T00:00:00+00:00"
+  },
+  {
+    "id": "seed-easter-cantata",
+    "slug": "easter-cantata-2026",
+    "status": "past",
+    "date": "2026-03-28",
+    "time": "",
+    "type": "Concert",
+    "title": "Easter Cantata",
+    "venue": "Nairobi",
+    "summary": "A resurrection-themed programme of spirituals and hymn arrangements.",
+    "about": [],
+    "poster": "/images/IMG-20260302-WA0014.jpg",
+    "packages": [],
+    "media": [],
+    "createdAt": "2026-07-01T00:00:00+00:00",
+    "updatedAt": "2026-07-01T00:00:00+00:00"
+  },
+  {
+    "id": "seed-season-of-giving",
+    "slug": "season-of-giving-2025",
+    "status": "past",
+    "date": "2025-12-20",
+    "time": "",
+    "type": "Outreach",
+    "title": "Season of Giving Outreach",
+    "venue": "Nairobi",
+    "summary": "Carols and a charity drive taken into the community over the December season.",
+    "about": [],
+    "poster": "/images/20260111_172207.jpg",
+    "packages": [],
+    "media": [],
+    "createdAt": "2026-07-01T00:00:00+00:00",
+    "updatedAt": "2026-07-01T00:00:00+00:00"
+  }
+]

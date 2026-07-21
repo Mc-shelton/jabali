@@ -1,0 +1,151 @@
+{
+  "platformLinks": {
+    "spotify": "https://spotify.com",
+    "youtubeMusic": "https://www.youtube.com/@jabalichorale",
+    "appleMusic": "https://music.apple.com",
+    "soundcloud": "https://soundcloud.com"
+  },
+  "catalog": [
+    {
+      "id": "savior-more-than-life",
+      "title": "Savior More Than Life",
+      "artist": "Jabali Chorale",
+      "category": "Single",
+      "type": "Single",
+      "year": "2024",
+      "duration": "3:18",
+      "mood": "Joyful praise",
+      "art": "https://raw.githubusercontent.com/Mc-shelton/jabali/main/public/images/jc_2.jpeg",
+      "thumbnail": "https://raw.githubusercontent.com/Mc-shelton/jabali/main/public/images/jc_2.jpeg",
+      "audioSrc": "https://jabalichorale.com/bucket/website/music/savior-more-than-life.mp3",
+      "previewStart": 42,
+      "previewDuration": 30,
+      "summary": "God has been faithful to us, and we will praise Him with all our hearts. This song is a bright, percussive declaration carried by voices"
+    },
+    {
+      "id": "hallelujah-from-mount-olives",
+      "title": "Hallelujah From Mount Olives",
+      "artist": "Jabali Chorale",
+      "category": "Single",
+      "type": "Single",
+      "year": "2024",
+      "duration": "4:12",
+      "mood": "Triumphant worship",
+      "art": "https://raw.githubusercontent.com/Mc-shelton/jabali/main/public/images/jc_1.jpeg",
+      "thumbnail": "https://raw.githubusercontent.com/Mc-shelton/jabali/main/public/images/jc_1.jpeg",
+      "audioSrc": "https://jabalichorale.com/bucket/website/music/hallelujah.mp3",
+      "previewStart": 108,
+      "previewDuration": 30,
+      "summary": "Priase the Lord! - by Ludwig van Beethoven."
+    },
+    {
+      "id": "mataifa-yote",
+      "title": "Mataifa Yote",
+      "artist": "Jabali Chorale",
+      "category": "Single",
+      "type": "Single",
+      "year": "2024",
+      "duration": "3:54",
+      "mood": "Hopeful longing",
+      "art": "https://raw.githubusercontent.com/Mc-shelton/jabali/main/public/images/20260111_172207.jpg",
+      "thumbnail": "https://raw.githubusercontent.com/Mc-shelton/jabali/main/public/images/20260111_172207.jpg",
+      "audioSrc": "https://jabalichorale.com/bucket/website/music/mataifa-yote.mp3",
+      "previewStart": 0,
+      "previewDuration": 30,
+      "summary": "Mataifa"
+    },
+    {
+      "id": "twae-wangu",
+      "title": "Lift Up Your Heads",
+      "artist": "Jabali Chorale",
+      "category": "Single",
+      "type": "Single",
+      "year": "2024",
+      "duration": "3:47",
+      "mood": "Reflective",
+      "art": "https://raw.githubusercontent.com/Mc-shelton/jabali/main/public/images/jc_2.jpeg",
+      "thumbnail": "https://raw.githubusercontent.com/Mc-shelton/jabali/main/public/images/jc_2.jpeg",
+      "audioSrc": "https://jabalichorale.com/bucket/website/music/lift-up-your-heads.mp3",
+      "previewStart": 84,
+      "previewDuration": 30,
+      "summary": "LIft up your heads."
+    },
+    {
+      "id": "hata-peope",
+      "title": "Hata Peope",
+      "artist": "Jabali Chorale",
+      "category": "Single",
+      "type": "Single",
+      "year": "2024",
+      "duration": "4:01",
+      "mood": "Celebratory",
+      "art": "https://raw.githubusercontent.com/Mc-shelton/jabali/main/public/images/jc_1.jpeg",
+      "thumbnail": "https://raw.githubusercontent.com/Mc-shelton/jabali/main/public/images/jc_1.jpeg",
+      "audioSrc": "https://jabalichorale.com/bucket/website/music/hata-pepo.mp3",
+      "previewStart": 0,
+      "previewDuration": 30,
+      "summary": "Hata pepo"
+    },
+    {
+      "id": "lift-up-your-heads",
+      "title": "Lift Up Your Heads",
+      "artist": "Jabali Chorale",
+      "category": "Single",
+      "type": "Single",
+      "year": "2024",
+      "duration": "5:06",
+      "mood": "Reverent",
+      "art": "https://raw.githubusercontent.com/Mc-shelton/jabali/main/public/images/20260111_161459.jpg",
+      "thumbnail": "https://raw.githubusercontent.com/Mc-shelton/jabali/main/public/images/20260111_161459.jpg",
+      "audioSrc": "https://jabalichorale.com/bucket/website/music/lift-up-your-heads.mp3",
+      "previewStart": 106,
+      "previewDuration": 30,
+      "summary": "LIft up your heads."
+    }
+  ],
+  "featuredReleases": [
+    {
+      "id": "savior-more-than-life-release",
+      "trackId": "savior-more-than-life",
+      "title": "Savior More Than Life",
+      "type": "Single",
+      "year": "2024",
+      "image": "https://raw.githubusercontent.com/Mc-shelton/jabali/main/public/images/jc_2.jpeg",
+      "thumbnail": "https://raw.githubusercontent.com/Mc-shelton/jabali/main/public/images/jc_2.jpeg",
+      "audioSrc": null,
+      "summary": "God has been faithful to us, and we will praise Him with all our hearts."
+    },
+    {
+      "id": "hallelujah-from-mount-olives-release",
+      "trackId": "hallelujah-from-mount-olives",
+      "title": "Hallelujah From Mount Olives",
+      "type": "Single",
+      "year": "2024",
+      "image": "https://raw.githubusercontent.com/Mc-shelton/jabali/main/public/images/jc_1.jpeg",
+      "thumbnail": "https://raw.githubusercontent.com/Mc-shelton/jabali/main/public/images/jc_1.jpeg",
+      "audioSrc": null,
+      "summary": "Praise the Lord, with a choral lift shaped by Beethoven."
+    },
+    {
+      "id": "recent-records-collection",
+      "trackId": "",
+      "title": "Recent Records",
+      "type": "Collection",
+      "year": "2024",
+      "image": "https://raw.githubusercontent.com/Mc-shelton/jabali/main/public/images/IMG-20260302-WA0011.jpg",
+      "thumbnail": "https://raw.githubusercontent.com/Mc-shelton/jabali/main/public/images/IMG-20260302-WA0011.jpg",
+      "audioSrc": null,
+      "summary": "A rotating set of chorale favorites, rehearsal standouts, and live ministry staples."
+    }
+  ],
+  "recentRecordIds": [
+    "savior-more-than-life",
+    "hallelujah-from-mount-olives",
+    "mataifa-yote",
+    "twae-wangu"
+  ],
+  "homePromoTrackIds": [
+    "savior-more-than-life",
+    "hallelujah-from-mount-olives"
+  ]
+}

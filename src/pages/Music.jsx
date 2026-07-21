@@ -1,125 +1,130 @@
-import { PauseCircleOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
 import {
+  ArrowRightOutlined,
   CustomerServiceOutlined,
+  PauseCircleOutlined,
   PlayCircleOutlined,
-  SoundOutlined,
   YoutubeOutlined,
-  ArrowRightOutlined
 } from '@ant-design/icons';
 import '../styles/music.scss';
-import {
-  heroImg1,
-  heroImg2,
-} from '../assets';
-import { featuredReleases, musicCatalog, musicPlatformLinks } from '../data/music';
+import { useMusic } from '../hooks/usePublicData';
 import useAudioPlayer from '../hooks/useAudioPlayer';
+import { cssUrl } from '../utils/assetPath';
 
 const Music = () => {
+  // Shadowing the old module-level names keeps the JSX below unchanged.
+  const {
+    catalog: musicCatalog,
+    platformLinks: musicPlatformLinks,
+    featuredReleases,
+  } = useMusic();
   const { toggleTrack, isTrackActive, isTrackLoading, getTrackLoadingProgress } = useAudioPlayer();
 
   return (
-  <main className="music-page">
-    <section className="music-hero">
-      <div className="music-copy">
-        <p className="music-pill">All Our Music</p>
-        <h1>Every song in one listening room.</h1>
-        <p className="music-lead">
-          The Jabali catalogue gathered onto one page: featured releases, the full song list currently in the project,
-          and quick paths to the platforms where listeners expect to find the chorale.
+    <main className="music-page">
+      <header className="page-header shell">
+        <p className="eyebrow">Our Music</p>
+        <h1 className="display-lg music-title">
+          Every song in one
+          <em>listening room.</em>
+        </h1>
+        <p className="lead">
+          The Jabali catalogue gathered onto one page: featured releases, the full song list currently in
+          the project, and quick paths to the platforms where listeners expect to find the chorale.
         </p>
-        <div className="music-actions">
-          <a className="music-btn primary" href={musicPlatformLinks.spotify} aria-label="Open Spotify">
+
+        <div className="page-header-actions">
+          <a className="btn btn-primary" href={musicPlatformLinks.spotify} target="_blank" rel="noreferrer">
             <CustomerServiceOutlined />
-            <span>Spotify</span>
+            Spotify
           </a>
-          <a className="music-btn ghost" href={musicPlatformLinks.youtubeMusic} aria-label="Open YouTube Music">
+          <a className="btn btn-ghost" href={musicPlatformLinks.youtubeMusic} target="_blank" rel="noreferrer">
             <YoutubeOutlined />
-            <span>YouTube Music</span>
+            YouTube Music
           </a>
-          <Link className="music-btn ghost" to="/about">
-            <span>Meet The Chorale</span>
+          <Link className="btn btn-ghost" to="/about">
+            Meet the chorale
             <ArrowRightOutlined />
           </Link>
         </div>
-      </div>
+      </header>
 
-      <div className="music-hero-art">
-        <div className="hero-stack-card primary" style={{ backgroundImage: `url(${heroImg1})` }} />
-        <div className="hero-stack-card secondary" style={{ backgroundImage: `url(${heroImg2})` }} />
-        <div className="hero-floating-note">
-          <SoundOutlined />
-          <span>{musicCatalog.length} tracks live in the catalogue</span>
+      <section className="featured section">
+        <div className="shell">
+          <div className="section-head reveal">
+            <p className="eyebrow">Featured</p>
+            <h2 className="display-md">Current releases and highlighted listening.</h2>
+          </div>
+
+          <div className="featured-grid reveal">
+            {featuredReleases.map((release) => (
+              <article className="feature-card" key={release.id}>
+                <div className="feature-cover" style={{ backgroundImage: cssUrl(release.image) }} />
+                <div className="feature-body">
+                  <p className="feature-tag">
+                    {release.type} · {release.year}
+                  </p>
+                  <h3 className="feature-title">{release.title}</h3>
+                  <p className="feature-summary">{release.summary}</p>
+                </div>
+              </article>
+            ))}
+          </div>
         </div>
-      </div>
-    </section>
+      </section>
 
-    <section className="music-featured">
-      <div className="music-section-head">
-        <div>
-          <p className="music-pill">Featured</p>
-          <h2>Current releases and highlighted listening.</h2>
+      <section className="catalogue section" id="all-music">
+        <div className="shell">
+          <div className="section-head is-centered reveal">
+            <p className="eyebrow is-centered on-dark">Catalogue</p>
+            <h2 className="display-md">Some of our music.</h2>
+            <p className="catalogue-note">
+              {musicCatalog.length} pieces from the repertoire. Press play for a thirty-second preview.
+            </p>
+          </div>
+
+          <ol className="catalogue-list reveal">
+            {musicCatalog.map((track, index) => {
+              const isActive = isTrackActive(track.id);
+              const isLoading = isTrackLoading(track.id);
+
+              return (
+                <li className={`catalogue-row ${isActive ? 'is-playing' : ''}`} key={track.id}>
+                  <span className="catalogue-index">{String(index + 1).padStart(2, '0')}</span>
+
+                  <span className="catalogue-art" style={{ backgroundImage: cssUrl(track.art) }} />
+
+                  <span className="catalogue-track">
+                    <span className="catalogue-track-title">{track.title}</span>
+                    <span className="catalogue-track-meta">{track.category}</span>
+                  </span>
+
+                  <span className="catalogue-mood">{track.mood}</span>
+                  <span className="catalogue-duration">{track.duration}</span>
+
+                  <button
+                    type="button"
+                    className="catalogue-play"
+                    aria-label={`${isActive ? 'Pause' : 'Play'} ${track.title}`}
+                    onClick={() => toggleTrack(track)}
+                    disabled={!track.audioSrc}
+                    data-loading={isLoading}
+                  >
+                    {isLoading ? (
+                      <span className="audio-load-label">{getTrackLoadingProgress(track.id)}%</span>
+                    ) : isActive ? (
+                      <PauseCircleOutlined />
+                    ) : (
+                      <PlayCircleOutlined />
+                    )}
+                  </button>
+                </li>
+              );
+            })}
+          </ol>
         </div>
-      </div>
-
-      <div className="release-grid">
-        {featuredReleases.map((release) => (
-          <article className="release-card" key={release.title}>
-            <div className="release-cover" style={{ backgroundImage: `url(${release.image})` }}>
-              <span className="release-tag">
-                {release.type} · {release.year}
-              </span>
-            </div>
-            <div className="release-meta">
-              <h3>{release.title}</h3>
-              <p>{release.summary}</p>
-            </div>
-          </article>
-        ))}
-      </div>
-    </section>
-
-    <section className="music-catalogue" id="all-music">
-      <div className="music-section-head">
-        <div>
-          <p className="music-pill">Catalogue</p>
-          <h2>Full music list.</h2>
-        </div>
-        <p className="music-section-copy">
-          This page now acts as the full music destination for the songs currently defined in the project.
-        </p>
-      </div>
-
-      <div className="catalogue-list">
-        {musicCatalog.map((track, index) => (
-          <article className="catalogue-row" key={track.title}>
-            <div className="catalogue-index">{String(index + 1).padStart(2, '0')}</div>
-            <div className="catalogue-art" style={{ backgroundImage: `url(${track.art})` }} />
-            <div className="catalogue-track">
-              <h3>{track.title}</h3>
-              <p>{track.category}</p>
-            </div>
-            <div className="catalogue-mood">{track.mood}</div>
-            <div className="catalogue-duration">{track.duration}</div>
-            <button
-              className="catalogue-play"
-              type="button"
-              aria-label={`${isTrackActive(track.id) ? 'Pause' : 'Play'} ${track.title}`}
-              onClick={() => toggleTrack(track)}
-              disabled={!track.audioSrc}
-              data-loading={isTrackLoading(track.id)}
-            >
-              {isTrackLoading(track.id)
-                ? <span className="audio-load-label">{getTrackLoadingProgress(track.id)}%</span>
-                : isTrackActive(track.id)
-                  ? <PauseCircleOutlined />
-                  : <PlayCircleOutlined />}
-            </button>
-          </article>
-        ))}
-      </div>
-    </section>
-  </main>
+      </section>
+    </main>
   );
 };
 

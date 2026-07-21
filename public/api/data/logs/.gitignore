@@ -1,0 +1,2 @@
+# Log files are runtime output — keep the directory, ignore the contents.
+api-*.log

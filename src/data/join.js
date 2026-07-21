@@ -37,12 +37,11 @@ export const joinPageData = {
   voiceOptions: [
     'Soprano',
     'Alto',
-    'Mezzo-Soprano',
     'Tenor',
     'Baritone',
     'Bass',
     'Instrument Support',
-    'Service Team',
+    'Support Team',
     'Not sure yet',
   ],
 };

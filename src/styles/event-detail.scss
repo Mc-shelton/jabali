@@ -1,0 +1,462 @@
+@use 'tokens';
+
+.evd-page {
+  background: tokens.$paper;
+}
+
+// ---------------------------------------------------------------- back
+.evd-back {
+  padding-top: clamp(24px, 4vw, 40px);
+}
+
+.evd-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: tokens.$ink-muted;
+  font-size: 0.88rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color tokens.$dur tokens.$ease, gap tokens.$dur tokens.$ease;
+
+  &:hover {
+    color: tokens.$ink;
+    gap: 12px;
+  }
+}
+
+// ---------------------------------------------------------------- layout
+.evd-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  gap: clamp(28px, 4vw, 56px);
+  align-items: start;
+  padding-top: clamp(20px, 3vw, 32px);
+  padding-bottom: clamp(48px, 6vw, 80px);
+}
+
+.evd-poster-col {
+  position: sticky;
+  top: 104px; // clears the fixed nav
+}
+
+.evd-poster {
+  aspect-ratio: 3 / 4;
+  border-radius: tokens.$r-lg;
+  background-color: tokens.$paper-sunk;
+  background-size: cover;
+  background-position: center;
+  box-shadow: tokens.$shadow-lift;
+}
+
+.evd-main {
+  display: grid;
+  justify-items: start;
+  gap: 18px;
+}
+
+.evd-title {
+  max-width: 20ch;
+}
+
+// ---------------------------------------------------------------- facts
+.evd-facts {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+  max-width: 460px;
+  margin: 4px 0 0;
+  padding: 20px 0;
+  border-block: 1px solid tokens.$line;
+
+  div {
+    display: grid;
+    grid-template-columns: 120px minmax(0, 1fr);
+    gap: 12px;
+    align-items: baseline;
+  }
+
+  dt {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: tokens.$ink-muted;
+
+    svg {
+      color: tokens.$brass;
+      font-size: 12px;
+    }
+  }
+
+  dd {
+    margin: 0;
+    color: tokens.$ink;
+    font-weight: 500;
+  }
+}
+
+// ---------------------------------------------------------------- ticket panel
+.evd-ticket {
+  display: grid;
+  gap: 16px;
+  width: 100%;
+  max-width: 460px;
+  padding: clamp(20px, 2.4vw, 28px);
+  border: 1px solid tokens.$line;
+  border-radius: tokens.$r-lg;
+  background: tokens.$paper-raised;
+
+  &.is-past {
+    background: tokens.$paper-sunk;
+    border-color: transparent;
+  }
+
+  .btn {
+    width: 100%;
+  }
+}
+
+.evd-ticket-price {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+
+  strong {
+    font-size: 1.5rem;
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    color: tokens.$ink;
+  }
+}
+
+.evd-ticket-label {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: tokens.$ink-muted;
+}
+
+.evd-ticket-sub {
+  font-size: 0.9rem;
+  color: tokens.$ink-muted;
+}
+
+.evd-ticket.is-past .evd-ticket-label {
+  font-size: 1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  text-transform: none;
+  color: tokens.$ink;
+}
+
+// ---------------------------------------------------------------- packages
+.evd-packages {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+
+  li {
+    list-style: none;
+  }
+}
+
+// Each tier is a whole clickable card — reserve or buy that package.
+// `width: 100%` + reset is needed because these render as <button> (the M-Pesa
+// checkout path); a button otherwise shrinks to its content instead of filling
+// the panel like the <a> variant does.
+.evd-package {
+  display: grid;
+  gap: 6px;
+  width: 100%;
+  padding: 16px 18px;
+  border: 1px solid tokens.$line;
+  border-radius: tokens.$r-md;
+  background: tokens.$paper;
+  text-align: left;
+  font: inherit;
+  text-decoration: none;
+  color: inherit;
+  cursor: pointer;
+  transition: border-color tokens.$dur tokens.$ease, background tokens.$dur tokens.$ease,
+    transform tokens.$dur tokens.$ease;
+
+  &:hover {
+    transform: translateY(-2px);
+    border-color: tokens.$ink;
+  }
+
+  &:focus-visible {
+    outline: 2px solid tokens.$brass-lit;
+    outline-offset: 2px;
+  }
+}
+
+.evd-package-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.evd-package-name {
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: tokens.$ink;
+}
+
+.evd-package-price {
+  font-size: 1.1rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: tokens.$brass;
+  white-space: nowrap;
+}
+
+.evd-package-note {
+  font-size: 0.85rem;
+  color: tokens.$ink-muted;
+}
+
+.evd-package-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  margin-top: 4px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: tokens.$ink;
+
+  svg {
+    font-size: 12px;
+    transition: transform tokens.$dur tokens.$ease;
+  }
+}
+
+.evd-package:hover .evd-package-action svg {
+  transform: translateX(3px);
+}
+
+.evd-calendar {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: tokens.$brass;
+  font-size: 0.85rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: color tokens.$dur tokens.$ease;
+
+  &:hover {
+    color: tokens.$ink;
+    text-decoration: underline;
+  }
+}
+
+// ---------------------------------------------------------------- about
+.evd-about {
+  display: grid;
+  gap: 12px;
+  max-width: 62ch;
+  margin-top: 6px;
+
+  p {
+    color: tokens.$ink-body;
+    line-height: 1.75;
+  }
+}
+
+.evd-about-title {
+  font-size: 1.2rem;
+  margin-bottom: 2px;
+}
+
+// ---------------------------------------------------------------- merch
+.evd-merch {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: clamp(16px, 2vw, 24px);
+}
+
+.evd-merch-card {
+  display: grid;
+  grid-template-rows: auto 1fr;
+  border: 1px solid tokens.$line;
+  border-radius: tokens.$r-md;
+  overflow: hidden;
+  background: tokens.$paper-raised;
+}
+
+.evd-merch-image {
+  aspect-ratio: 1;
+  background-color: tokens.$paper-sunk;
+  background-size: cover;
+  background-position: center;
+}
+
+.evd-merch-body {
+  display: grid;
+  align-content: start;
+  gap: 10px;
+  padding: clamp(16px, 2vw, 20px);
+}
+
+.evd-merch-top {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.evd-merch-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+}
+
+.evd-merch-price {
+  font-weight: 700;
+  color: tokens.$brass;
+  white-space: nowrap;
+}
+
+.evd-merch-desc {
+  color: tokens.$ink-muted;
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.evd-merch-buy {
+  margin-top: 4px;
+  width: 100%;
+  justify-content: center;
+}
+
+// ---------------------------------------------------------------- media
+.evd-media {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: clamp(10px, 1.4vw, 16px);
+}
+
+.evd-media-tile {
+  aspect-ratio: 4 / 3;
+  padding: 0;
+  border: 0;
+  border-radius: tokens.$r-sm;
+  background-color: tokens.$paper-sunk;
+  background-size: cover;
+  background-position: center;
+  cursor: zoom-in;
+  transition: transform tokens.$dur tokens.$ease, box-shadow tokens.$dur tokens.$ease;
+
+  &:hover {
+    transform: scale(1.02);
+    box-shadow: tokens.$shadow-soft;
+  }
+
+  &:focus-visible {
+    outline: 2px solid tokens.$brass-lit;
+    outline-offset: 3px;
+  }
+}
+
+// ---------------------------------------------------------------- lightbox
+.evd-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 210;
+  display: grid;
+  place-items: center;
+  padding: clamp(16px, 4vw, 48px);
+  background: rgba(11, 31, 51, 0.88);
+  backdrop-filter: blur(6px);
+}
+
+.evd-lightbox {
+  position: relative;
+  display: grid;
+  place-items: center;
+  max-width: min(1100px, 100%);
+}
+
+.evd-close {
+  position: absolute;
+  top: -58px;
+  right: 0;
+  display: grid;
+  place-items: center;
+  width: 44px;
+  height: 44px;
+  border: 1px solid rgba(255, 255, 255, 0.4);
+  border-radius: tokens.$r-pill;
+  background: transparent;
+  color: #fff;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background tokens.$dur tokens.$ease, transform tokens.$dur tokens.$ease;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+    transform: rotate(90deg);
+  }
+
+  &:focus-visible {
+    outline: 2px solid tokens.$brass-lit;
+    outline-offset: 2px;
+  }
+}
+
+.evd-lightbox-image {
+  max-width: 100%;
+  max-height: 82vh;
+  width: auto;
+  height: auto;
+  border-radius: tokens.$r-md;
+  object-fit: contain;
+}
+
+// ---------------------------------------------------------------- missing
+.evd-missing {
+  display: grid;
+  justify-items: start;
+  gap: 18px;
+}
+
+// ---------------------------------------------------------------- responsive
+@media (max-width: 860px) {
+  .evd-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .evd-poster-col {
+    position: static;
+  }
+
+  .evd-poster {
+    aspect-ratio: 16 / 10;
+    max-width: 520px;
+  }
+}
+
+@media (max-width: 560px) {
+  .evd-close {
+    top: -54px;
+  }
+}
+
+// Hint that a product has size/colour choices, shown before the buyer opens
+// checkout so the card doesn't look like a plain fixed-spec item.
+.evd-merch-opts {
+  margin: 0;
+  font-size: 0.8rem;
+  color: tokens.$ink-muted;
+}

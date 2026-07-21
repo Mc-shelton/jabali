@@ -1,0 +1,13 @@
+# Uploaded images are served to visitors, but must never be executed as code.
+# Disable any handlers/scripts in this tree; allow only static image types.
+<IfModule mod_php.c>
+  php_flag engine off
+</IfModule>
+RemoveHandler .php .phtml .php3 .php4 .php5 .php7 .phps .cgi .pl .py
+RemoveType .php .phtml .php3 .php4 .php5 .php7 .phps
+
+<FilesMatch "\.(?i:jpe?g|png|webp|gif|svg)$">
+  <IfModule mod_authz_core.c>
+    Require all granted
+  </IfModule>
+</FilesMatch>

@@ -1,6 +1,6 @@
 export const contactItems = [
   { label: 'Email', value: 'outreach@jabalichorale.com' },
-  { label: 'Phone', value: '+254741741381' },
+  { label: 'Phone', value: '+254 743 349733' },
   { label: 'Rehearsals', value: 'Every Sunday, 3:00 PM to 5:30 PM, Commerce House CBD' },
 ];
 

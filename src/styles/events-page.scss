@@ -1,0 +1,305 @@
+@use 'tokens';
+
+.ev-page {
+  background: tokens.$paper;
+}
+
+.ev-title {
+  max-width: 18ch;
+}
+
+// ================================================================= upcoming
+.ev-list {
+  display: grid;
+  gap: 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.ev-card {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  align-items: center;
+  gap: clamp(20px, 3vw, 40px);
+  padding: clamp(20px, 2.6vw, 30px);
+  border: 1px solid tokens.$line;
+  border-radius: tokens.$r-lg;
+  background: tokens.$paper-raised;
+  text-decoration: none;
+  color: inherit;
+  transition: border-color tokens.$dur tokens.$ease, transform tokens.$dur tokens.$ease,
+    box-shadow tokens.$dur tokens.$ease;
+
+  &:hover {
+    transform: translateY(-3px);
+    border-color: tokens.$line-strong;
+    box-shadow: tokens.$shadow-soft;
+  }
+
+  &:focus-visible {
+    outline: 2px solid tokens.$brass-lit;
+    outline-offset: 3px;
+  }
+}
+
+.ev-badge {
+  padding: 3px 9px;
+  border-radius: tokens.$r-pill;
+  background: tokens.$brass-glow;
+  color: tokens.$brass;
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+
+.ev-go {
+  display: grid;
+  place-items: center;
+  width: 42px;
+  height: 42px;
+  border-radius: tokens.$r-pill;
+  border: 1px solid tokens.$line-strong;
+  color: tokens.$ink;
+  font-size: 14px;
+  transition: background tokens.$dur tokens.$ease, color tokens.$dur tokens.$ease,
+    transform tokens.$dur tokens.$ease;
+}
+
+.ev-card:hover .ev-go {
+  background: tokens.$ink;
+  border-color: tokens.$ink;
+  color: #fff;
+  transform: translateX(3px);
+}
+
+// A calendar-tile date block anchors each row.
+.ev-date {
+  display: grid;
+  justify-items: center;
+  gap: 2px;
+  width: 84px;
+  padding: 14px 0;
+  border-radius: tokens.$r-md;
+  background: tokens.$navy-deep;
+  color: #fff;
+}
+
+.ev-date-weekday {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: tokens.$brass-lit;
+}
+
+.ev-date-day {
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.ev-date-month {
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.ev-body {
+  display: grid;
+  gap: 6px;
+  min-width: 0;
+}
+
+.ev-type {
+  font-size: 0.68rem;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: tokens.$brass;
+}
+
+.ev-name {
+  font-size: clamp(1.2rem, 2vw, 1.55rem);
+}
+
+.ev-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  margin-top: 2px;
+  color: tokens.$ink-muted;
+  font-size: 0.85rem;
+
+  span {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+  }
+
+  svg {
+    color: tokens.$brass;
+    font-size: 13px;
+  }
+}
+
+.ev-desc {
+  margin-top: 6px;
+  max-width: 62ch;
+  color: tokens.$ink-body;
+  font-size: 0.92rem;
+  line-height: 1.65;
+}
+
+.ev-cta {
+  white-space: nowrap;
+}
+
+.ev-empty {
+  display: grid;
+  justify-items: start;
+  gap: 18px;
+  padding: clamp(28px, 4vw, 44px);
+  border: 1px dashed tokens.$line-strong;
+  border-radius: tokens.$r-lg;
+
+  p {
+    color: tokens.$ink-muted;
+  }
+}
+
+// ================================================================= archive
+.ev-past-section {
+  padding-top: 0;
+}
+
+.ev-past {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border-top: 1px solid tokens.$line;
+}
+
+.ev-past li {
+  list-style: none;
+}
+
+.ev-past-row {
+  display: grid;
+  grid-template-columns: 130px minmax(0, 1.4fr) 120px minmax(0, 1fr);
+  align-items: baseline;
+  gap: 20px;
+  padding: 18px 4px;
+  border-bottom: 1px solid tokens.$line;
+  text-decoration: none;
+  color: inherit;
+  transition: background tokens.$dur tokens.$ease, padding-left tokens.$dur tokens.$ease;
+
+  &:hover {
+    background: tokens.$paper-sunk;
+    padding-left: 12px;
+  }
+
+  &:focus-visible {
+    outline: 2px solid tokens.$brass-lit;
+    outline-offset: -2px;
+  }
+}
+
+.ev-past-date {
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: tokens.$brass;
+}
+
+.ev-past-title {
+  font-size: 1.02rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  color: tokens.$ink;
+}
+
+.ev-past-type {
+  font-size: 0.78rem;
+  color: tokens.$ink-muted;
+}
+
+.ev-past-venue {
+  font-size: 0.85rem;
+  color: tokens.$ink-muted;
+  text-align: right;
+}
+
+// ================================================================= booking cta
+.ev-invite {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 28px;
+  margin-bottom: clamp(64px, 8vw, 112px);
+  padding: clamp(32px, 4vw, 52px);
+  border-radius: tokens.$r-lg;
+  background: tokens.$paper-sunk;
+
+  > div {
+    display: grid;
+    justify-items: start;
+    gap: 12px;
+    max-width: 58ch;
+  }
+}
+
+.ev-invite-copy {
+  color: tokens.$ink-muted;
+  line-height: 1.7;
+}
+
+// ================================================================= responsive
+@media (max-width: 720px) {
+  .ev-card {
+    grid-template-columns: auto minmax(0, 1fr);
+    grid-template-areas:
+      'date body'
+      'cta  cta';
+    align-items: start;
+  }
+
+  .ev-date {
+    grid-area: date;
+  }
+
+  .ev-body {
+    grid-area: body;
+  }
+
+  .ev-cta {
+    grid-area: cta;
+    justify-content: center;
+  }
+
+  .ev-past-row {
+    grid-template-columns: 1fr;
+    gap: 4px;
+    padding: 16px 4px;
+  }
+
+  .ev-past-venue {
+    text-align: left;
+  }
+}
+
+@media (max-width: 460px) {
+  .ev-card {
+    grid-template-columns: 1fr;
+    grid-template-areas:
+      'date'
+      'body'
+      'cta';
+    justify-items: start;
+    gap: 16px;
+  }
+}

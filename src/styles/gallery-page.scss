@@ -1,0 +1,277 @@
+@use 'tokens';
+
+// Class names are `gal-` prefixed on purpose: the old gallery rules still live
+// in extra-pages.scss (loaded globally by the pages that haven't migrated yet),
+// and all CSS in this app is global.
+.gal-page {
+  background: tokens.$paper;
+}
+
+.gal-title em {
+  display: block;
+  font-style: normal;
+  color: tokens.$ink-muted;
+}
+
+// ================================================================= boards
+.gal-boards {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: clamp(16px, 2.2vw, 28px);
+}
+
+.gal-board {
+  display: grid;
+  gap: 0;
+  padding: 0;
+  border: 1px solid tokens.$line;
+  border-radius: tokens.$r-md;
+  overflow: hidden;
+  background: tokens.$paper-raised;
+  text-align: left;
+  cursor: pointer;
+  transition: transform tokens.$dur tokens.$ease, border-color tokens.$dur tokens.$ease;
+
+  &:hover {
+    transform: translateY(-4px);
+    border-color: tokens.$line-strong;
+  }
+
+  &:focus-visible {
+    outline: 2px solid tokens.$brass-lit;
+    outline-offset: 3px;
+  }
+}
+
+.gal-mosaic {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  aspect-ratio: 4 / 3;
+  background: tokens.$paper-sunk;
+
+  span {
+    display: block;
+    background-color: tokens.$paper-sunk;
+    background-size: cover;
+    background-position: center;
+  }
+}
+
+.gal-board-meta {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 18px 20px;
+
+  strong {
+    font-size: 1.05rem;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    color: tokens.$ink;
+  }
+
+  small {
+    font-size: 0.78rem;
+    color: tokens.$ink-muted;
+    white-space: nowrap;
+  }
+}
+
+// ================================================================= browse
+.gal-browse {
+  padding-top: 0;
+}
+
+.gal-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-bottom: clamp(24px, 3vw, 36px);
+}
+
+.gal-chip {
+  padding: 10px 18px;
+  border: 1px solid tokens.$line-strong;
+  border-radius: tokens.$r-pill;
+  background: transparent;
+  color: tokens.$ink-body;
+  font-family: tokens.$font-sans;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background tokens.$dur tokens.$ease, color tokens.$dur tokens.$ease,
+    border-color tokens.$dur tokens.$ease;
+
+  &:hover {
+    border-color: tokens.$ink;
+    color: tokens.$ink;
+  }
+
+  &.is-active {
+    background: tokens.$ink;
+    border-color: tokens.$ink;
+    color: #fff;
+  }
+
+  &:focus-visible {
+    outline: 2px solid tokens.$brass-lit;
+    outline-offset: 2px;
+  }
+}
+
+.gal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  gap: clamp(10px, 1.4vw, 16px);
+}
+
+.gal-tile {
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: tokens.$r-sm;
+  background-color: tokens.$paper-sunk;
+  background-size: cover;
+  background-position: center;
+  cursor: zoom-in;
+  transition: transform tokens.$dur tokens.$ease, box-shadow tokens.$dur tokens.$ease;
+
+  &:hover {
+    transform: scale(1.02);
+    box-shadow: tokens.$shadow-soft;
+  }
+
+  &:focus-visible {
+    outline: 2px solid tokens.$brass-lit;
+    outline-offset: 3px;
+  }
+}
+
+.gal-note {
+  margin-top: clamp(24px, 3vw, 36px);
+  padding-top: 20px;
+  border-top: 1px solid tokens.$line;
+  font-size: 0.82rem;
+  line-height: 1.7;
+  color: tokens.$ink-muted;
+  max-width: 70ch;
+}
+
+// ================================================================= overlays
+.gal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: clamp(16px, 4vw, 48px);
+  background: rgba(11, 31, 51, 0.72);
+  backdrop-filter: blur(6px);
+
+  &.is-lightbox {
+    z-index: 210; // sits above an open board
+    background: rgba(11, 31, 51, 0.88);
+  }
+}
+
+.gal-modal {
+  width: min(1080px, 100%);
+  max-height: 88vh;
+  overflow-y: auto;
+  padding: clamp(20px, 3vw, 32px);
+  border-radius: tokens.$r-lg;
+  background: tokens.$paper;
+}
+
+.gal-modal-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.gal-modal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 10px;
+}
+
+.gal-close {
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border: 1px solid tokens.$line-strong;
+  border-radius: tokens.$r-pill;
+  background: tokens.$paper-raised;
+  color: tokens.$ink;
+  font-size: 16px;
+  cursor: pointer;
+  transition: background tokens.$dur tokens.$ease, transform tokens.$dur tokens.$ease;
+
+  &:hover {
+    background: tokens.$paper-sunk;
+    transform: rotate(90deg);
+  }
+
+  &:focus-visible {
+    outline: 2px solid tokens.$brass-lit;
+    outline-offset: 2px;
+  }
+}
+
+.gal-lightbox {
+  position: relative;
+  display: grid;
+  place-items: center;
+  max-width: min(1100px, 100%);
+}
+
+.gal-close-floating {
+  position: absolute;
+  top: -58px;
+  right: 0;
+  border-color: rgba(255, 255, 255, 0.4);
+  background: transparent;
+  color: #fff;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.12);
+  }
+}
+
+.gal-lightbox-image {
+  max-width: 100%;
+  max-height: 82vh;
+  width: auto;
+  height: auto;
+  border-radius: tokens.$r-md;
+  object-fit: contain;
+}
+
+// ================================================================= responsive
+@media (max-width: 900px) {
+  .gal-boards {
+    grid-template-columns: 1fr;
+    max-width: 480px;
+  }
+
+  .gal-grid {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .gal-grid,
+  .gal-modal-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .gal-close-floating {
+    top: -54px;
+  }
+}

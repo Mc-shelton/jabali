@@ -1,16 +1,20 @@
-// _constants
-$primary-color: #255181;
-$secondary-color: #ff9a00;
-$border: rgba(37, 81, 129, 0.14);
-$background: #ffffff;
-$ink: #255181;
-$ink-soft: rgba(37, 81, 129, 0.78);
-$ink-muted: rgba(37, 81, 129, 0.64);
-$surface-tint: rgba(37, 81, 129, 0.05);
-$surface-tint-strong: rgba(37, 81, 129, 0.09);
-$accent-soft: rgba(255, 154, 0, 0.16);
-$accent-shadow: rgba(255, 154, 0, 0.28);
-$box-shadow: 0 18px 40px rgba(37, 81, 129, 0.12);
-$sun: #ff9a00;
-$paper: #ffffff;
+// Legacy variable names, remapped onto the design tokens.
+// Kept so pages that haven't migrated yet still compile and still pick up the
+// new palette. New styles should `@use 'tokens'` directly and skip this file.
+@use 'tokens';
+
+$primary-color: tokens.$navy;
+$secondary-color: tokens.$brass-lit;
+$border: tokens.$line;
+$background: tokens.$paper;
+$ink: tokens.$ink;
+$ink-soft: tokens.$ink-body;
+$ink-muted: tokens.$ink-muted;
+$surface-tint: rgba(14, 27, 42, 0.04);
+$surface-tint-strong: rgba(14, 27, 42, 0.08);
+$accent-soft: tokens.$brass-glow;
+$accent-shadow: rgba(204, 123, 0, 0.28);
+$box-shadow: tokens.$shadow-soft;
+$sun: tokens.$brass;
+$paper: tokens.$paper-raised;
 $paper-soft: rgba(255, 255, 255, 0.92);

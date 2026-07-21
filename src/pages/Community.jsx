@@ -6,7 +6,9 @@ import {
   MailOutlined,
 } from '@ant-design/icons';
 import '../styles/extra-pages.scss';
-import { communityPageData } from '../data/community';
+import { communityPageData as communityNav } from '../data/community';
+import { useContent } from '../hooks/usePublicData';
+import { cssUrl } from '../utils/assetPath';
 
 const sideIcons = {
   Home: <HomeOutlined />,
@@ -15,11 +17,17 @@ const sideIcons = {
   Contact: <MailOutlined />,
 };
 
-const Community = () => (
+const Community = () => {
+  const { data } = useContent('community');
+  // topLinks / sideLinks are navigation and stay in code; editable copy comes
+  // from the dashboard. Shadowing the old name keeps the JSX below unchanged.
+  const communityPageData = { ...communityNav, ...data };
+
+  return (
   <main className="community-page">
     <section
       className="community-canvas"
-      style={{ backgroundImage: `linear-gradient(115deg, rgba(6, 11, 26, 0.86), rgba(11, 18, 39, 0.72) 42%, rgba(100, 59, 24, 0.48)), url(${communityPageData.backgroundImage})` }}
+      style={{ backgroundImage: `linear-gradient(115deg, rgba(6, 11, 26, 0.86), rgba(11, 18, 39, 0.72) 42%, rgba(100, 59, 24, 0.48)), ${cssUrl(communityPageData.backgroundImage)}` }}
     >
       <aside className="community-rail" aria-label="Community navigation">
         <Link className="community-rail-brand" to="/" aria-label="Jabali Chorale home">
@@ -81,6 +89,7 @@ const Community = () => (
       </div>
     </section>
   </main>
-);
+  );
+};
 
 export default Community;

@@ -2,6 +2,8 @@ import { useEffect, useRef, useState } from 'react';
 
 const FADE_DURATION_MS = 2200;
 const FADE_OUT_BUFFER_SECONDS = 2.2;
+const HAVE_METADATA = 1;
+const HAVE_FUTURE_DATA = 3;
 
 const formatTime = (seconds) => {
   if (!Number.isFinite(seconds)) return '0:00';
@@ -12,6 +14,22 @@ const formatTime = (seconds) => {
 
   return `${minutes}:${String(remainder).padStart(2, '0')}`;
 };
+
+const waitForAudioEvent = (audio, eventName) =>
+  new Promise((resolve, reject) => {
+    const handleSuccess = () => {
+      audio.removeEventListener('error', handleError);
+      resolve();
+    };
+
+    const handleError = () => {
+      audio.removeEventListener(eventName, handleSuccess);
+      reject(new Error(`Audio failed while waiting for ${eventName}`));
+    };
+
+    audio.addEventListener(eventName, handleSuccess, { once: true });
+    audio.addEventListener('error', handleError, { once: true });
+  });
 
 const useAudioPlayer = () => {
   const audioRef = useRef(null);
@@ -127,7 +145,10 @@ const useAudioPlayer = () => {
     audio.volume = 0;
 
     const step = (now) => {
-      const progress = Math.min((now - start) / FADE_DURATION_MS, 1);
+      // rAF passes the frame's start time, which can predate `start` — a raw
+      // ratio then goes negative, and assigning a negative volume throws and
+      // kills the fade, leaving the track playing silently at volume 0.
+      const progress = Math.max(0, Math.min((now - start) / FADE_DURATION_MS, 1));
       audio.volume = progress;
 
       if (progress < 1 && !audio.paused) {
@@ -158,6 +179,7 @@ const useAudioPlayer = () => {
     if (!isSameTrack) {
       audio.pause();
       audio.src = track.audioSrc;
+      audio.load();
       setCurrentTrackId(track.id);
       setLoadingProgress(0);
       setPlaybackTime(0);
@@ -175,19 +197,19 @@ const useAudioPlayer = () => {
 
     setLoadingTrackId(track.id);
 
-    if (!isSameTrack || Math.abs(audio.currentTime - startTime) > 0.5) {
-      const setStartTime = () => {
-        audio.currentTime = startTime;
-      };
-
-      if (audio.readyState >= 1) {
-        setStartTime();
-      } else {
-        audio.addEventListener('loadedmetadata', setStartTime, { once: true });
-      }
-    }
-
     try {
+      if (audio.readyState < HAVE_METADATA) {
+        await waitForAudioEvent(audio, 'loadedmetadata');
+      }
+
+      if (!isSameTrack || Math.abs(audio.currentTime - startTime) > 0.5) {
+        audio.currentTime = startTime;
+      }
+
+      if (audio.readyState < HAVE_FUTURE_DATA) {
+        await waitForAudioEvent(audio, 'canplay');
+      }
+
       await audio.play();
       setLoadingTrackId(null);
       runFadeIn();

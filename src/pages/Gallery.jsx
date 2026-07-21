@@ -1,208 +1,196 @@
-import { useEffect, useState } from 'react';
-import '../styles/extra-pages.scss';
-import { galleryBoards, galleryCategories, galleryFeature } from '../data/gallery';
+import { useCallback, useEffect, useState } from 'react';
+import { CloseOutlined } from '@ant-design/icons';
+import '../styles/gallery-page.scss';
+import { useContent } from '../hooks/usePublicData';
+import { cssUrl } from '../utils/assetPath';
 
 const Gallery = () => {
-  const [activeCategoryId, setActiveCategoryId] = useState(galleryCategories[0].id);
+  const { data } = useContent('gallery');
+  // Shadowing the old module-level names keeps the JSX below unchanged.
+  const galleryBoards = data.boards;
+  const galleryCategories = data.categories;
+  const galleryFeature = data.feature;
+
+  // Selections are held as id/title, not as objects: the gallery arrives from
+  // the API after first paint, so a stored object would go stale. An id that no
+  // longer exists falls back to the first category.
+  const [activeCategoryId, setActiveCategoryId] = useState(null);
   const [activeBoardTitle, setActiveBoardTitle] = useState(null);
   const [activeImage, setActiveImage] = useState(null);
-  const activeCategory = galleryCategories.find(({ id }) => id === activeCategoryId) ?? galleryCategories[0];
+
+  const activeCategory =
+    galleryCategories.find(({ id }) => id === activeCategoryId) ?? galleryCategories[0] ?? null;
   const activeBoard = galleryBoards.find(({ title }) => title === activeBoardTitle) ?? null;
+  const isOverlayOpen = Boolean(activeBoard || activeImage);
+
+  // Escape closes the topmost layer only: the lightbox first, then the board
+  // behind it — so it never dumps you out of two levels at once.
+  const closeTopLayer = useCallback(() => {
+    if (activeImage) {
+      setActiveImage(null);
+      return;
+    }
+    setActiveBoardTitle(null);
+  }, [activeImage]);
 
   useEffect(() => {
-    const isOverlayOpen = Boolean(activeBoard || activeImage);
-
     document.body.classList.toggle('gallery-overlay-open', isOverlayOpen);
+    document.body.style.overflow = isOverlayOpen ? 'hidden' : '';
+
+    if (!isOverlayOpen) return undefined;
+
+    const onKeyDown = (event) => {
+      if (event.key === 'Escape') closeTopLayer();
+    };
+
+    window.addEventListener('keydown', onKeyDown);
 
     return () => {
+      window.removeEventListener('keydown', onKeyDown);
       document.body.classList.remove('gallery-overlay-open');
+      document.body.style.overflow = '';
     };
-  }, [activeBoard, activeImage]);
+  }, [isOverlayOpen, closeTopLayer]);
 
   return (
-    <main className="extra-page">
-    <section className="extra-hero">
-      <div>
-        <p className="extra-pill">Gallery</p>
-        <h1>Rehearsals, ministry moments, and stage memories.</h1>
-        <p className="extra-lead">
-          A visual archive for chorale life: concerts, practice sessions, recordings, travel, and the quiet moments in
-          between.
+    <main className="gal-page">
+      <header className="page-header shell">
+        <p className="eyebrow">Gallery</p>
+        <h1 className="display-lg gal-title">
+          Rehearsals, ministry moments,
+          <em>and stage memories.</em>
+        </h1>
+        <p className="lead">
+          A visual archive of chorale life: concerts, practice sessions, recordings, travel, and the quiet
+          moments in between.
         </p>
-      </div>
-      <div className="extra-hero-card">
-        <p className="hero-card-label">Archive</p>
-        <strong>Photos & visual moments</strong>
-        <span>Use this page as the destination for your growing image library.</span>
-      </div>
-    </section>
+      </header>
 
-    <section className="gallery-showcase">
-      <article className="gallery-phone gallery-phone-board">
-        <div className="gallery-phone-head">
-          <button type="button" className="gallery-icon-button" aria-label="Next">
-            &#8250;
-          </button>
-          <div>
-            <h2>Boards</h2>
-            <p>Gather concert memories and rehearsal highlights into clean visual collections.</p>
-          </div>
+      <section className="section shell">
+        <div className="section-head reveal">
+          <p className="eyebrow">Collections</p>
+          <h2 className="display-md">Boards</h2>
+          <p className="section-head-note">Concert memories and rehearsal highlights, grouped together.</p>
         </div>
 
-        <div className="gallery-board-list">
+        <div className="gal-boards reveal">
           {galleryBoards.map((board) => (
             <button
               type="button"
-              className="gallery-board-card"
+              className="gal-board"
               key={board.title}
               onClick={() => setActiveBoardTitle(board.title)}
             >
-              <div className="gallery-board-mosaic">
-                {board.images.map((image) => (
-                  <div key={`${board.title}-${image}`} style={{ backgroundImage: `url(${image})` }} />
+              <span className="gal-mosaic">
+                {board.images.slice(0, 4).map((image) => (
+                  <span key={`${board.title}-${image}`} style={{ backgroundImage: cssUrl(image) }} />
                 ))}
-              </div>
-              <div className="gallery-board-meta">
+              </span>
+              <span className="gal-board-meta">
                 <strong>{board.title}</strong>
-              </div>
+                <small>{board.images.length} photos</small>
+              </span>
             </button>
           ))}
         </div>
-      </article>
+      </section>
 
-      <article className="gallery-phone gallery-phone-section">
-        <div className="gallery-phone-head">
-          <button type="button" className="gallery-icon-button" aria-label="Next">
-            &#8250;
-          </button>
-          <div>
-            <h2>Concert Nights</h2>
-            <p>One board opened into a section page with related albums and selected images underneath.</p>
-          </div>
+      {activeCategory && (
+      <section className="section shell gal-browse">
+        <div className="section-head reveal">
+          <p className="eyebrow">Browse</p>
+          <h2 className="display-md">{activeCategory.featureTitle}</h2>
+          <p className="section-head-note">{activeCategory.featureText}</p>
         </div>
 
-        <div className="gallery-category-strip">
+        <div className="gal-filters reveal">
           {galleryCategories.map((category) => (
             <button
               type="button"
-              className={`gallery-category-chip${category.id === activeCategory.id ? ' is-active' : ''}`}
+              className={`gal-chip${category.id === activeCategory.id ? ' is-active' : ''}`}
               key={category.id}
               onClick={() => setActiveCategoryId(category.id)}
               aria-pressed={category.id === activeCategory.id}
             >
-              <span style={{ backgroundImage: `url(${category.image})` }} />
-              <small>{category.label}</small>
+              {category.label}
             </button>
           ))}
         </div>
 
-        <div className="gallery-section-card">
-          <div className="gallery-section-hero" style={{ backgroundImage: `url(${activeCategory.hero})` }} />
-          <div className="gallery-section-copy">
-            <strong>{activeCategory.featureTitle}</strong>
-            <p>{activeCategory.featureText}</p>
-          </div>
-          <div className="gallery-section-grid">
-            {activeCategory.images.map((image, index) => (
+        <div className="gal-grid reveal">
+          {activeCategory.images.map((image, index) => (
+            <button
+              type="button"
+              className="gal-tile"
+              key={`${image}-${index}`}
+              style={{ backgroundImage: cssUrl(image) }}
+              onClick={() => setActiveImage(image)}
+              aria-label={`Open image ${index + 1} from ${activeCategory.label}`}
+            />
+          ))}
+        </div>
+
+        <p className="gal-note">{galleryFeature.note}</p>
+      </section>
+      )}
+
+      {activeBoard ? (
+        <div className="gal-overlay" role="presentation" onClick={() => setActiveBoardTitle(null)}>
+          <div
+            className="gal-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="gal-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="gal-modal-head">
+              <div>
+                <p className="eyebrow">Board</p>
+                <h2 id="gal-modal-title" className="display-md">
+                  {activeBoard.title}
+                </h2>
+              </div>
               <button
                 type="button"
-                className="gallery-section-thumb"
-                key={`${image}-${index}`}
-                style={{ backgroundImage: `url(${image})` }}
-                onClick={() => setActiveImage(image)}
-                aria-label={`Open section image ${index + 1} from ${activeCategory.label}`}
-              />
-            ))}
-          </div>
-        </div>
-      </article>
-
-      <article className="gallery-phone gallery-phone-detail">
-        <div className="gallery-detail-top" style={{ backgroundImage: `url(${galleryFeature.image})` }}>
-          <button type="button" className="gallery-icon-button gallery-icon-overlay" aria-label="Next">
-            &#8250;
-          </button>
-          <button type="button" className="gallery-icon-button gallery-icon-overlay is-right" aria-label="Favorite">
-            &#9829;
-          </button>
-        </div>
-
-        <div className="gallery-detail-sheet">
-          <button type="button" className="gallery-cta">
-            Overview
-          </button>
-          <p className="gallery-detail-category">{galleryFeature.category}</p>
-
-          <div className="gallery-detail-facts">
-            <div>
-              <span>Captured by</span>
-              <strong>{galleryFeature.artist}</strong>
+                className="gal-close"
+                aria-label="Close board"
+                onClick={() => setActiveBoardTitle(null)}
+              >
+                <CloseOutlined />
+              </button>
             </div>
-            <div>
-              <span>Collection size</span>
-              <strong>{galleryFeature.size}</strong>
-            </div>
-            <div>
-              <span>Location</span>
-              <strong>{galleryFeature.location}</strong>
+
+            <div className="gal-modal-grid">
+              {activeBoard.images.map((image, index) => (
+                <button
+                  type="button"
+                  className="gal-tile"
+                  key={`${activeBoard.title}-${image}-${index}`}
+                  style={{ backgroundImage: cssUrl(image) }}
+                  onClick={() => setActiveImage(image)}
+                  aria-label={`Open image ${index + 1} from ${activeBoard.title}`}
+                />
+              ))}
             </div>
           </div>
-
-          <p className="gallery-detail-note">{galleryFeature.note}</p>
-
-          <div className="gallery-audio-row" aria-hidden="true">
-            <span className="gallery-audio-play" />
-            <span className="gallery-audio-bar" />
-          </div>
         </div>
-      </article>
-    </section>
+      ) : null}
 
-    {activeBoard ? (
-      <div className="gallery-modal-backdrop" role="presentation" onClick={() => setActiveBoardTitle(null)}>
-        <div
-          className="gallery-modal"
-          role="dialog"
-          aria-modal="true"
-          aria-labelledby="gallery-board-modal-title"
-          onClick={(event) => event.stopPropagation()}
-        >
-          <div className="gallery-modal-head">
-            <div>
-              <p className="extra-pill">Board</p>
-              <h2 id="gallery-board-modal-title">{activeBoard.title}</h2>
-            </div>
-            <button type="button" className="gallery-modal-close" aria-label="Close board" onClick={() => setActiveBoardTitle(null)}>
-              &times;
+      {activeImage ? (
+        <div className="gal-overlay is-lightbox" role="presentation" onClick={() => setActiveImage(null)}>
+          <div className="gal-lightbox" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
+            <button
+              type="button"
+              className="gal-close gal-close-floating"
+              aria-label="Close image"
+              onClick={() => setActiveImage(null)}
+            >
+              <CloseOutlined />
             </button>
-          </div>
-
-          <div className="gallery-modal-grid">
-            {activeBoard.images.map((image, index) => (
-              <button
-                type="button"
-                className="gallery-modal-image"
-                key={`${activeBoard.title}-${image}-${index}`}
-                onClick={() => setActiveImage(image)}
-                style={{ backgroundImage: `url(${image})` }}
-                aria-label={`Open image ${index + 1} from ${activeBoard.title}`}
-              />
-            ))}
+            <img src={activeImage} alt="" className="gal-lightbox-image" />
           </div>
         </div>
-      </div>
-    ) : null}
-
-    {activeImage ? (
-      <div className="gallery-lightbox-backdrop" role="presentation" onClick={() => setActiveImage(null)}>
-        <div className="gallery-lightbox" role="dialog" aria-modal="true" onClick={(event) => event.stopPropagation()}>
-          <button type="button" className="gallery-modal-close gallery-lightbox-close" aria-label="Close image" onClick={() => setActiveImage(null)}>
-            &times;
-          </button>
-          <img src={activeImage} alt="Gallery preview" className="gallery-lightbox-image" />
-        </div>
-      </div>
-    ) : null}
+      ) : null}
     </main>
   );
 };

@@ -1,0 +1,299 @@
+@use 'tokens';
+
+.co-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 300;
+  display: grid;
+  place-items: center;
+  padding: clamp(12px, 4vw, 40px);
+  background: rgba(11, 31, 51, 0.78);
+  backdrop-filter: blur(6px);
+  overflow-y: auto;
+}
+
+.co-modal {
+  width: min(520px, 100%);
+  background: tokens.$paper-raised;
+  border-radius: tokens.$r-lg;
+  box-shadow: tokens.$shadow-lift;
+  overflow: hidden;
+}
+
+// ---------------------------------------------------------------- head
+.co-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: clamp(20px, 3vw, 28px) clamp(20px, 3vw, 28px) 16px;
+  border-bottom: 1px solid tokens.$line;
+}
+
+.co-kicker {
+  margin: 0 0 4px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: tokens.$ink-muted;
+}
+
+.co-title {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: tokens.$ink;
+}
+
+.co-close {
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid tokens.$line-strong;
+  border-radius: tokens.$r-pill;
+  background: transparent;
+  color: tokens.$ink;
+  cursor: pointer;
+  transition: background tokens.$dur tokens.$ease, transform tokens.$dur tokens.$ease;
+
+  &:hover {
+    background: tokens.$paper-sunk;
+    transform: rotate(90deg);
+  }
+}
+
+// ---------------------------------------------------------------- steps
+.co-steps {
+  display: flex;
+  gap: 8px;
+  padding: 14px clamp(20px, 3vw, 28px) 0;
+}
+
+.co-step {
+  flex: 1;
+  padding-bottom: 8px;
+  border-bottom: 2px solid tokens.$line;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: tokens.$ink-muted;
+  text-align: center;
+  transition: color tokens.$dur tokens.$ease, border-color tokens.$dur tokens.$ease;
+
+  &.is-on {
+    color: tokens.$brass;
+    border-color: tokens.$brass-lit;
+  }
+}
+
+// ---------------------------------------------------------------- body
+.co-body {
+  display: grid;
+  gap: 16px;
+  padding: clamp(20px, 3vw, 28px);
+}
+
+.co-grid-2 {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+}
+
+.co-field {
+  display: grid;
+  gap: 6px;
+
+  > span {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: tokens.$ink-body;
+  }
+
+  input {
+    width: 100%;
+    padding: 12px 13px;
+    border: 1px solid tokens.$line-strong;
+    border-radius: tokens.$r-sm;
+    background: tokens.$paper;
+    color: tokens.$ink-body;
+    font: inherit;
+    font-size: 0.94rem;
+
+    &:focus {
+      outline: none;
+      border-color: tokens.$ink;
+      box-shadow: 0 0 0 3px rgba(23, 73, 122, 0.12);
+    }
+  }
+
+  small {
+    font-size: 0.78rem;
+    color: tokens.$ink-muted;
+  }
+}
+
+.co-phone {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding-left: 13px;
+  border: 1px solid tokens.$line-strong;
+  border-radius: tokens.$r-sm;
+  background: tokens.$paper;
+  color: tokens.$ink-muted;
+
+  &:focus-within {
+    border-color: tokens.$ink;
+    box-shadow: 0 0 0 3px rgba(23, 73, 122, 0.12);
+  }
+
+  input {
+    border: 0;
+    box-shadow: none;
+    padding-left: 0;
+
+    &:focus {
+      box-shadow: none;
+    }
+  }
+}
+
+// ---------------------------------------------------------------- totals
+.co-total,
+.co-summary > div {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 14px 16px;
+  border-radius: tokens.$r-sm;
+  background: tokens.$paper-sunk;
+
+  span {
+    font-size: 0.85rem;
+    color: tokens.$ink-body;
+  }
+
+  strong {
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: tokens.$ink;
+  }
+}
+
+.co-summary-note {
+  margin: 8px 2px 0;
+  font-size: 0.8rem;
+  color: tokens.$ink-muted;
+}
+
+.co-submit {
+  width: 100%;
+  justify-content: center;
+}
+
+.co-actions {
+  display: flex;
+  gap: 10px;
+
+  .btn {
+    flex: 1;
+    justify-content: center;
+  }
+}
+
+// ---------------------------------------------------------------- messages
+.co-error {
+  margin: 0 clamp(20px, 3vw, 28px);
+  margin-top: 16px;
+  padding: 10px 14px;
+  border-radius: tokens.$r-sm;
+  background: #fdeaea;
+  color: #a12727;
+  font-size: 0.88rem;
+}
+
+// ---------------------------------------------------------------- centred states
+.co-centre {
+  justify-items: center;
+  text-align: center;
+  padding-block: clamp(28px, 5vw, 44px);
+
+  h3 {
+    margin: 0;
+    font-size: 1.35rem;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    color: tokens.$ink;
+  }
+
+  .btn {
+    margin-top: 4px;
+  }
+}
+
+.co-centre-text {
+  max-width: 42ch;
+  color: tokens.$ink-body;
+  line-height: 1.7;
+  font-size: 0.94rem;
+}
+
+.co-spinner {
+  font-size: 40px;
+  color: tokens.$brass;
+}
+
+.co-icon {
+  font-size: 52px;
+
+  &.is-ok {
+    color: #1f9d55;
+  }
+
+  &.is-bad {
+    color: #c0392b;
+  }
+
+  // Waiting is not an error state — brass, not red, so it doesn't read as
+  // "your payment failed" when the payment is simply still in flight.
+  &.is-wait {
+    color: tokens.$brass-lit;
+  }
+}
+
+// Secondary line under the main message in a centred state.
+.co-muted {
+  color: tokens.$ink-muted;
+  font-size: 0.88rem;
+}
+
+.co-note {
+  margin: 0;
+  padding: 9px 14px;
+  border-radius: tokens.$r-sm;
+  background: tokens.$paper-sunk;
+  color: tokens.$ink-body;
+  font-size: 0.86rem;
+}
+
+// Three buttons fit on the failed screen; let them wrap rather than squash.
+.co-actions {
+  flex-wrap: wrap;
+
+  .btn {
+    min-width: 120px;
+  }
+}
+
+@media (max-width: 480px) {
+  .co-grid-2 {
+    grid-template-columns: 1fr;
+  }
+}

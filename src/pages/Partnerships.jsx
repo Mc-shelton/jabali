@@ -1,85 +1,100 @@
 import { Link } from 'react-router-dom';
-import '../styles/extra-pages.scss';
-import { partnershipsPageData } from '../data/partnerships';
+import { ArrowRightOutlined } from '@ant-design/icons';
+import '../styles/partnerships-page.scss';
+import { useContent } from '../hooks/usePublicData';
+import { cssUrl } from '../utils/assetPath';
 
-const Partnerships = () => (
-  <main className="extra-page partnerships-page">
-    <section className="partnerships-flow">
-      <section className="partnerships-hero">
-        <div
-          className="partnerships-intro"
-          style={{
-            backgroundImage: `linear-gradient(135deg, rgba(15, 25, 42, 0.94), rgba(42, 27, 14, 0.74)), url(${partnershipsPageData.backgroundImage})`,
-          }}
-        >
-          <p className="extra-pill">{partnershipsPageData.eyebrow}</p>
-          <h1>{partnershipsPageData.title}</h1>
-          <p className="extra-lead">{partnershipsPageData.lead}</p>
+const Partnerships = () => {
+  // Shadowing the old module-level name keeps the JSX below unchanged.
+  const { data: partnershipsPageData } = useContent('partnerships');
 
-          <div className="partnerships-stats" aria-label="Partnership overview">
-            {partnershipsPageData.stats.map((item) => (
-              <div className="partnerships-stat" key={item.label}>
-                <strong>{item.value}</strong>
-                <span>{item.label}</span>
-              </div>
-            ))}
-          </div>
-        </div>
+  return (
+  <main className="pt-page">
+    <section className="pt-hero">
+      <div
+        className="pt-hero-photo"
+        style={{ backgroundImage: cssUrl(partnershipsPageData.backgroundImage) }}
+        aria-hidden="true"
+      />
+      <div className="pt-hero-scrim" aria-hidden="true" />
 
-        <aside className="partnerships-highlight">
-          <p className="hero-card-label">{partnershipsPageData.highlight.label}</p>
-          <strong>{partnershipsPageData.highlight.title}</strong>
-          <span>{partnershipsPageData.highlight.text}</span>
-        </aside>
-      </section>
+      <div className="pt-hero-inner shell">
+        <p className="eyebrow on-dark">{partnershipsPageData.eyebrow}</p>
+        <h1 className="display-lg pt-title">{partnershipsPageData.title}</h1>
+        <p className="pt-lead">{partnershipsPageData.lead}</p>
 
-      <section className="partnerships-types">
+        <dl className="pt-stats" aria-label="Partnership overview">
+          {partnershipsPageData.stats.map((item) => (
+            <div key={item.label}>
+              <dt>{item.value}</dt>
+              <dd>{item.label}</dd>
+            </div>
+          ))}
+        </dl>
+      </div>
+    </section>
+
+    <section className="section shell">
+      <div className="section-head reveal">
+        <p className="eyebrow">Where We Partner</p>
+        <h2 className="display-md">Three lanes of collaboration.</h2>
+        <p className="section-head-note">
+          {partnershipsPageData.highlight.title} — {partnershipsPageData.highlight.text}
+        </p>
+      </div>
+
+      <div className="pt-types reveal">
         {partnershipsPageData.partnerTypes.map((item) => (
-          <article className="partnerships-block" key={item.title}>
-            <p className="partnerships-tag">{item.tag}</p>
-            <h2>{item.title}</h2>
-            <p>{item.copy}</p>
+          <article className="pt-type" key={item.title}>
+            <p className="eyebrow">{item.tag}</p>
+            <h3>{item.title}</h3>
+            <p className="pt-type-copy">{item.copy}</p>
           </article>
         ))}
-      </section>
+      </div>
+    </section>
 
-      <section className="partnerships-summary">
-        <article className="partnerships-block">
-          <p className="extra-pill">What We Bring</p>
-          <h2>Performance, planning, and ministry credibility.</h2>
-          <div className="partnerships-list">
-            {partnershipsPageData.strengths.map((item) => (
-              <p key={item}>{item}</p>
-            ))}
-          </div>
-        </article>
+    <section className="section shell pt-summary">
+      <article className="pt-panel reveal">
+        <p className="eyebrow">What We Bring</p>
+        <h2 className="display-md">Performance, planning, and ministry credibility.</h2>
+        <ul className="pt-list">
+          {partnershipsPageData.strengths.map((item) => (
+            <li key={item}>{item}</li>
+          ))}
+        </ul>
+      </article>
 
-        <article className="partnerships-block partnerships-block-accent">
-          <p className="extra-pill">Working Rhythm</p>
-          <h2>Simple, clear, and planned around the objective.</h2>
-          <div className="partnerships-process">
-            {partnershipsPageData.process.map((item, index) => (
-              <div className="partnerships-process-row" key={item}>
-                <span>{String(index + 1).padStart(2, '0')}</span>
-                <p>{item}</p>
-              </div>
-            ))}
-          </div>
-        </article>
-      </section>
+      <article className="pt-panel pt-panel-dark reveal">
+        <p className="eyebrow on-dark">Working Rhythm</p>
+        <h2 className="display-md">Simple, clear, and planned around the objective.</h2>
+        <ol className="pt-process">
+          {partnershipsPageData.process.map((item, index) => (
+            <li key={item}>
+              <span>{String(index + 1).padStart(2, '0')}</span>
+              <p>{item}</p>
+            </li>
+          ))}
+        </ol>
+      </article>
+    </section>
 
-      <section className="partnerships-cta-band">
-        <div className="partnerships-cta-copy">
-          <p className="extra-pill">{partnershipsPageData.inquiry.label}</p>
-          <h2>{partnershipsPageData.inquiry.title}</h2>
-          <p>{partnershipsPageData.inquiry.text}</p>
+    <section className="shell">
+      <div className="pt-cta reveal">
+        <div>
+          <p className="eyebrow">{partnershipsPageData.inquiry.label}</p>
+          <h2 className="display-md">{partnershipsPageData.inquiry.title}</h2>
+          <p className="pt-cta-copy">{partnershipsPageData.inquiry.text}</p>
         </div>
-        <Link className="partnerships-cta-link" to={partnershipsPageData.inquiry.ctaTo}>
+
+        <Link className="btn btn-primary" to={partnershipsPageData.inquiry.ctaTo}>
           {partnershipsPageData.inquiry.ctaLabel}
+          <ArrowRightOutlined />
         </Link>
-      </section>
+      </div>
     </section>
   </main>
-);
+  );
+};
 
 export default Partnerships;
