@@ -78,4 +78,22 @@ const MAIL = [
     'from_email' => 'tickets@example.com',
     'from_name'  => 'Jabali Chorale',
     'bcc'        => '',
+
+    // REQUIRED on hosts that disable mail() — most shared cPanel plans do.
+    // Check with:  php -r "echo ini_get('disable_functions');"
+    // If 'mail' appears in that list, fill this in or no confirmation is sent.
+    //
+    // Create the mailbox in cPanel → Email Accounts, then use its full address
+    // as the username. Connection Details on that page gives host and ports.
+    //   port 587 → 'secure' => 'tls'   (STARTTLS, the usual choice)
+    //   port 465 → 'secure' => 'ssl'   (implicit TLS)
+    //
+    // Leave 'host' empty to fall back to mail().
+    'smtp' => [
+        'host'   => '',                        // e.g. mail.jabalichorale.com
+        'port'   => 587,
+        'user'   => '',                        // full address, e.g. tickets@jabalichorale.com
+        'pass'   => '',
+        'secure' => 'tls',
+    ],
 ];
