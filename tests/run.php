@@ -52,7 +52,7 @@ if ($tracked) {
 }
 
 echo "\n=== suites ===\n";
-foreach (['schema_test', 'merch_test', 'log_test', 'fulfil_test', 'mailer_test'] as $suite) {
+foreach (['schema_test', 'merch_test', 'log_test', 'fulfil_test', 'mailer_test', 'qr_test'] as $suite) {
     $out = [];
     exec('php ' . escapeshellarg(__DIR__ . "/$suite.php") . ' 2>&1', $out, $code);
     $summary = trim((string) end($out));
