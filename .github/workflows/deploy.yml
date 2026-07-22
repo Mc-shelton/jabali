@@ -4,11 +4,21 @@ name: Build and deploy
 # over FTPS. A failing check blocks the deploy — nothing reaches the live site
 # unless everything passes.
 #
-# Required repository secrets (Settings → Secrets and variables → Actions):
+# Settings → Secrets and variables → Actions.
+#
+# Secrets (masked in logs — credentials only):
 #   FTP_HOST      e.g. jabalichorale.com  (or the server hostname from cPanel)
 #   FTP_USER      the FTP account username
 #   FTP_PASSWORD  that account's password
+#
+# Variables (visible in logs — deliberately NOT secrets):
 #   FTP_PATH      remote web root, e.g. /public_html
+#   SITE_URL      e.g. https://jabalichorale.com
+#
+# These two are not credentials, and making them secrets actively hurts: lftp
+# prints its target path, so a masked FTP_PATH renders every log line as
+# "***/***" — which is exactly the information you need when a deploy lands in
+# the wrong directory. Keep them as variables.
 #
 # Run it by hand from the Actions tab (workflow_dispatch) with "dry run" ticked
 # to see exactly what WOULD change before letting it write anything.
@@ -121,7 +131,7 @@ jobs:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USER }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
-          FTP_PATH: ${{ secrets.FTP_PATH }}
+          FTP_PATH: ${{ vars.FTP_PATH }}
           DRY_RUN: ${{ inputs.dry_run && '--dry-run' || '' }}
           # --delete is DELIBERATELY off by default. It is the only step here
           # that can destroy data, and the excludes are the only thing standing
@@ -158,7 +168,7 @@ jobs:
       - name: Smoke test the live site
         if: ${{ !inputs.dry_run }}
         env:
-          SITE: ${{ secrets.SITE_URL }}
+          SITE: ${{ vars.SITE_URL }}
         run: |
           set -euo pipefail
           if [ -z "${SITE:-}" ]; then
