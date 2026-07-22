@@ -25,6 +25,16 @@ Options -MultiViews
   RewriteCond %{REQUEST_URI} \.(mp3|m4a|wav|ogg|flac|mp4|webm|mov|jpe?g|png|webp|avif|gif|svg|ico|pdf|css|js|mjs|map|json|txt|xml|woff2?|ttf|eot|zip)$ [NC]
   RewriteRule ^ - [R=404,L]
 
+  # A single event or product is served through preview.php, which returns the
+  # same index.html with that item's own poster in the og: tags. Link crawlers
+  # (WhatsApp, Facebook, X, Slack) never run JavaScript, so tags set by React
+  # are never seen — the HTML has to arrive already carrying them.
+  #
+  # Only these two shapes. The listing pages (/events, /merch) and every other
+  # route stay a plain static file serve with the site-wide defaults.
+  RewriteRule ^events/[^/]+/?$ preview.php [L]
+  RewriteRule ^merch/[^/]+/?$ preview.php [L]
+
   RewriteRule ^ index.html [L]
 </IfModule>
 

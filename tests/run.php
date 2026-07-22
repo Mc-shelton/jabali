@@ -10,7 +10,14 @@ $root = dirname(__DIR__);
 $failed = [];
 
 echo "\n=== PHP lint ===\n";
-foreach (glob("$root/public/api/*.php") ?: [] as $file) {
+// public/*.php as well as public/api/*.php: preview.php sits in the web root
+// and is what every shared link is served through, so a parse error there
+// breaks every event and product page.
+$phpFiles = array_merge(
+    glob("$root/public/api/*.php") ?: [],
+    glob("$root/public/*.php") ?: [],
+);
+foreach ($phpFiles as $file) {
     $name = basename($file);
     exec('php -l ' . escapeshellarg($file) . ' 2>&1', $out, $code);
     if ($code !== 0) {
@@ -19,14 +26,14 @@ foreach (glob("$root/public/api/*.php") ?: [] as $file) {
     }
     $out = [];
 }
-echo '  ' . count(glob("$root/public/api/*.php") ?: []) . " files checked\n";
+echo '  ' . count($phpFiles) . " files checked\n";
 
 // Deprecated calls that print a notice into the response body ahead of the JSON,
 // which makes a successful request look like a network failure to the client.
 // This has bitten twice (finfo_close, curl_close) — so it is now a build error.
 echo "\n=== deprecated-call sweep ===\n";
 $banned = ['curl_close', 'finfo_close', 'strftime', 'utf8_encode', 'utf8_decode', 'each'];
-foreach (glob("$root/public/api/*.php") ?: [] as $file) {
+foreach ($phpFiles as $file) {
     $src = file_get_contents($file) ?: '';
     // Strip comments so the explanatory notes about these functions don't trip it.
     $stripped = preg_replace('!//.*$|/\*.*?\*/!ms', '', $src);

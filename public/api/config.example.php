@@ -47,6 +47,18 @@ const MEMBER_PASSWORD_HASH = '';
 // Data lives beside this file but is blocked from the web by api/data/.htaccess.
 define('DATA_DIR', __DIR__ . '/data');
 
+// The site's canonical origin, no trailing slash.
+//
+// Used by preview.php to build absolute og:image URLs for shared links — a
+// crawler has no page context to resolve a relative path against, so a
+// relative one previews with no image at all.
+//
+// Configured rather than taken from the request: the Host header comes from
+// the client, and a spoofed one would put someone else's domain into the
+// preview image URL of a link you shared. Left blank, it falls back to the
+// request host so a staging copy still works.
+const SITE_URL = 'https://jabalichorale.com';
+
 // --------------------------------------------------------------- uploads
 // Uploaded images must be web-reachable, so they go in the public web root.
 // The folder comes from the admin UI but is only ever accepted from this
