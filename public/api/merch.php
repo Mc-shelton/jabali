@@ -114,15 +114,15 @@ route([
             if ($at < 0) {
                 error_out('Product not found.', 404);
             }
-            json_out($store['products'][$at]);
+            json_out(merch_present($store['products'][$at]));
         }
 
         // Promo codes are secret — the same rule events.php applies to its own.
         // A visitor must not be able to read a discount code out of the API.
         if (!is_authenticated()) {
-            json_out(['products' => $store['products']]);
+            json_out(['products' => merch_present_all($store['products'])]);
         }
-        json_out($store);
+        json_out(['products' => merch_present_all($store['products']), 'promoCodes' => $store['promoCodes']]);
     },
 
     'POST' => function () {
@@ -146,7 +146,7 @@ route([
         merch_save($products, $store['promoCodes']);
 
         log_info('Merchandise created', ['id' => $product['id'], 'name' => $product['name']]);
-        json_out($product, 201);
+        json_out(merch_present($product), 201);
     },
 
     'PUT' => function () {
@@ -179,7 +179,7 @@ route([
         merch_save($products, $store['promoCodes']);
 
         log_info('Merchandise updated', ['id' => $product['id'], 'name' => $product['name']]);
-        json_out($product);
+        json_out(merch_present($product));
     },
 
     'DELETE' => function () {

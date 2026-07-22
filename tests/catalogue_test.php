@@ -136,6 +136,69 @@ check('flat type survives',    $clean[0]['type'], 'flat');
 check('unknown type becomes percent',
     merch_clean_promos([['code' => 'X', 'type' => 'nonsense', 'value' => 5]])[0]['type'], 'percent');
 
+echo "\n-- discounts --\n";
+// The property that matters: ONE function produces the price, and it is the
+// one both the site and the checkout use. If display and charging were ever
+// computed separately, a buyer would see one figure and be charged another.
+// merch_present() is what a client receives — the derived figures are
+// computed on read, never stored, so this is where they appear.
+$priced = fn(array $extra) => merch_present(merch_public_fields(['name' => 'Tee', 'price' => 'KES 1,000'] + $extra));
+
+$plain = $priced([]);
+check('no discount: final = original', $plain['priceFinal'], 1000);
+check('no discount: flag is false',    $plain['hasDiscount'], false);
+
+$pct = $priced(['discount' => ['enabled' => true, 'type' => 'percent', 'value' => 20]]);
+check('20% off 1000',              $pct['priceFinal'], 800);
+check('original is kept',          $pct['priceOriginal'], 1000);
+check('discount flag is true',     $pct['hasDiscount'], true);
+check('charged price matches',     merch_unit_price($pct), 800);
+
+$flat = $priced(['discount' => ['enabled' => true, 'type' => 'flat', 'value' => 250]]);
+check('KES 250 off 1000', $flat['priceFinal'], 750);
+
+// A zero-value discount is no discount. Storing it as enabled would put a
+// "0% off" badge on the site — the exact thing that must not appear.
+$zero = $priced(['discount' => ['enabled' => true, 'type' => 'percent', 'value' => 0]]);
+check('zero value is not a discount', $zero['hasDiscount'], false);
+check('zero value leaves the price',  $zero['priceFinal'], 1000);
+check('zero value stores disabled',   $zero['discount']['enabled'], false);
+
+// Nothing may price an item at or below nothing.
+$over = $priced(['discount' => ['enabled' => true, 'type' => 'flat', 'value' => 5000]]);
+check('over-large flat floors at 1', $over['priceFinal'], 1);
+$over100 = $priced(['discount' => ['enabled' => true, 'type' => 'percent', 'value' => 500]]);
+check('percent is capped at 100',    $over100['discount']['value'], 100);
+check('100% off still costs 1',      $over100['priceFinal'], 1);
+
+$neg = $priced(['discount' => ['enabled' => true, 'type' => 'percent', 'value' => -30]]);
+check('negative value is dropped',   $neg['hasDiscount'], false);
+
+// Disabled but configured: the numbers stay on record, the price does not move.
+$off = $priced(['discount' => ['enabled' => false, 'type' => 'percent', 'value' => 20]]);
+check('disabled discount is inert',  $off['priceFinal'], 1000);
+check('disabled keeps the value',    $off['discount']['value'], 20);
+
+// A product with no price at all can't be discounted into one.
+$free = merch_present(merch_public_fields(['name' => 'X', 'price' => '',
+    'discount' => ['enabled' => true, 'type' => 'percent', 'value' => 50]]));
+check('no price: no discount', $free['hasDiscount'], false);
+
+echo "\n-- discounts survive the round trip --\n";
+// A saved product must price the same after it comes back off disk, or the
+// shop and the checkout diverge the moment the page reloads.
+$saved = merch_normalise(
+    ['name' => 'Hoodie', 'price' => 'KES 2,500',
+     'discount' => ['enabled' => true, 'type' => 'percent', 'value' => 10]],
+    [],
+);
+store_write('merch', ['products' => [$saved], 'promoCodes' => []]);
+$back = merch_resolve_for_event(['merchIds' => [$saved['id']]])[0];
+check('resolved price is discounted', $back['priceFinal'], 2250);
+check('resolved keeps the original',  $back['priceOriginal'], 2500);
+check('resolved flags the discount',  $back['hasDiscount'], true);
+check('charge matches display',       merch_unit_price($back), $back['priceFinal']);
+
 echo "\n-- a bare array still reads as products --\n";
 store_write('merch', [$p1]);
 check('legacy store shape works', count(merch_load()), 1);

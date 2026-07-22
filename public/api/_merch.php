@@ -122,6 +122,66 @@ function merch_clean_options($raw): array
     return $options;
 }
 
+// Prices are stored as the admin typed them ("KES 1,200"), so every
+// calculation starts by pulling the number back out.
+function merch_price_int($price): int
+{
+    return (int) preg_replace('/[^0-9]/', '', (string) $price);
+}
+
+// A price reduction shown on the product itself, distinct from a promo code:
+// this one needs no code and is advertised on the site.
+function merch_clean_discount($raw): array
+{
+    $in = is_array($raw) ? $raw : [];
+    $value = max(0, (int) ($in['value'] ?? 0));
+    $type = ($in['type'] ?? 'percent') === 'flat' ? 'flat' : 'percent';
+
+    // A percentage over 100 would price the item below zero.
+    if ($type === 'percent') $value = min(100, $value);
+
+    return [
+        // Zero value is the same as no discount, and storing it as "enabled"
+        // would put a "0% off" badge on the site — the exact thing we don't
+        // want shown.
+        'enabled' => !empty($in['enabled']) && $value > 0,
+        'type'    => $type,
+        'value'   => $value,
+    ];
+}
+
+// THE price calculation for a product. One function, used by the checkout to
+// charge and by the API to tell the site what to display — if these were ever
+// two implementations they would drift, and the number on the page would stop
+// matching the number taken from the buyer's phone.
+//
+// Returns [original, final, hasDiscount].
+function merch_price_parts(array $product): array
+{
+    $original = merch_price_int($product['price'] ?? '');
+    $discount = merch_clean_discount($product['discount'] ?? []);
+
+    if (!$discount['enabled'] || $original < 1) {
+        return [$original, $original, false];
+    }
+
+    $final = $discount['type'] === 'percent'
+        ? (int) round($original * (1 - $discount['value'] / 100))
+        : $original - $discount['value'];
+
+    // Never free and never negative: a flat discount larger than the price
+    // would otherwise invert the charge.
+    $final = max(1, $final);
+
+    return [$original, $final, $final < $original];
+}
+
+// What a buyer pays for one unit, before options and quantity.
+function merch_unit_price(array $product): int
+{
+    return merch_price_parts($product)[1];
+}
+
 // The product fields as the public site and the checkout see them. Kept apart
 // from the record so the same shape can be produced for a legacy inline item
 // that has no id or timestamps.
@@ -138,8 +198,34 @@ function merch_public_fields(array $in): array
             'enabled' => !empty($openIn['enabled']),
             'min'     => max(1, (int) ($openIn['min'] ?? 1)),
         ],
+        'discount'    => merch_clean_discount($in['discount'] ?? []),
         'options'     => merch_clean_options($in['options'] ?? []),
     ];
+}
+
+// Adds the computed price fields a client needs.
+//
+// Derived on read, never stored. Writing them to disk would mean a product
+// saved before a pricing rule changed keeps answering with the old figure —
+// and the shop would quote a price the checkout no longer charges. The stored
+// record holds only what the admin typed; the arithmetic happens here, once,
+// on the way out.
+function merch_present(array $product): array
+{
+    [$original, $final, $hasDiscount] = merch_price_parts($product);
+
+    $product['priceOriginal'] = $original;
+    $product['priceFinal']    = $final;
+    $product['hasDiscount']   = $hasDiscount;
+    // Older records predate the field entirely.
+    $product['discount']      = merch_clean_discount($product['discount'] ?? []);
+
+    return $product;
+}
+
+function merch_present_all(array $products): array
+{
+    return array_map('merch_present', $products);
 }
 
 // True when there is nothing worth storing. An open-amount product legitimately
@@ -188,7 +274,7 @@ function merch_resolve_for_event(array $event, ?array $catalogue = null): array
         $id = (string) $id;
         if (!isset($byId[$id]) || isset($seen[$id])) continue;
         $seen[$id] = true;
-        $out[] = $byId[$id];
+        $out[] = merch_present($byId[$id]);
     }
 
     // Legacy inline products. Matched by name against what the ids already
@@ -207,7 +293,7 @@ function merch_resolve_for_event(array $event, ?array $catalogue = null): array
 
         // Given an id so the admin can tell it apart, but it is not in the
         // catalogue — 'legacy:' marks it as belonging to this event alone.
-        $out[] = $fields + ['id' => 'legacy:' . slugify($fields['name'])];
+        $out[] = merch_present($fields + ['id' => 'legacy:' . slugify($fields['name'])]);
     }
 
     return $out;

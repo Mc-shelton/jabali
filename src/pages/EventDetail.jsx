@@ -14,6 +14,7 @@ import { useEvent } from '../hooks/usePublicData';
 import { cssUrl } from '../utils/assetPath';
 import PageLoader from '../components/PageLoader';
 import TicketCheckout from '../components/TicketCheckout';
+import Price from '../components/Price';
 
 const EventDetail = () => {
   const { slug } = useParams();
@@ -201,11 +202,13 @@ const EventDetail = () => {
                   <div className="evd-merch-top">
                     <h3 className="evd-merch-name">{product.name}</h3>
                     {/* An open-amount item has no fixed price to show. */}
-                    <span className="evd-merch-price">
-                      {product.openAmount?.enabled
-                        ? `From KES ${Number(product.openAmount.min ?? 1).toLocaleString('en-KE')}`
-                        : product.price}
-                    </span>
+                    {product.openAmount?.enabled ? (
+                      <span className="evd-merch-price">
+                        From KES {Number(product.openAmount.min ?? 1).toLocaleString('en-KE')}
+                      </span>
+                    ) : (
+                      <Price product={product} className="evd-merch-price" />
+                    )}
                   </div>
                   {product.description && <p className="evd-merch-desc">{product.description}</p>}
                   {product.options?.length > 0 && (

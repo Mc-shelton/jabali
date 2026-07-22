@@ -1,0 +1,3 @@
+- add a few merch on the home page, just under the recent records
+- for a good nav, for smaller screens, move partnerships, jc community, shop to footer in that order, untill we have the mobile menu view [ideally that is when the nav ui is breaking as you move down smaller screens, before the mobile menu]
+- add descriptoins summeries, so that the description be used on the product details for products

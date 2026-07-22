@@ -96,6 +96,64 @@ function apply_promo(int $amount, string $code, array $eventCodes): array
     return [max(1, $discounted), true];
 }
 
+// Merchandise added to a ticket order at checkout, so one M-Pesa prompt covers
+// the whole basket.
+//
+// Priced exactly like the main item and under the same rule: the browser sends
+// only which product, how many, and which variant — never a price, never a
+// discount. Everything that decides the figure is read from the store here.
+//
+// Returns [lines, total, error]. Anything the buyer asked for that no longer
+// exists is dropped rather than failing the order: they are mid-payment for
+// tickets, and losing that to a t-shirt that went out of stock would be the
+// worse outcome. The confirmation lists what was actually bought.
+function resolve_addons(array $event, $sent): array
+{
+    if (!is_array($sent) || !$sent) return [[], 0, null];
+
+    $available = merch_resolve_for_event($event);
+    $byName = [];
+    foreach ($available as $product) {
+        $byName[(string) ($product['name'] ?? '')] = $product;
+    }
+
+    $lines = [];
+    $total = 0;
+
+    foreach ($sent as $row) {
+        if (!is_array($row)) continue;
+
+        $name = clean_string($row['name'] ?? '', 80);
+        $product = $byName[$name] ?? null;
+        if (!$product) continue;
+
+        // An open-amount product is a donation with a buyer-named figure; it
+        // has no place as a bolt-on line with a quantity.
+        if (!empty($product['openAmount']['enabled'])) continue;
+
+        $qty = max(1, min(20, (int) ($row['quantity'] ?? 1)));
+
+        [$chosen, $delta, $err] = resolve_options($product, $row['options'] ?? []);
+        if ($err) return [[], 0, $err];
+
+        $unit = merch_unit_price($product) + $delta;
+        if ($unit < 1) continue;
+
+        $lineTotal = $unit * $qty;
+        $total += $lineTotal;
+
+        $lines[] = [
+            'name'      => $product['name'],
+            'quantity'  => $qty,
+            'unitPrice' => $unit,
+            'amount'    => $lineTotal,
+            'options'   => $chosen,
+        ];
+    }
+
+    return [$lines, $total, null];
+}
+
 // Find the event and the purchased item (ticket package or merch product).
 //
 // Merchandise is also sold on its own pages at /merch, with no event involved.
@@ -158,6 +216,7 @@ function public_order(array $order): array
         'receipt'    => $order['receipt'] ?? null,
         'message'    => $order['resultDesc'] ?? null,
         'options'    => $order['options'] ?? [],
+        'addOns'     => $order['addOns'] ?? [],
         // How long this order has been waiting, so the checkout can word things
         // sensibly ("still waiting") instead of counting its own polls.
         'ageSeconds' => max(0, time() - strtotime($order['createdAt'] ?? 'now')),
@@ -211,10 +270,25 @@ route([
             $quantity = 1;
             $subtotal = $unit;
         } else {
-            $unit = price_to_int($item['price'] ?? '') + $optionDelta;
+            // A product's own discount is applied here, from the STORED
+            // product — the same function the API uses to tell the site what
+            // to show. If the two were computed separately, a buyer could see
+            // one price on the page and have a different one taken from their
+            // phone. Ticket packages have no such discount; theirs are promo
+            // codes, applied to the subtotal below.
+            $base = $itemType === 'merch'
+                ? merch_unit_price($item)
+                : price_to_int($item['price'] ?? '');
+
+            $unit = $base + $optionDelta;
             if ($unit < 1) error_out('This item has no price set. Please contact us.', 422);
             $subtotal = $unit * $quantity;
         }
+
+        // Merchandise the buyer added on the way to payment, so one prompt
+        // covers the lot.
+        [$addOns, $addOnTotal, $addOnErr] = resolve_addons($event, $in['addOns'] ?? []);
+        if ($addOnErr) error_out($addOnErr, 422);
 
         // Merchandise has its own codes; an event's belong to its tickets.
         // Keeping them apart means a concert discount can't come off a hoodie,
@@ -224,7 +298,11 @@ route([
             ? merch_promo_codes()
             : ($event['promoCodes'] ?? []);
 
-        [$amount] = apply_promo($subtotal, $promo, $codeList);
+        // The code discounts the item it belongs to, not the whole basket: a
+        // ticket promo shouldn't quietly take money off the shirts added
+        // alongside it. Add-ons already carry their own product discounts.
+        [$discounted] = apply_promo($subtotal, $promo, $codeList);
+        $amount = $discounted + $addOnTotal;
 
         $reference = mb_substr(preg_replace('/[^A-Za-z0-9]/', '', $event['title']) ?: 'JabaliChorale', 0, 12);
         [$ok, $res] = mpesa_stk_push($amount, $payPhone, $reference, ($itemType === 'merch' ? 'Merch ' : 'Tickets ') . $itemName);
@@ -252,6 +330,11 @@ route([
             'options'           => $chosenOptions,   // shown in admin + on the e-ticket
             'openAmount'        => $isOpenAmount,
             'quantity'          => $quantity,
+            // The main item's share, so the add-on lines and the total can
+            // always be reconciled against each other after the fact.
+            'itemAmount'        => $discounted,
+            'addOns'            => $addOns,
+            'addOnAmount'       => $addOnTotal,
             'amount'            => $amount,
             'promoCode'         => $promo,
             'customer'          => [

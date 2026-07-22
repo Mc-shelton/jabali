@@ -335,3 +335,39 @@ p {
     transform: none;
   }
 }
+
+// ---------------------------------------------------------------- price
+// A product's price, with its discount when it has one. No discount renders as
+// a plain price — the struck-through original and the badge simply aren't
+// there, rather than being present and empty.
+.price {
+  display: inline-flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.price-was {
+  color: tokens.$ink-muted;
+  font-weight: 400;
+  text-decoration-thickness: 1px;
+}
+
+.price-now {
+  font-weight: 700;
+}
+
+.price-badge {
+  padding: 3px 9px;
+  border-radius: tokens.$r-pill;
+  // Red rather than the brand brass: this is the one place on the site where
+  // "look, it's cheaper" is the whole message, and brass reads as decoration
+  // next to the price it's meant to be shouting about.
+  background: #fdeaea;
+  color: #a12727;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}

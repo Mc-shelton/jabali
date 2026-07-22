@@ -30,7 +30,7 @@ const money = (n) => `KES ${Number(n).toLocaleString('en-KE')}`;
 const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
   const isMerch = kind === 'merch';
   const qtyLabel = isMerch ? 'Quantity' : 'Number of tickets';
-  // details | payment | processing | waiting | success | failed
+  // details | extras | payment | processing | waiting | success | failed
   // `waiting` is not a failure — it's "we stopped auto-checking, press Refresh".
   const [stage, setStage] = useState('details');
   const [form, setForm] = useState({
@@ -53,6 +53,64 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
   const openAmount = item.openAmount?.enabled ? item.openAmount : null;
   const [customAmount, setCustomAmount] = useState('');
 
+  // ---- add-ons: merchandise bolted onto this order, paid in one prompt.
+  //
+  // Offered from the same event, minus the thing already being bought and
+  // minus any open-amount product (a donation has no quantity, so it makes no
+  // sense as a bolt-on line). Keyed by product name, which is what the server
+  // resolves against.
+  const addOnCatalogue = (event.merch ?? []).filter(
+    (p) => p.name !== item.name && !p.openAmount?.enabled,
+  );
+  // { [name]: { quantity, choices: { [optionName]: label } } }
+  const [addOns, setAddOns] = useState({});
+
+  const addOnQty = (name) => addOns[name]?.quantity ?? 0;
+
+  const setAddOnQty = (product, next) =>
+    setAddOns((prev) => {
+      const qty = Math.max(0, Math.min(20, next));
+      if (qty === 0) {
+        const { [product.name]: _drop, ...rest } = prev;
+        return rest;
+      }
+      return {
+        ...prev,
+        [product.name]: {
+          quantity: qty,
+          // Required variants default to their first choice, so a line can
+          // never be submitted half-specified.
+          choices:
+            prev[product.name]?.choices ??
+            Object.fromEntries(
+              (product.options ?? [])
+                .filter((o) => o.required)
+                .map((o) => [o.name, o.choices?.[0]?.label ?? '']),
+            ),
+        },
+      };
+    });
+
+  const setAddOnChoice = (name, optionName, label) =>
+    setAddOns((prev) => ({
+      ...prev,
+      [name]: { ...prev[name], choices: { ...prev[name]?.choices, [optionName]: label } },
+    }));
+
+  // Mirrors the server's arithmetic for display only — tickets.php re-derives
+  // every figure from the stored products.
+  const addOnLines = Object.entries(addOns).map(([name, line]) => {
+    const product = addOnCatalogue.find((p) => p.name === name);
+    const delta = (product?.options ?? []).reduce((sum, opt) => {
+      const picked = opt.choices?.find((c) => c.label === line.choices?.[opt.name]);
+      return sum + (picked ? Number(picked.priceDelta) || 0 : 0);
+    }, 0);
+    const unit = (product?.priceFinal ?? priceToNumber(product?.price)) + delta;
+    return { name, product, quantity: line.quantity, choices: line.choices, amount: unit * line.quantity };
+  });
+
+  const addOnTotal = addOnLines.reduce((sum, l) => sum + l.amount, 0);
+
   const [mpesaPhone, setMpesaPhone] = useState('');
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
@@ -68,9 +126,14 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
     return sum + (picked ? Number(picked.priceDelta) || 0 : 0);
   }, 0);
 
-  const unit = openAmount ? Number(customAmount) || 0 : priceToNumber(item.price) + optionDelta;
+  // `priceFinal` is the server's own figure with any product discount already
+  // applied. Falling back to parsing the label keeps ticket packages — which
+  // have no discount — working unchanged.
+  const basePrice = item.priceFinal ?? priceToNumber(item.price);
+  const unit = openAmount ? Number(customAmount) || 0 : basePrice + optionDelta;
   const qty = openAmount ? 1 : Math.max(1, Number(form.quantity) || 1);
-  const estTotal = unit * qty;
+  const itemTotal = unit * qty;
+  const estTotal = itemTotal + addOnTotal;
 
   const amountTooLow = Boolean(openAmount) && unit < (openAmount.min ?? 1);
 
@@ -159,11 +222,13 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
 
   const setField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
 
-  const goToPayment = (e) => {
+  // Details → extras → payment. The extras step is skipped entirely when there
+  // is nothing to offer, rather than showing an empty screen to click past.
+  const goToExtras = (e) => {
     e.preventDefault();
     setError('');
     setMpesaPhone((p) => p || form.phone);
-    setStage('payment');
+    setStage(addOnCatalogue.length > 0 ? 'extras' : 'payment');
   };
 
   const pay = async (e) => {
@@ -181,6 +246,15 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
           .filter((opt) => choices[opt.name])
           .map((opt) => ({ name: opt.name, choice: choices[opt.name] })),
         ...(openAmount ? { amount: unit } : {}),
+        // Which product, how many, which variant. Never a price — the server
+        // reads that from the stored product.
+        addOns: addOnLines.map((l) => ({
+          name: l.name,
+          quantity: l.quantity,
+          options: Object.entries(l.choices ?? {})
+            .filter(([, choice]) => choice)
+            .map(([name, choice]) => ({ name, choice })),
+        })),
         promoCode: form.promoCode,
         mpesaPhone,
         customer: {
@@ -207,7 +281,15 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
             <p className="co-kicker">{event.title}</p>
             <h2 className="co-title">
               {item.name}
-              {openAmount ? ' · you choose the amount' : ` · ${money(priceToNumber(item.price))}`}
+              {openAmount ? (
+                ' · you choose the amount'
+              ) : (
+                <>
+                  {' · '}
+                  {item.hasDiscount && <s className="co-was">{money(item.priceOriginal)}</s>}
+                  {money(basePrice)}
+                </>
+              )}
             </h2>
           </div>
           {stage !== 'processing' && (
@@ -220,6 +302,9 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
         {/* progress dots */}
         <div className="co-steps" aria-hidden="true">
           <span className="co-step is-on">Details</span>
+          {addOnCatalogue.length > 0 && (
+            <span className={`co-step ${stage !== 'details' ? 'is-on' : ''}`}>Extras</span>
+          )}
           <span className={`co-step ${['payment', 'processing', 'waiting', 'success', 'failed'].includes(stage) ? 'is-on' : ''}`}>Payment</span>
           <span className={`co-step ${['success', 'failed'].includes(stage) ? 'is-on' : ''}`}>Done</span>
         </div>
@@ -228,7 +313,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
 
         {/* ---------------------------------------------------------- details */}
         {stage === 'details' && (
-          <form className="co-body" onSubmit={goToPayment}>
+          <form className="co-body" onSubmit={goToExtras}>
             <div className="co-grid-2">
               <label className="co-field">
                 <span>Preferred name *</span>
@@ -322,6 +407,116 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
           </form>
         )}
 
+        {/* ---------------------------------------------------------- extras */}
+        {stage === 'extras' && (
+          <div className="co-body">
+            <div className="co-extras-head">
+              <h3>Add merchandise?</h3>
+              <p>Anything you add is paid for in the same M-Pesa prompt — one payment, one order.</p>
+            </div>
+
+            <div className="co-extras">
+              {addOnCatalogue.map((product) => {
+                const qty = addOnQty(product.name);
+                const chosen = addOns[product.name]?.choices ?? {};
+
+                return (
+                  <div className={`co-extra ${qty > 0 ? 'is-on' : ''}`} key={product.name}>
+                    <div
+                      className="co-extra-photo"
+                      style={product.image ? { backgroundImage: `url("${product.image}")` } : undefined}
+                      aria-hidden="true"
+                    />
+
+                    <div className="co-extra-main">
+                      <strong>{product.name}</strong>
+                      <span className="co-extra-price">
+                        {product.hasDiscount && (
+                          <s>{money(product.priceOriginal)}</s>
+                        )}
+                        {money(product.priceFinal ?? priceToNumber(product.price))}
+                      </span>
+
+                      {/* Variant pickers appear only once the item is in the
+                          basket — asking for a size before you've said you want
+                          one is noise. */}
+                      {qty > 0 &&
+                        (product.options ?? []).map((opt) => (
+                          <label className="co-extra-option" key={opt.name}>
+                            <span>{opt.name}</span>
+                            <select
+                              value={chosen[opt.name] ?? ''}
+                              onChange={(e) => setAddOnChoice(product.name, opt.name, e.target.value)}
+                            >
+                              {!opt.required && <option value="">No preference</option>}
+                              {opt.choices?.map((c) => (
+                                <option key={c.label} value={c.label}>
+                                  {c.label}
+                                  {c.priceDelta ? ` (+${money(c.priceDelta)})` : ''}
+                                </option>
+                              ))}
+                            </select>
+                          </label>
+                        ))}
+                    </div>
+
+                    <div className="co-extra-qty">
+                      <button
+                        type="button"
+                        onClick={() => setAddOnQty(product, qty - 1)}
+                        disabled={qty === 0}
+                        aria-label={`Remove one ${product.name}`}
+                      >
+                        −
+                      </button>
+                      <span aria-live="polite">{qty}</span>
+                      <button
+                        type="button"
+                        onClick={() => setAddOnQty(product, qty + 1)}
+                        aria-label={`Add one ${product.name}`}
+                      >
+                        +
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="co-summary">
+              <div>
+                <span>
+                  {item.name}
+                  {!openAmount && ` × ${qty}`}
+                </span>
+                <strong>{money(itemTotal)}</strong>
+              </div>
+              {addOnTotal > 0 && (
+                <div>
+                  <span>Merchandise</span>
+                  <strong>{money(addOnTotal)}</strong>
+                </div>
+              )}
+            </div>
+
+            <div className="co-total">
+              <span>Total</span>
+              <strong>{money(estTotal)}</strong>
+            </div>
+
+            <div className="co-actions">
+              <button type="button" className="btn btn-ghost" onClick={() => setStage('details')}>
+                <ArrowLeftOutlined />
+                Back
+              </button>
+              <button type="button" className="btn btn-primary" onClick={() => setStage('payment')}>
+                {addOnTotal > 0 ? 'Continue' : 'No thanks, continue'}
+                <ArrowRightOutlined />
+              </button>
+            </div>
+          </div>
+        )}
+
         {/* ---------------------------------------------------------- payment */}
         {stage === 'payment' && (
           <form className="co-body" onSubmit={pay}>
@@ -331,7 +526,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
                   {item.name}
                   {!openAmount && ` × ${qty}`}
                 </span>
-                <strong>{money(estTotal)}</strong>
+                <strong>{money(itemTotal)}</strong>
               </div>
               {/* Repeat the chosen variant so it's confirmed before paying. */}
               {itemOptions.some((opt) => choices[opt.name]) && (
@@ -342,6 +537,28 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
                     .join(' · ')}
                 </p>
               )}
+
+              {/* Every add-on line, itemised. The buyer is about to approve a
+                  single figure on their phone and should be able to see
+                  exactly what it is made of before they do. */}
+              {addOnLines.map((line) => (
+                <div key={line.name}>
+                  <span>
+                    {line.name} × {line.quantity}
+                    {Object.values(line.choices ?? {}).filter(Boolean).length > 0 &&
+                      ` (${Object.values(line.choices).filter(Boolean).join(' · ')})`}
+                  </span>
+                  <strong>{money(line.amount)}</strong>
+                </div>
+              ))}
+
+              {addOnTotal > 0 && (
+                <div className="co-summary-total">
+                  <span>Total</span>
+                  <strong>{money(estTotal)}</strong>
+                </div>
+              )}
+
               <p className="co-summary-note">You’ll approve the exact amount on your phone.</p>
             </div>
 
@@ -362,7 +579,11 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
             </label>
 
             <div className="co-actions">
-              <button type="button" className="btn btn-ghost" onClick={() => setStage('details')}>
+              <button
+                type="button"
+                className="btn btn-ghost"
+                onClick={() => setStage(addOnCatalogue.length > 0 ? 'extras' : 'details')}
+              >
                 <ArrowLeftOutlined />
                 Back
               </button>

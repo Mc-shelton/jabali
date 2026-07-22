@@ -3,12 +3,10 @@ import { ArrowRightOutlined } from '@ant-design/icons';
 import '../styles/merch.scss';
 import { useMerch } from '../hooks/usePublicData';
 import PageLoader from '../components/PageLoader';
+import Price from '../components/Price';
 
 // The shop. Mirrors the Events page: a grid of cards, each opening its own
 // detail page, where the actual buying happens.
-const money = (product) =>
-  product.openAmount?.enabled ? 'You choose the amount' : product.price;
-
 const Merch = () => {
   const { products, loading } = useMerch();
 
@@ -53,7 +51,7 @@ const Merch = () => {
                   />
                   <span className="mr-card-body">
                     <strong className="mr-card-name">{product.name}</strong>
-                    <span className="mr-card-price">{money(product)}</span>
+                    <Price product={product} className="mr-card-price" />
                     {product.options?.length > 0 && (
                       <small className="mr-card-meta">
                         {product.options.map((o) => o.name).join(' · ')} available

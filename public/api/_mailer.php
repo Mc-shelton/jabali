@@ -25,6 +25,24 @@ function order_email_html(array $order): string
         ? "<tr><td style=\"padding:8px 0;color:#5a6875\">Options</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">"
           . htmlspecialchars(implode(' · ', $optionBits)) . "</td></tr>"
         : '';
+
+    // Merchandise added to the same order at checkout. Itemised rather than
+    // folded into the total: the buyer approved one figure on their phone and
+    // needs to be able to see what made it up.
+    $addOnRows = '';
+    foreach ((array) ($order['addOns'] ?? []) as $line) {
+        $lineOpts = [];
+        foreach ((array) ($line['options'] ?? []) as $opt) {
+            $lineOpts[] = ($opt['name'] ?? '') . ': ' . ($opt['choice'] ?? '');
+        }
+        $label = ($line['quantity'] ?? 1) . ' × ' . ($line['name'] ?? '');
+        if ($lineOpts) $label .= ' (' . implode(' · ', $lineOpts) . ')';
+
+        $addOnRows .= "<tr><td style=\"padding:8px 0;color:#5a6875\">Also added</td>"
+            . "<td style=\"padding:8px 0;text-align:right;font-weight:600\">"
+            . htmlspecialchars($label) . ' — KES ' . number_format((int) ($line['amount'] ?? 0))
+            . "</td></tr>";
+    }
     $receipt = htmlspecialchars($order['receipt'] ?? '');
     $code = htmlspecialchars($order['ticketCode'] ?? '');
 
@@ -45,6 +63,7 @@ function order_email_html(array $order): string
         <tr><td style=\"padding:8px 0;color:#5a6875\">Event</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">$event</td></tr>
         <tr><td style=\"padding:8px 0;color:#5a6875\">Order</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">$item</td></tr>
         $optionsRow
+        $addOnRows
         <tr><td style=\"padding:8px 0;color:#5a6875\">Amount paid</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">$amount</td></tr>
         " . ($receipt ? "<tr><td style=\"padding:8px 0;color:#5a6875\">M-Pesa receipt</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">$receipt</td></tr>" : '') . "
       </table>

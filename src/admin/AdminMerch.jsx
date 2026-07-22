@@ -29,8 +29,27 @@ const blankProduct = () => ({
   description: '',
   image: '',
   openAmount: { enabled: false, min: 50 },
+  discount: { enabled: false, type: 'percent', value: 10 },
   options: [],
 });
+
+// Mirrors merch_price_parts() in _merch.php, for the admin preview only. The
+// server recomputes it; this exists so the admin can see the result before
+// saving rather than after.
+const priceToInt = (price) => Number(String(price ?? '').replace(/[^0-9]/g, '')) || 0;
+
+const previewPrice = (draft) => {
+  const original = priceToInt(draft.price);
+  const d = draft.discount ?? {};
+  if (!d.enabled || !d.value || original < 1) return null;
+  const final =
+    d.type === 'percent'
+      ? Math.round(original * (1 - Math.min(100, d.value) / 100))
+      : original - d.value;
+  return { original, final: Math.max(1, final) };
+};
+
+const money = (n) => `KES ${Number(n).toLocaleString('en-KE')}`;
 
 const AdminMerch = () => {
   const [products, setProducts] = useState([]);
@@ -79,6 +98,9 @@ const AdminMerch = () => {
 
   const setOpenAmount = (key, value) =>
     setDraft((d) => ({ ...d, openAmount: { ...(d.openAmount ?? {}), [key]: value } }));
+
+  const setDiscount = (key, value) =>
+    setDraft((d) => ({ ...d, discount: { ...(d.discount ?? {}), [key]: value } }));
 
   // ---- variant pickers (Size → S/M/L, each with an optional price delta)
   const mapOptions = (fn) => setDraft((d) => ({ ...d, options: fn(d.options ?? []) }));
@@ -270,6 +292,58 @@ const AdminMerch = () => {
                     />
                     <small>Quantity is hidden for these — the amount is the total.</small>
                   </label>
+                )}
+
+                {/* Discount — shown on the site, no code needed. Hidden for
+                    open-amount products, where the buyer sets the figure and
+                    there is no price to reduce. */}
+                {!draft.openAmount?.enabled && (
+                  <div className="admin-discount">
+                    <label className="admin-check">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(draft.discount?.enabled)}
+                        onChange={(e) => setDiscount('enabled', e.target.checked)}
+                      />
+                      <span>Put this on discount</span>
+                    </label>
+
+                    {draft.discount?.enabled && (
+                      <>
+                        <div className="admin-promo">
+                          <select
+                            value={draft.discount?.type ?? 'percent'}
+                            onChange={(e) => setDiscount('type', e.target.value)}
+                          >
+                            <option value="percent">% off</option>
+                            <option value="flat">KES off</option>
+                          </select>
+                          <input
+                            type="number"
+                            min="1"
+                            max={draft.discount?.type === 'percent' ? 100 : undefined}
+                            value={draft.discount?.value ?? 0}
+                            onChange={(e) => setDiscount('value', Number(e.target.value) || 0)}
+                          />
+                        </div>
+
+                        {(() => {
+                          const p = previewPrice(draft);
+                          return p ? (
+                            <p className="admin-hint">
+                              Shown on the site as <s>{money(p.original)}</s>{' '}
+                              <strong>{money(p.final)}</strong>. This is also what buyers are
+                              charged.
+                            </p>
+                          ) : (
+                            <p className="admin-hint">
+                              Set a price above and a discount value to see the result.
+                            </p>
+                          );
+                        })()}
+                      </>
+                    )}
+                  </div>
                 )}
 
                 <div className="admin-options">

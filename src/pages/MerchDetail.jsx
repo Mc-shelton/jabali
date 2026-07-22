@@ -5,6 +5,7 @@ import '../styles/merch.scss';
 import { useMerch, useMerchProduct } from '../hooks/usePublicData';
 import TicketCheckout from '../components/TicketCheckout';
 import PageLoader from '../components/PageLoader';
+import Price from '../components/Price';
 import NotFound from './NotFound';
 
 // A product's own page — the merch equivalent of the event detail page. Buying
@@ -57,9 +58,7 @@ const MerchDetail = () => {
         <div className="mr-detail-body">
           <p className="eyebrow">Merchandise</p>
           <h1 className="display-md">{product.name}</h1>
-          <p className="mr-detail-price">
-            {isOpen ? 'You choose the amount' : product.price}
-          </p>
+          <Price product={product} className="mr-detail-price" />
 
           {product.description && <p className="mr-detail-copy">{product.description}</p>}
 
@@ -108,9 +107,7 @@ const MerchDetail = () => {
                   />
                   <span className="mr-card-body">
                     <strong className="mr-card-name">{item.name}</strong>
-                    <span className="mr-card-price">
-                      {item.openAmount?.enabled ? 'You choose the amount' : item.price}
-                    </span>
+                    <Price product={item} className="mr-card-price" showBadge={false} />
                   </span>
                   <span className="mr-card-cta">
                     View

@@ -413,3 +413,155 @@
     padding-block: 20px;
   }
 }
+
+// ---------------------------------------------------------------- extras
+// The "add merchandise" step, between details and payment.
+.co-extras-head {
+  display: grid;
+  gap: 4px;
+
+  h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: tokens.$ink;
+  }
+
+  p {
+    color: tokens.$ink-muted;
+    font-size: 0.86rem;
+    line-height: 1.55;
+  }
+}
+
+.co-extras {
+  display: grid;
+  gap: 10px;
+  // Long lists scroll inside the step rather than pushing the total and the
+  // Continue button out of reach.
+  max-height: 46dvh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+.co-extra {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px;
+  border: 1px solid tokens.$line;
+  border-radius: tokens.$r-sm;
+  background: tokens.$paper;
+  transition: border-color tokens.$dur tokens.$ease, background tokens.$dur tokens.$ease;
+
+  &.is-on {
+    border-color: tokens.$ink;
+    background: rgba(23, 73, 122, 0.04);
+  }
+}
+
+.co-extra-photo {
+  width: 52px;
+  height: 52px;
+  border-radius: tokens.$r-xs;
+  background-color: tokens.$paper-sunk;
+  background-size: cover;
+  background-position: center;
+}
+
+.co-extra-main {
+  display: grid;
+  gap: 4px;
+  min-width: 0;
+
+  strong {
+    color: tokens.$ink;
+    font-size: 0.92rem;
+  }
+}
+
+.co-extra-price {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  color: tokens.$brass;
+  font-size: 0.86rem;
+  font-weight: 600;
+
+  s {
+    color: tokens.$ink-muted;
+    font-weight: 400;
+  }
+}
+
+.co-extra-option {
+  display: grid;
+  gap: 3px;
+  margin-top: 4px;
+
+  > span {
+    font-size: 0.72rem;
+    font-weight: 600;
+    color: tokens.$ink-muted;
+  }
+
+  select {
+    padding: 7px 9px;
+    border: 1px solid tokens.$line-strong;
+    border-radius: tokens.$r-xs;
+    background: #fff;
+    font: inherit;
+    font-size: 16px; // no zoom-on-focus in mobile Safari
+  }
+}
+
+// Stepper. Deliberately large targets: this is the one control on the screen
+// people tap repeatedly, often one-handed.
+.co-extra-qty {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+
+  button {
+    width: 34px;
+    height: 34px;
+    border: 1px solid tokens.$line-strong;
+    border-radius: tokens.$r-sm;
+    background: #fff;
+    color: tokens.$ink;
+    font-size: 1.1rem;
+    line-height: 1;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.4;
+      cursor: default;
+    }
+
+    &:not(:disabled):hover {
+      border-color: tokens.$ink;
+    }
+  }
+
+  span {
+    min-width: 26px;
+    text-align: center;
+    font-weight: 700;
+    color: tokens.$ink;
+  }
+}
+
+// The struck-through original price beside a discounted one.
+.co-was {
+  margin-right: 7px;
+  color: tokens.$ink-muted;
+  font-weight: 400;
+}
+
+// A running total inside the summary block gets a rule above it, so it reads
+// as the sum of the lines rather than another line.
+.co-summary-total {
+  margin-top: 4px;
+  padding-top: 12px;
+  border-top: 1px solid tokens.$line-strong;
+}
