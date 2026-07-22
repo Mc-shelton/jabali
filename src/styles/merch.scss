@@ -1,0 +1,244 @@
+@use 'tokens';
+
+// The shop: a listing page and a product page, built to sit beside the events
+// pages rather than look like a different site.
+
+.mr-page {
+  background: tokens.$paper;
+}
+
+// ---------------------------------------------------------------- grid
+.mr-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: clamp(16px, 2.4vw, 28px);
+}
+
+.mr-card {
+  border: 1px solid tokens.$line;
+  border-radius: tokens.$r-md;
+  background: tokens.$paper-raised;
+  overflow: hidden;
+  transition: border-color tokens.$dur tokens.$ease, transform tokens.$dur tokens.$ease,
+    box-shadow tokens.$dur tokens.$ease;
+
+  &:hover {
+    transform: translateY(-4px);
+    border-color: tokens.$ink;
+    box-shadow: tokens.$shadow-soft;
+  }
+}
+
+.mr-card-link {
+  display: grid;
+  // Photo, body, then the CTA pinned to the bottom, so cards with a longer name
+  // still line their buttons up across the row.
+  grid-template-rows: auto 1fr auto;
+  height: 100%;
+  text-decoration: none;
+
+  &:focus-visible {
+    outline: 2px solid tokens.$brass-lit;
+    outline-offset: -2px;
+  }
+}
+
+.mr-card-photo {
+  display: block;
+  aspect-ratio: 1 / 1;
+  background-color: tokens.$paper-sunk;
+  background-size: cover;
+  background-position: center;
+}
+
+.mr-card-body {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 16px 18px 8px;
+}
+
+.mr-card-name {
+  color: tokens.$ink;
+  font-size: 1rem;
+  letter-spacing: -0.01em;
+}
+
+.mr-card-price {
+  color: tokens.$brass;
+  font-size: 0.94rem;
+  font-weight: 600;
+}
+
+.mr-card-meta {
+  color: tokens.$ink-muted;
+  font-size: 0.78rem;
+}
+
+.mr-card-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 18px 18px;
+  color: tokens.$ink;
+  font-size: 0.86rem;
+  font-weight: 600;
+
+  svg {
+    width: 14px;
+    height: 14px;
+    transition: transform tokens.$dur tokens.$ease;
+  }
+}
+
+.mr-card:hover .mr-card-cta svg {
+  transform: translateX(3px);
+}
+
+.mr-empty {
+  display: grid;
+  justify-items: start;
+  gap: 18px;
+  padding: clamp(32px, 5vw, 56px);
+  border: 1px dashed tokens.$line-strong;
+  border-radius: tokens.$r-lg;
+  color: tokens.$ink-muted;
+}
+
+// ---------------------------------------------------------------- detail
+.mr-back {
+  padding-top: clamp(20px, 3vw, 32px);
+}
+
+.mr-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: tokens.$ink-muted;
+  font-size: 0.88rem;
+  font-weight: 600;
+  text-decoration: none;
+
+  &:hover {
+    color: tokens.$ink;
+  }
+}
+
+.mr-detail {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: clamp(28px, 5vw, 64px);
+  align-items: start;
+  padding-top: clamp(24px, 3vw, 40px);
+}
+
+.mr-detail-photo {
+  aspect-ratio: 1 / 1;
+  border-radius: tokens.$r-lg;
+  background-color: tokens.$paper-sunk;
+  background-size: cover;
+  background-position: center;
+}
+
+.mr-detail-body {
+  display: grid;
+  justify-items: start;
+  gap: 16px;
+}
+
+.mr-detail-price {
+  color: tokens.$brass;
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.mr-detail-copy {
+  max-width: 52ch;
+  color: tokens.$ink-body;
+  line-height: 1.75;
+}
+
+.mr-detail-options {
+  display: grid;
+  gap: 12px;
+  width: 100%;
+  margin: 0;
+  padding: 18px 20px;
+  border-radius: tokens.$r-md;
+  background: tokens.$paper-sunk;
+
+  div {
+    display: grid;
+    gap: 3px;
+  }
+
+  dt {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: tokens.$ink-muted;
+  }
+
+  dd {
+    margin: 0;
+    color: tokens.$ink-body;
+    font-size: 0.94rem;
+    font-weight: 600;
+  }
+}
+
+.mr-buy {
+  margin-top: 4px;
+}
+
+.mr-detail-note {
+  max-width: 46ch;
+  color: tokens.$ink-muted;
+  font-size: 0.84rem;
+  line-height: 1.6;
+}
+
+.mr-more {
+  border-top: 1px solid tokens.$line;
+}
+
+// ---------------------------------------------------------------- responsive
+@media (max-width: 860px) {
+  .mr-detail {
+    grid-template-columns: 1fr;
+  }
+
+  // Capped so the photo doesn't take a whole phone screen before the price and
+  // the buy button come into view.
+  .mr-detail-photo {
+    max-height: 60vh;
+    aspect-ratio: 4 / 3;
+  }
+}
+
+@media (max-width: 560px) {
+  .mr-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 12px;
+  }
+
+  .mr-card-body {
+    padding: 12px 13px 6px;
+  }
+
+  .mr-card-name {
+    font-size: 0.92rem;
+  }
+
+  .mr-card-cta {
+    padding: 8px 13px 14px;
+    font-size: 0.8rem;
+  }
+
+  .mr-buy {
+    width: 100%;
+    justify-content: center;
+  }
+}

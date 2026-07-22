@@ -11,6 +11,43 @@
     <meta name="theme-color" content="#0E1B2A" />
     <link rel="icon" type="image/png" href="/graphics/jc_logo_nopg.png" />
 
+    <!-- Link previews (WhatsApp, Facebook, X, LinkedIn, iMessage, Slack).
+         Without these, every shared link fell back to the favicon — the tiny
+         logo, letterboxed in grey.
+
+         og:image MUST be an absolute URL. Crawlers fetch it out of band, with
+         no page context to resolve a relative path against, so "/images/..."
+         silently yields no image at all.
+
+         These are static, so every link previews the same way whatever route
+         it points at. That is deliberate: crawlers do not run JavaScript, so a
+         per-page image would have to be rendered server-side rather than set
+         by React — by which point the crawler has already read this file. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:site_name" content="Jabali Chorale" />
+    <meta property="og:title" content="Jabali Chorale — Gospel in Song" />
+    <meta
+      property="og:description"
+      content="A gospel chorale committed to bringing Jesus, the transforming power of the gospel, to the life of every soul. Listen to our music, meet the chorale, and join us."
+    />
+    <meta property="og:url" content="https://jabalichorale.com/" />
+    <meta property="og:image" content="https://jabalichorale.com/images/jc_splash.jpeg" />
+    <meta property="og:image:secure_url" content="https://jabalichorale.com/images/jc_splash.jpeg" />
+    <meta property="og:image:type" content="image/jpeg" />
+    <meta property="og:image:width" content="1500" />
+    <meta property="og:image:height" content="1000" />
+    <meta property="og:image:alt" content="Jabali Chorale" />
+    <meta property="og:locale" content="en_KE" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="Jabali Chorale — Gospel in Song" />
+    <meta
+      name="twitter:description"
+      content="A gospel chorale committed to bringing Jesus, the transforming power of the gospel, to the life of every soul."
+    />
+    <meta name="twitter:image" content="https://jabalichorale.com/images/jc_splash.jpeg" />
+    <meta name="twitter:image:alt" content="Jabali Chorale" />
+
     <!-- Type per the Brand Book: Siwa is Canva-licensed and unavailable as a
          webfont, so its approved alternatives apply — Cormorant Garamond
          (display) and Montserrat (the book's named body type). -->

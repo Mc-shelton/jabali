@@ -21,6 +21,7 @@ const navItems = [
   { to: '/join', label: 'Join' },
   { to: '/partnerships', label: 'Partnerships' },
   { to: '/community', label: 'JC Community' },
+  { to: '/merch', label: 'Shop' },
   { to: '/contact', label: 'Contact' },
   // The anniversary campaign — flagged so it reads as a feature, not a section.
   { to: '/jabali-at-5', label: 'Jabali @5', feature: true }

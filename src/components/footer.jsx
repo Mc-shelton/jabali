@@ -25,6 +25,7 @@ const navGroups = [
       { to: '/music', label: 'Music' },
       { to: '/events', label: 'Events' },
       { to: '/gallery', label: 'Gallery' },
+      { to: '/merch', label: 'Shop' },
     ],
   },
   {

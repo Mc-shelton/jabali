@@ -9,6 +9,7 @@ require __DIR__ . '/_bootstrap.php';
 require __DIR__ . '/_mpesa.php';
 require __DIR__ . '/_fulfil.php';
 require __DIR__ . '/_orders.php';
+require __DIR__ . '/_merch.php';
 
 const STORE = 'orders';
 
@@ -96,8 +97,30 @@ function apply_promo(int $amount, string $code, array $eventCodes): array
 }
 
 // Find the event and the purchased item (ticket package or merch product).
+//
+// Merchandise is also sold on its own pages at /merch, with no event involved.
+// That case is resolved straight from the catalogue and given a stand-in
+// "event" so the order record, the confirmation email and the admin list all
+// keep the single shape they already have. Crucially the ITEM still comes from
+// the store, so pricing is derived exactly as it is for an event sale — a
+// request cannot name its own price here either.
 function find_event_and_item(string $slug, string $type, string $name): array
 {
+    if ($type === 'merch' && $slug === '') {
+        foreach (merch_load() as $product) {
+            if (($product['name'] ?? '') === $name) {
+                return [[
+                    'slug'   => '',
+                    'title'  => 'Jabali Chorale Merchandise',
+                    'date'   => '',
+                    'venue'  => '',
+                    'status' => 'upcoming',
+                ], $product, null];
+            }
+        }
+        return [null, null, 'That item is no longer available.'];
+    }
+
     foreach (store_read('events', []) as $e) {
         if (($e['slug'] ?? '') !== $slug) continue;
 
@@ -106,7 +129,13 @@ function find_event_and_item(string $slug, string $type, string $name): array
             return [null, null, 'This event has already passed.'];
         }
 
-        $list = $type === 'merch' ? ($e['merch'] ?? []) : ($e['packages'] ?? []);
+        // Resolved, not read raw: an event stores merchandise as catalogue ids,
+        // so $e['merch'] holds only the legacy inline items. Reading it
+        // directly would price catalogue products as "no longer available" and
+        // fail every merch purchase.
+        $list = $type === 'merch'
+            ? merch_resolve_for_event($e)
+            : ($e['packages'] ?? []);
         foreach ($list as $item) {
             if (($item['name'] ?? '') === $name) return [$e, $item, null];
         }
@@ -187,7 +216,15 @@ route([
             $subtotal = $unit * $quantity;
         }
 
-        [$amount] = apply_promo($subtotal, $promo, $event['promoCodes'] ?? []);
+        // Merchandise has its own codes; an event's belong to its tickets.
+        // Keeping them apart means a concert discount can't come off a hoodie,
+        // and a merch discount can't be spent on a ticket. Config's site-wide
+        // PROMO_CODES still backs both (see apply_promo).
+        $codeList = $itemType === 'merch'
+            ? merch_promo_codes()
+            : ($event['promoCodes'] ?? []);
+
+        [$amount] = apply_promo($subtotal, $promo, $codeList);
 
         $reference = mb_substr(preg_replace('/[^A-Za-z0-9]/', '', $event['title']) ?: 'JabaliChorale', 0, 12);
         [$ok, $res] = mpesa_stk_push($amount, $payPhone, $reference, ($itemType === 'merch' ? 'Merch ' : 'Tickets ') . $itemName);

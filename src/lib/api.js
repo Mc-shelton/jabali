@@ -130,6 +130,22 @@ export async function login(password, username) {
   return data;
 }
 
+// ---------------------------------------------------------------- merchandise
+// Products live once in the catalogue; events reference them by id.
+export const fetchMerch = () => request('merch.php');
+export const fetchMerchProduct = (id) => request(`merch.php?id=${encodeURIComponent(id)}`);
+export const createMerchProduct = (data) => request('merch.php', { method: 'POST', body: data });
+export const updateMerchProduct = (id, data) =>
+  request(`merch.php?id=${encodeURIComponent(id)}`, { method: 'PUT', body: data });
+export const deleteMerchProduct = (id) =>
+  request(`merch.php?id=${encodeURIComponent(id)}`, { method: 'DELETE' });
+export const saveMerchPromos = (promoCodes) =>
+  request('merch.php?promos=1', { method: 'PUT', body: { promoCodes } });
+
+// One-time: lifts products still defined inside events into the catalogue.
+export const importMerchFromEvents = () =>
+  request('merch.php?import=1', { method: 'POST' });
+
 // ---------------------------------------------------------------- settings
 export const adminFetchSettings = () => request('settings.php');
 export const saveSettings = (data) => request('settings.php', { method: 'PUT', body: data });

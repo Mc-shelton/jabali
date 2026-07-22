@@ -8,12 +8,15 @@ import AdminJabali5 from './admin/AdminJabali5';
 import AdminOrders from './admin/AdminOrders';
 import AdminContent from './admin/AdminContent';
 import AdminAccess from './admin/AdminAccess';
+import AdminMerch from './admin/AdminMerch';
 import AdminLogs from './admin/AdminLogs';
 import AdminScan from './admin/AdminScan';
 import Home from './pages/Home';
 import About from './pages/About';
 import Music from './pages/Music';
 import Events from './pages/Events';
+import Merch from './pages/Merch';
+import MerchDetail from './pages/MerchDetail';
 import EventDetail from './pages/EventDetail';
 import Jabali5 from './pages/Jabali5';
 import Contact from './pages/Contact';
@@ -34,6 +37,8 @@ const router = createBrowserRouter([
       { path: 'music', element: <Music /> },
       { path: 'events', element: <Events /> },
       { path: 'events/:slug', element: <EventDetail /> },
+      { path: 'merch', element: <Merch /> },
+      { path: 'merch/:id', element: <MerchDetail /> },
       { path: 'jabali-at-5', element: <Jabali5 /> },
       { path: 'join', element: <Join /> },
       { path: 'partnerships', element: <Partnerships /> },
@@ -59,6 +64,7 @@ const router = createBrowserRouter([
       // route of their own.
       { path: 'content', element: <AdminContent /> },
       { path: 'content/:section', element: <AdminContent /> },
+      { path: 'merch', element: <AdminMerch /> },
       { path: 'access', element: <AdminAccess /> },
       { path: 'logs', element: <AdminLogs /> }
     ]

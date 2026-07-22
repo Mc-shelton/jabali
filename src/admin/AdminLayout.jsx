@@ -9,6 +9,7 @@ import {
   EditOutlined,
   FileTextOutlined,
   TeamOutlined,
+  SkinOutlined,
 } from '@ant-design/icons';
 
 const AdminLayout = ({ onLogout, children }) => (
@@ -22,6 +23,9 @@ const AdminLayout = ({ onLogout, children }) => (
       <nav className="admin-nav">
         <NavLink to="/admin/events" className="admin-nav-link">
           <CalendarOutlined /> Events
+        </NavLink>
+        <NavLink to="/admin/merch" className="admin-nav-link">
+          <SkinOutlined /> Merchandise
         </NavLink>
         <NavLink to="/admin/orders" className="admin-nav-link">
           <ShoppingOutlined /> Orders

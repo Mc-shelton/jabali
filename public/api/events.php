@@ -7,11 +7,21 @@
 //   DELETE events.php?slug=...      → delete                            (admin)
 require __DIR__ . '/_bootstrap.php';
 
+require __DIR__ . '/_merch.php';
+
 const STORE = 'events';
 
 function enrich(array $event): array
 {
     $event['ticketed'] = !empty($event['packages']);
+
+    // Products live in the catalogue now, and the event holds their ids. They
+    // are resolved back into a full `merch` array here so everything
+    // downstream — the event page, the checkout, and the pricing in
+    // tickets.php — sees exactly the shape it saw when merch was inline.
+    // `merchIds` is kept alongside it for the admin form to bind to.
+    $event['merch'] = merch_resolve_for_event($event);
+
     // Promo codes are secret — only admins get them (see present()).
     if (!is_authenticated()) {
         unset($event['promoCodes']);
@@ -88,77 +98,33 @@ function normalise_event(array $in, array $events, ?array $existing = null): arr
         ];
     }
 
-    // merch: [{ name, price, description, image, openAmount, options }]
-    //
-    // options let a buyer pick a variant (Size: S/M/L). Each choice may carry a
-    // price delta, applied server-side at checkout — the browser never gets to
-    // say what something costs.
-    //
-    // openAmount is for things like a donation, where the buyer names the
-    // figure. `min` is the floor; quantity doesn't apply to these.
-    $merch = [];
+    // Products come from the catalogue now; the event stores only their ids.
+    // Unknown ids are kept rather than filtered: a product deleted by mistake
+    // and re-created under the same name gets its id back, and every event
+    // still pointing at it starts working again on its own.
+    $merchIds = [];
+    foreach ((array) ($in['merchIds'] ?? []) as $id) {
+        $id = clean_string($id, 120);
+        if ($id !== '' && !in_array($id, $merchIds, true)) {
+            $merchIds[] = $id;
+        }
+    }
+
+    // Any inline products an older event still carries are preserved untouched
+    // until the admin runs the import on the Merchandise screen. Dropping them
+    // here would pull them from sale the first time the event was edited for an
+    // unrelated reason.
+    $legacyMerch = [];
     foreach ((array) ($in['merch'] ?? []) as $m) {
         if (!is_array($m)) continue;
-        $name = clean_string($m['name'] ?? '', 80);
-        $price = clean_string($m['price'] ?? '', 40);
-        $openIn = is_array($m['openAmount'] ?? null) ? $m['openAmount'] : [];
-        $openEnabled = !empty($openIn['enabled']);
-
-        // An open-amount item legitimately has no fixed price, so it must not be
-        // dropped by the empty check that applies to normal products.
-        if ($name === '' && $price === '' && !$openEnabled) continue;
-
-        $options = [];
-        foreach ((array) ($m['options'] ?? []) as $opt) {
-            if (!is_array($opt)) continue;
-            $optName = clean_string($opt['name'] ?? '', 40);
-            if ($optName === '') continue;
-
-            $choices = [];
-            foreach ((array) ($opt['choices'] ?? []) as $choice) {
-                if (!is_array($choice)) continue;
-                $label = clean_string($choice['label'] ?? '', 60);
-                if ($label === '') continue;
-                $choices[] = [
-                    'label'      => $label,
-                    'priceDelta' => (int) ($choice['priceDelta'] ?? 0),
-                ];
-            }
-            if (!$choices) continue;              // a parameter with no choices is meaningless
-
-            $options[] = [
-                'name'     => $optName,
-                'required' => !isset($opt['required']) || !empty($opt['required']),
-                'choices'  => $choices,
-            ];
-        }
-
-        $merch[] = [
-            'name'        => $name,
-            'price'       => $price,
-            'description' => clean_string($m['description'] ?? '', 300),
-            'image'       => clean_string($m['image'] ?? '', 500),
-            'openAmount'  => [
-                'enabled' => $openEnabled,
-                'min'     => max(1, (int) ($openIn['min'] ?? 1)),
-            ],
-            'options'     => $options,
-        ];
+        $fields = merch_public_fields($m);
+        if (merch_is_empty($fields)) continue;
+        $legacyMerch[] = $fields;
     }
 
     // promoCodes: [{ code, type: 'percent'|'flat', value }] — per event.
-    $promoCodes = [];
-    foreach ((array) ($in['promoCodes'] ?? []) as $pc) {
-        if (!is_array($pc)) continue;
-        $code = strtoupper(clean_string($pc['code'] ?? '', 40));
-        $value = (int) ($pc['value'] ?? 0);
-        if ($code === '' || $value <= 0) continue;
-        $promoCodes[] = [
-            'code'  => $code,
-            'type'  => ($pc['type'] ?? 'percent') === 'flat' ? 'flat' : 'percent',
-            'value' => $value,
-        ];
-    }
+    // Merchandise has its own set, on the Merchandise screen.
+    $promoCodes = merch_clean_promos($in['promoCodes'] ?? []);
 
     $now = date('c');
 
@@ -175,7 +141,8 @@ function normalise_event(array $in, array $events, ?array $existing = null): arr
         'about'     => $about,
         'poster'    => clean_string($in['poster'] ?? '', 500),
         'packages'  => $packages,
-        'merch'     => $merch,
+        'merchIds'  => $merchIds,
+        'merch'     => $legacyMerch,
         'promoCodes' => $promoCodes,
         'media'     => $media,
         'createdAt' => $existing['createdAt'] ?? $now,

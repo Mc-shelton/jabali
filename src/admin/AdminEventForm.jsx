@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { PlusOutlined, DeleteOutlined, UploadOutlined, ArrowLeftOutlined } from '@ant-design/icons';
 import { Link } from 'react-router-dom';
-import { adminFetchEvents, createEvent, updateEvent, uploadImage } from '../lib/api';
+import { adminFetchEvents, createEvent, updateEvent, uploadImage, fetchMerch } from '../lib/api';
 import AdminImageField from './AdminImageField';
 import PageLoader from '../components/PageLoader';
 
@@ -17,7 +17,7 @@ const blank = {
   aboutText: '', // edited as text, split into paragraphs on save
   poster: '',
   packages: [],
-  merch: [],
+  merchIds: [],
   promoCodes: [],
   media: [],
 };
@@ -29,7 +29,7 @@ const toForm = (event) => ({
   ...event,
   aboutText: (event.about || []).join('\n\n'),
   packages: event.packages || [],
-  merch: event.merch || [],
+  merchIds: event.merchIds || [],
   promoCodes: event.promoCodes || [],
   media: event.media || [],
 });
@@ -45,7 +45,7 @@ const toPayload = (form) => ({
   about: form.aboutText.split(/\n{2,}/).map((s) => s.trim()).filter(Boolean),
   poster: form.poster,
   packages: form.packages,
-  merch: form.merch,
+  merchIds: form.merchIds,
   promoCodes: form.promoCodes,
   media: form.media,
 });
@@ -60,14 +60,34 @@ const AdminEventForm = () => {
   const [loading, setLoading] = useState(editing);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const [catalogue, setCatalogue] = useState([]);
+  // Products this event still defines inline, from before the catalogue. The
+  // server keeps them and keeps selling them; the form only reports them.
+  const [legacyMerch, setLegacyMerch] = useState([]);
+
+  // The catalogue backs the picker. A failure here is not surfaced as a page
+  // error: it would block editing the date or the venue over a list the admin
+  // may not even be changing, and the picker says plainly when it is empty.
+  useEffect(() => {
+    fetchMerch()
+      .then((data) => setCatalogue(data.products ?? []))
+      .catch(() => {});
+  }, []);
 
   useEffect(() => {
     if (!editing) return;
     adminFetchEvents()
       .then(({ upcoming, past }) => {
         const found = [...upcoming, ...past].find((e) => e.slug === slug);
-        if (found) setForm(toForm(found));
-        else setError('Event not found.');
+        if (found) {
+          setForm(toForm(found));
+          // `merch` on a loaded event is the RESOLVED list, so the inline
+          // leftovers are the ones the catalogue didn't account for.
+          const ids = new Set(found.merchIds ?? []);
+          setLegacyMerch(
+            (found.merch ?? []).filter((m) => !ids.has(m.id) && String(m.id ?? '').startsWith('legacy:')),
+          );
+        } else setError('Event not found.');
       })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
@@ -86,79 +106,17 @@ const AdminEventForm = () => {
   const removePackage = (i) =>
     setForm((f) => ({ ...f, packages: f.packages.filter((_, idx) => idx !== i) }));
 
-  // ---- merch
-  const addMerch = () =>
+  // ---- merchandise
+  // Products live in the catalogue now, so the event only records which ones it
+  // sells. Everything about a product — price, sizes, photo — is edited once,
+  // under Merchandise.
+  const toggleMerch = (id) =>
     setForm((f) => ({
       ...f,
-      merch: [
-        ...f.merch,
-        {
-          name: '',
-          price: '',
-          description: '',
-          image: '',
-          openAmount: { enabled: false, min: 50 },
-          options: [],
-        },
-      ],
+      merchIds: f.merchIds.includes(id)
+        ? f.merchIds.filter((x) => x !== id)
+        : [...f.merchIds, id],
     }));
-  const setMerch = (i, key, val) =>
-    setForm((f) => ({ ...f, merch: f.merch.map((m, idx) => (idx === i ? { ...m, [key]: val } : m)) }));
-  const removeMerch = (i) =>
-    setForm((f) => ({ ...f, merch: f.merch.filter((_, idx) => idx !== i) }));
-
-  // ---- merch options (Size: S/M/L …). Each choice may carry a price delta.
-  const mutateOptions = (i, fn) =>
-    setForm((f) => ({
-      ...f,
-      merch: f.merch.map((m, idx) => (idx === i ? { ...m, options: fn(m.options ?? []) } : m)),
-    }));
-
-  const addOption = (i) =>
-    mutateOptions(i, (opts) => [...opts, { name: '', required: true, choices: [{ label: '', priceDelta: 0 }] }]);
-  const removeOption = (i, oi) => mutateOptions(i, (opts) => opts.filter((_, idx) => idx !== oi));
-  const setOption = (i, oi, key, val) =>
-    mutateOptions(i, (opts) => opts.map((o, idx) => (idx === oi ? { ...o, [key]: val } : o)));
-
-  const addChoice = (i, oi) =>
-    mutateOptions(i, (opts) =>
-      opts.map((o, idx) =>
-        idx === oi ? { ...o, choices: [...(o.choices ?? []), { label: '', priceDelta: 0 }] } : o,
-      ),
-    );
-  const removeChoice = (i, oi, ci) =>
-    mutateOptions(i, (opts) =>
-      opts.map((o, idx) =>
-        idx === oi ? { ...o, choices: o.choices.filter((_, x) => x !== ci) } : o,
-      ),
-    );
-  const setChoice = (i, oi, ci, key, val) =>
-    mutateOptions(i, (opts) =>
-      opts.map((o, idx) =>
-        idx === oi
-          ? { ...o, choices: o.choices.map((c, x) => (x === ci ? { ...c, [key]: val } : c)) }
-          : o,
-      ),
-    );
-
-  const setOpenAmount = (i, key, val) =>
-    setForm((f) => ({
-      ...f,
-      merch: f.merch.map((m, idx) =>
-        idx === i
-          ? { ...m, openAmount: { ...(m.openAmount ?? { enabled: false, min: 50 }), [key]: val } }
-          : m,
-      ),
-    }));
-  const uploadMerchImage = async (i, file) => {
-    if (!file) return;
-    try {
-      const url = await uploadImage(file);
-      setMerch(i, 'image', url);
-    } catch (err) {
-      setError(err.message);
-    }
-  };
 
   // ---- promo codes
   const addPromo = () =>
@@ -318,123 +276,49 @@ const AdminEventForm = () => {
         {/* Merchandise */}
         <fieldset className="admin-fieldset">
           <legend>Merchandise</legend>
-          <p className="admin-hint">Products sold on this event’s page (T-shirts, CDs…). Paid via M-Pesa like tickets.</p>
+          <p className="admin-hint">
+            Choose which products this event sells. Add or edit products under{' '}
+            <Link to="/admin/merch">Merchandise</Link> — changing a price there updates every event
+            selling it.
+          </p>
 
-          {form.merch.map((m, i) => (
-            <div className="admin-merch-row" key={i}>
-              <label className="admin-merch-image" style={m.image ? { backgroundImage: `url("${m.image}")` } : undefined}>
-                <input type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => uploadMerchImage(i, e.target.files?.[0])} />
-                {!m.image && <UploadOutlined />}
-              </label>
-              <div className="admin-merch-fields">
-                <div className="admin-grid-2">
-                  <input placeholder="Name (e.g. T-Shirt)" value={m.name} onChange={(e) => setMerch(i, 'name', e.target.value)} />
-                  <input
-                    placeholder="Price (e.g. KES 1,200)"
-                    value={m.price}
-                    onChange={(e) => setMerch(i, 'price', e.target.value)}
-                    disabled={m.openAmount?.enabled}
-                  />
-                </div>
-                <input placeholder="Description (optional)" value={m.description} onChange={(e) => setMerch(i, 'description', e.target.value)} />
-
-                {/* Open amount — for donations, where the buyer names the figure. */}
-                <label className="admin-check">
-                  <input
-                    type="checkbox"
-                    checked={Boolean(m.openAmount?.enabled)}
-                    onChange={(e) => setOpenAmount(i, 'enabled', e.target.checked)}
-                  />
-                  <span>Let the buyer enter their own amount (e.g. a donation)</span>
-                </label>
-
-                {m.openAmount?.enabled && (
-                  <label className="admin-field admin-min-field">
-                    <span>Minimum amount (KES)</span>
-                    <input
-                      type="number"
-                      min="1"
-                      value={m.openAmount?.min ?? 50}
-                      onChange={(e) => setOpenAmount(i, 'min', Number(e.target.value) || 1)}
+          {catalogue.length === 0 ? (
+            <p className="admin-hint">
+              No products in the catalogue yet. <Link to="/admin/merch">Add one</Link> first.
+            </p>
+          ) : (
+            <div className="admin-merch-picker">
+              {catalogue.map((p) => {
+                const on = form.merchIds.includes(p.id);
+                return (
+                  <label className={`admin-merch-pick ${on ? 'is-on' : ''}`} key={p.id}>
+                    <input type="checkbox" checked={on} onChange={() => toggleMerch(p.id)} />
+                    <span
+                      className="admin-merch-pick-photo"
+                      style={p.image ? { backgroundImage: `url("${p.image}")` } : undefined}
                     />
-                    <small>Quantity is hidden for these — the amount is the total.</small>
+                    <span className="admin-merch-pick-text">
+                      <strong>{p.name}</strong>
+                      <small>{p.openAmount?.enabled ? 'Buyer names the amount' : p.price}</small>
+                    </span>
                   </label>
-                )}
-
-                {/* Buyer-selectable parameters, e.g. Size → S / M / L. */}
-                <div className="admin-options">
-                  {(m.options ?? []).map((opt, oi) => (
-                    <div className="admin-option" key={oi}>
-                      <div className="admin-option-head">
-                        <input
-                          className="admin-option-name"
-                          placeholder="Parameter (e.g. Size)"
-                          value={opt.name}
-                          onChange={(e) => setOption(i, oi, 'name', e.target.value)}
-                        />
-                        <label className="admin-check">
-                          <input
-                            type="checkbox"
-                            checked={opt.required !== false}
-                            onChange={(e) => setOption(i, oi, 'required', e.target.checked)}
-                          />
-                          <span>Required</span>
-                        </label>
-                        <button
-                          type="button"
-                          className="admin-icon-btn is-danger"
-                          onClick={() => removeOption(i, oi)}
-                          aria-label={`Remove ${opt.name || 'parameter'}`}
-                        >
-                          <DeleteOutlined />
-                        </button>
-                      </div>
-
-                      {(opt.choices ?? []).map((c, ci) => (
-                        <div className="admin-choice" key={ci}>
-                          <input
-                            placeholder="Option (e.g. XL)"
-                            value={c.label}
-                            onChange={(e) => setChoice(i, oi, ci, 'label', e.target.value)}
-                          />
-                          <input
-                            type="number"
-                            placeholder="+0"
-                            value={c.priceDelta ?? 0}
-                            onChange={(e) => setChoice(i, oi, ci, 'priceDelta', Number(e.target.value) || 0)}
-                            title="Price change for this option, in KES. Leave 0 for no change."
-                          />
-                          <button
-                            type="button"
-                            className="admin-icon-btn is-danger"
-                            onClick={() => removeChoice(i, oi, ci)}
-                            aria-label={`Remove ${c.label || 'option'}`}
-                          >
-                            <DeleteOutlined />
-                          </button>
-                        </div>
-                      ))}
-
-                      <button type="button" className="admin-btn admin-btn-ghost admin-btn-sm" onClick={() => addChoice(i, oi)}>
-                        <PlusOutlined /> Add option
-                      </button>
-                    </div>
-                  ))}
-
-                  <button type="button" className="admin-btn admin-btn-ghost admin-btn-sm" onClick={() => addOption(i)}>
-                    <PlusOutlined /> Add parameter (size, colour…)
-                  </button>
-                </div>
-              </div>
-              <button type="button" className="admin-icon-btn is-danger" onClick={() => removeMerch(i)} aria-label="Remove merchandise">
-                <DeleteOutlined />
-              </button>
+                );
+              })}
             </div>
-          ))}
+          )}
 
-          <button type="button" className="admin-btn admin-btn-ghost" onClick={addMerch}>
-            <PlusOutlined /> Add merchandise
-          </button>
+          {/* An event saved before the catalogue keeps its own products until
+              the import is run, and they stay on sale meanwhile. Shown so the
+              admin can see why an event offers something not ticked above. */}
+          {legacyMerch.length > 0 && (
+            <p className="admin-notice">
+              This event still has {legacyMerch.length} product
+              {legacyMerch.length === 1 ? '' : 's'} defined on it directly
+              ({legacyMerch.map((m) => m.name).join(', ')}). They are still on sale. Run{' '}
+              <Link to="/admin/merch">Import merchandise from events</Link> to move them into the
+              catalogue.
+            </p>
+          )}
         </fieldset>
 
         {/* Media */}

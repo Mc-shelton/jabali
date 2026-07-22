@@ -1,5 +1,12 @@
 import { useEffect, useState } from 'react';
-import { fetchContent, fetchEvent, fetchEvents, fetchJabali5 } from '../lib/api';
+import {
+  fetchContent,
+  fetchEvent,
+  fetchEvents,
+  fetchJabali5,
+  fetchMerch,
+  fetchMerchProduct,
+} from '../lib/api';
 import { getEventBySlug, upcomingEvents, pastEvents } from '../data/events';
 import { jabaliFive } from '../data/jabali5';
 import { contentSeed } from '../data/content';
@@ -93,6 +100,66 @@ export function useMusic() {
     (ids ?? []).map((id) => data.catalog.find((track) => track.id === id)).filter(Boolean);
 
   return { ...data, byIds, loading };
+}
+
+// The merchandise catalogue.
+//
+// No bundled seed, unlike events and the content sections: there is no honest
+// default set of products to show, and inventing one would put things on sale
+// that the chorale doesn't stock. An unreachable API means an empty shop, and
+// the page says so.
+export function useMerch() {
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    fetchMerch()
+      .then((data) => {
+        if (active) setProducts(data?.products ?? []);
+      })
+      .catch(() => {
+        if (active) setProducts([]);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  return { products, loading };
+}
+
+// One product, for its own page. `null` once loading is done means "no such
+// product", which the page turns into a not-found rather than a blank screen.
+export function useMerchProduct(id) {
+  const [product, setProduct] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setProduct(null);
+
+    fetchMerchProduct(id)
+      .then((data) => {
+        if (active) setProduct(data ?? null);
+      })
+      .catch(() => {
+        if (active) setProduct(null);
+      })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+
+    return () => {
+      active = false;
+    };
+  }, [id]);
+
+  return { product, loading };
 }
 
 export function useJabali5() {
