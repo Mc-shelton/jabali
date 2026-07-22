@@ -42,8 +42,15 @@ function send_order_email(array $order, ?string $pdf = null): bool {
 // Pull in fulfil_order alone: requiring the file would drag in the real
 // _ticket.php / _mailer.php and collide with the stubs above.
 $src = file_get_contents(__DIR__ . '/../public/api/_fulfil.php');
-preg_match('/function fulfil_order.*\n}/s', $src, $m);
+// Non-greedy: the file now defines resend_confirmation() after this one, and a
+// greedy match would pull it in too. Inner braces are indented, so the first
+// "\n}" is fulfil_order's own closing brace.
+preg_match('/function fulfil_order.*?\n}/s', $src, $m);
 eval($m[0]);
+
+// resend_confirmation() calls fulfil_order(), which the eval above just defined.
+preg_match('/function resend_confirmation.*?\n}/s', $src, $mr);
+eval($mr[0]);
 
 function paid_order(): array {
     return [
@@ -104,6 +111,53 @@ $o = paid_order();
 $o['status'] = 'pending';
 fulfil_order($o);
 check('pending order not emailed', $o['emailed'], false);
+
+echo "\n-- re-sending recovers a buyer left without a ticket --\n";
+// The case this exists for: the mailer was down when the payment settled, so a
+// paid order carries emailed=true and emailOk=false and would never retry.
+$GLOBALS['mail_behaviour'] = 'returns_false';
+$o = paid_order();
+fulfil_order($o);
+check('first attempt failed', $o['emailOk'], false);
+check('and is marked attempted', $o['emailed'], true);
+
+$GLOBALS['mail_behaviour'] = 'ok';
+$ok = resend_confirmation($o);
+check('re-send reports success', $ok, true);
+check('email now marked sent', $o['emailOk'], true);
+check('attempt counted', $o['resendCount'], 1);
+
+$ok = resend_confirmation($o);
+check('counts each attempt', $o['resendCount'], 2);
+
+echo "\n-- a stale error must not outlive a successful re-send --\n";
+$GLOBALS['mail_behaviour'] = 'throws';
+$o = paid_order();
+fulfil_order($o);
+check('error recorded', isset($o['emailError']), true);
+$GLOBALS['mail_behaviour'] = 'ok';
+resend_confirmation($o);
+check('error cleared once sent', isset($o['emailError']), false);
+
+echo "\n-- re-sending must not claim an unpaid order was paid --\n";
+$GLOBALS['mail_behaviour'] = 'ok';
+$o = paid_order();
+$o['status'] = 'pending';
+$o['emailed'] = false;
+check('refused for pending order', resend_confirmation($o), false);
+check('nothing was sent', $o['emailed'], false);
+
+$o = paid_order();
+$o['status'] = 'failed';
+check('refused for failed order', resend_confirmation($o), false);
+
+echo "\n-- a throwing mailer must not break re-send either --\n";
+$GLOBALS['mail_behaviour'] = 'throws';
+$o = paid_order();
+$threw = false;
+try { resend_confirmation($o); } catch (Throwable $e) { $threw = true; }
+check('exception did not escape', $threw, false);
+check('order is still paid', $o['status'], 'success');
 
 echo "\n-- failures are written to the log --\n";
 $lines = @file(log_path(), FILE_IGNORE_NEW_LINES | FILE_SKIP_EMPTY_LINES) ?: [];

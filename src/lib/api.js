@@ -141,6 +141,12 @@ export const adminFetchOrders = () => request('orders.php');
 // polling wrongly marked failed while the customer was still paying.
 export const reconcileOrders = () => request('orders.php?reconcile=1', { method: 'POST' });
 
+// Re-delivers the confirmation for an order that is already paid. Resolves with
+// { ok, error } — ok:false is a mail failure, not a request failure, so it does
+// not reject and the caller shows the reason instead of a generic error.
+export const resendConfirmation = (orderId) =>
+  request(`orders.php?resend=${encodeURIComponent(orderId)}`, { method: 'POST' });
+
 // ---------------------------------------------------------------- logs
 export const adminFetchLogs = ({ day = '', level = '' } = {}) => {
   const params = new URLSearchParams();

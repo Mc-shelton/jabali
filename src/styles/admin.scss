@@ -1198,3 +1198,29 @@
   letter-spacing: 0.04em;
   cursor: help;
 }
+
+// Sits directly under the warning flag above and is the remedy for it. Styled
+// as a quiet link rather than a primary button: it belongs to one row, not to
+// the page, and shouldn't compete with Re-check with M-Pesa in the toolbar.
+.admin-resend-btn {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: tokens.$azure;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-decoration: underline;
+  cursor: pointer;
+
+  &:hover:not(:disabled) {
+    color: tokens.$brass;
+  }
+
+  &:disabled {
+    color: tokens.$ink-muted;
+    text-decoration: none;
+    cursor: default;
+  }
+}

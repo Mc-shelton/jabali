@@ -5,7 +5,7 @@ import {
   CaretDownOutlined,
   SearchOutlined,
 } from '@ant-design/icons';
-import { adminFetchOrders, reconcileOrders } from '../lib/api';
+import { adminFetchOrders, reconcileOrders, resendConfirmation } from '../lib/api';
 import PageLoader from '../components/PageLoader';
 
 const money = (n) => `KES ${Number(n || 0).toLocaleString('en-KE')}`;
@@ -46,6 +46,8 @@ const AdminOrders = () => {
   const [sort, setSort] = useState({ key: 'createdAt', dir: 'desc' });
   const [reconciling, setReconciling] = useState(false);
   const [reconcileNote, setReconcileNote] = useState('');
+  // Which order is mid-resend, so only that row's button shows a busy state.
+  const [resendingId, setResendingId] = useState('');
 
   const load = () =>
     adminFetchOrders()
@@ -159,6 +161,29 @@ const AdminOrders = () => {
       setError(err.message || 'Could not reconcile orders.');
     } finally {
       setReconciling(false);
+    }
+  };
+
+  // Re-deliver one buyer's confirmation. The payment is already settled, so the
+  // only thing at stake is the message — a failure here is reported and the row
+  // simply keeps its warning flag.
+  const runResend = async (order) => {
+    setResendingId(order.id);
+    setReconcileNote('');
+    setError('');
+    try {
+      const res = await resendConfirmation(order.id);
+      await load();
+      setReconcileNote(
+        res.ok
+          ? `Confirmation re-sent to ${order.customer?.email || 'the buyer'}.`
+          : `Could not send to ${order.customer?.email || 'the buyer'}` +
+            (res.error ? `: ${res.error}` : '. See Logs for details.'),
+      );
+    } catch (err) {
+      setError(err.message || 'Could not re-send the confirmation.');
+    } finally {
+      setResendingId('');
     }
   };
 
@@ -359,6 +384,20 @@ const AdminOrders = () => {
                       >
                         no email sent
                       </div>
+                    )}
+                    {/* Makes the flag above actionable. Only offered when there
+                        is an address to send to — without one the button could
+                        only ever fail. */}
+                    {o.status === 'success' && o.emailOk === false && o.customer?.email && (
+                      <button
+                        type="button"
+                        className="admin-resend-btn"
+                        onClick={() => runResend(o)}
+                        disabled={resendingId === o.id}
+                        title={`Re-send the confirmation to ${o.customer.email}`}
+                      >
+                        {resendingId === o.id ? 'Sending…' : 'Re-send'}
+                      </button>
                     )}
                   </td>
                   <td className="admin-cell-sub">{reference(o) || '—'}</td>

@@ -33,6 +33,48 @@ route([
         require_auth();
         require_csrf();
 
+        // Re-send one buyer's confirmation. Separate from reconcile: that asks
+        // Daraja whether money arrived, this only re-delivers a message for an
+        // order already known to be paid.
+        if (!empty($_GET['resend'])) {
+            $id = (string) $_GET['resend'];
+            $orders = store_read('orders', []);
+
+            $idx = null;
+            foreach ($orders as $i => $o) {
+                if (($o['id'] ?? '') === $id) { $idx = $i; break; }
+            }
+            if ($idx === null) {
+                error_out('Order not found.', 404);
+            }
+            if (($orders[$idx]['status'] ?? '') !== 'success') {
+                error_out('Only a paid order can be confirmed.', 400);
+            }
+
+            $ok = resend_confirmation($orders[$idx]);
+
+            // Persist either way: the attempt, its count and any error belong in
+            // the record even when delivery failed, otherwise the admin screen
+            // keeps showing a stale result.
+            store_write('orders', $orders);
+
+            log_info('Confirmation re-sent by admin', [
+                'orderId' => $id,
+                'to'      => $orders[$idx]['customer']['email'] ?? null,
+                'ok'      => $ok,
+                'attempt' => $orders[$idx]['resendCount'] ?? 1,
+            ]);
+
+            // 200 with ok:false rather than an error status — the request was
+            // handled correctly, the mail server is what refused. The admin
+            // screen needs the reason to display, not an exception.
+            json_out([
+                'ok'      => $ok,
+                'emailOk' => $orders[$idx]['emailOk'] ?? false,
+                'error'   => $orders[$idx]['emailError'] ?? null,
+            ]);
+        }
+
         if (empty($_GET['reconcile'])) {
             error_out('Nothing to do.', 400);
         }

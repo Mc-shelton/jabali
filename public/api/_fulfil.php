@@ -43,3 +43,30 @@ function fulfil_order(array &$order): void
         ]);
     }
 }
+
+// Sends the confirmation again for an order that is already paid — the recovery
+// path for a buyer left without a ticket because the mailer was down when their
+// payment settled.
+//
+// fulfil_order() refuses to run twice on purpose, so that a flaky mailer cannot
+// trigger a fresh send on every status poll. Clearing the flag here is the
+// deliberate, admin-initiated exception to that rule; resendCount keeps it
+// visible in the order record, so a repeatedly-retried order is not mistaken for
+// one that sent cleanly first time.
+//
+// Inherits fulfil_order's containment: it does not throw, and reports through
+// the emailOk flag.
+function resend_confirmation(array &$order): bool
+{
+    // Only a settled payment has anything to confirm. Re-sending for a pending
+    // or failed order would tell the buyer they had paid when they had not.
+    if (($order['status'] ?? '') !== 'success') return false;
+
+    $order['emailed'] = false;
+    unset($order['emailError']);
+    $order['resendCount'] = (int) ($order['resendCount'] ?? 0) + 1;
+
+    fulfil_order($order);
+
+    return !empty($order['emailOk']);
+}
