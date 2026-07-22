@@ -196,9 +196,13 @@ route([
             error_out($res['error'] ?? 'Could not start the payment. Please try again.', 502);
         }
 
+        // Read before minting: the code must be checked against every code
+        // already issued, and this same array is what gets written back below.
+        $orders = store_read(STORE, []);
+
         $order = [
             'id'                => bin2hex(random_bytes(12)),
-            'ticketCode'        => 'JC-' . strtoupper(bin2hex(random_bytes(3))),
+            'ticketCode'        => mint_ticket_code($orders),
             'createdAt'         => date('c'),
             'status'            => 'pending',
             'eventSlug'         => $slug,
@@ -228,7 +232,6 @@ route([
             'lastQueryAt'       => 0,
         ];
 
-        $orders = store_read(STORE, []);
         $orders[] = $order;
         store_write(STORE, $orders);
 

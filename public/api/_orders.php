@@ -14,6 +14,32 @@ require_once __DIR__ . '/_mpesa.php';
 require_once __DIR__ . '/_fulfil.php';
 
 // Re-ask Daraja about an unsettled order and apply the answer.
+// Mints a ticket code that no existing order already holds.
+//
+// This is what gets scanned at the door, so a collision admits or turns away
+// the wrong person. Five random bytes give ~1.1 trillion codes: with a few
+// thousand tickets the chance of any clash is negligible, where the original
+// three bytes reached even odds at roughly 4,800 tickets and never checked.
+//
+// The alphabet is deliberately [0-9A-Z-], which is exactly QR's alphanumeric
+// set — a code outside it would not fit the compact symbol on the ticket.
+function mint_ticket_code(array $orders): string
+{
+    $taken = [];
+    foreach ($orders as $o) {
+        if (!empty($o['ticketCode'])) $taken[strtoupper((string) $o['ticketCode'])] = true;
+    }
+
+    // Bounded rather than while(true): an unforeseen bug here must fail the
+    // checkout loudly, not spin inside a payment request.
+    for ($try = 0; $try < 20; $try++) {
+        $code = 'JC-' . strtoupper(bin2hex(random_bytes(5)));
+        if (!isset($taken[$code])) return $code;
+    }
+
+    throw new RuntimeException('could not mint a unique ticket code after 20 attempts');
+}
+
 // `$force` skips the rate limit and the initial grace period — used by the
 // customer's manual Refresh button and by the admin reconcile.
 function refresh_order_status(array $order, bool $force = false): array
