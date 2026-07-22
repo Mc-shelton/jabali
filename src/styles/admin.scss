@@ -688,6 +688,42 @@
   font-size: 0.88rem;
 }
 
+.admin-file-control {
+  margin-top: 4px;
+}
+
+.admin-file-current {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  padding: 9px 12px;
+  border: 1px solid tokens.$line-strong;
+  border-radius: tokens.$r-sm;
+  background: tokens.$paper-sunk;
+
+  a {
+    min-width: 0;
+    flex: 1;
+    overflow: hidden;
+    color: tokens.$ink;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  button {
+    display: grid;
+    place-items: center;
+    width: 30px;
+    height: 30px;
+    border: 0;
+    border-radius: tokens.$r-pill;
+    background: transparent;
+    color: tokens.$ink-body;
+    cursor: pointer;
+  }
+}
+
 .admin-media-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));

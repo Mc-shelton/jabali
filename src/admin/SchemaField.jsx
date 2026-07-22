@@ -8,6 +8,7 @@ import {
   DownOutlined,
 } from '@ant-design/icons';
 import AdminImageField from './AdminImageField';
+import AdminFileField from './AdminFileField';
 
 // Renders one field from the content schema served by content.php?schema=1.
 // Recursive: a `group` renders its child fields, a `list` renders a row per item
@@ -52,6 +53,18 @@ const ScalarInput = ({ spec, value, onChange, id }) => {
         value={value || ''}
         onChange={onChange}
         folder={spec.upload}
+      />
+    );
+  }
+
+  if (kind === 'file') {
+    return (
+      <AdminFileField
+        label={spec.label}
+        value={value || ''}
+        onChange={onChange}
+        folder={spec.upload}
+        accept={spec.accept}
       />
     );
   }
@@ -317,8 +330,8 @@ const SchemaField = ({ name, spec, value, onChange, path = '' }) => {
   }
 
   // ----------------------------------------------------------------- scalar
-  // The image field renders its own label, so don't wrap it in a second one.
-  if (kind === 'image') {
+  // Upload fields render their own labels, so don't wrap them in a second one.
+  if (kind === 'image' || kind === 'file') {
     return <ScalarInput spec={spec} value={value} onChange={onChange} id={fieldId} />;
   }
 

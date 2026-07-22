@@ -7,7 +7,7 @@
 // editing the schema — never this file, and never the React form.
 //
 // Field kinds:
-//   text | textarea | url | image | email | select | number | bool  → scalar
+//   text | textarea | url | image | file | email | select | number | bool → scalar
 //   group  ['fields' => [name => spec, ...]]   → nested object
 //   list   ['of' => spec, 'maxItems' => int]   → repeatable
 //
@@ -20,7 +20,7 @@ function schema_default_max(string $kind): int
 {
     return match ($kind) {
         'textarea' => 2000,
-        'url', 'image' => 500,
+        'url', 'image', 'file' => 500,
         'email'  => 200,
         default  => 200,
     };
@@ -101,7 +101,7 @@ function normalise_field(array $spec, $value)
     $maxLen = $spec['maxLength'] ?? schema_default_max($kind);
 
     $clean = match ($kind) {
-        'url', 'image' => clean_url($value, $maxLen),
+        'url', 'image', 'file' => clean_url($value, $maxLen),
         'email'  => clean_email($value),
         'number' => (int) $value,
         'bool'   => (bool) $value,

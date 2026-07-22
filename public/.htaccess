@@ -16,7 +16,19 @@ Options -MultiViews
   RewriteCond %{REQUEST_FILENAME} -l
   RewriteRule ^ - [L]
 
+  # A request that looks like a file but isn't one must 404 rather than fall
+  # through to the app. Otherwise a missing asset returns index.html with a 200,
+  # and the browser is handed HTML where it expected media: an <audio> element
+  # reports "format not supported" and a player sits at 0% forever, with nothing
+  # anywhere saying the file is simply absent. This cost real debugging time on
+  # the music page.
+  RewriteCond %{REQUEST_URI} \.(mp3|m4a|wav|ogg|flac|mp4|webm|mov|jpe?g|png|webp|avif|gif|svg|ico|pdf|css|js|mjs|map|json|txt|xml|woff2?|ttf|eot|zip)$ [NC]
+  RewriteRule ^ - [R=404,L]
+
   RewriteRule ^ index.html [L]
 </IfModule>
 
+# Deep links into the single-page app are handled by the rewrite above, so this
+# only catches genuine misses. It is deliberately NOT used for the asset rule:
+# that returns a bare 404 so the browser sees a missing file, not a page.
 ErrorDocument 404 /index.html

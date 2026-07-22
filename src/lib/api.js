@@ -185,3 +185,11 @@ export async function uploadImage(file, folder) {
   const data = await request('upload.php', { method: 'POST', body: form, isForm: true });
   return data.url;
 }
+
+export async function uploadMedia(file, folder = 'music') {
+  const form = new FormData();
+  form.append('file', file);
+  form.append('folder', folder);
+  const data = await request('media-upload.php', { method: 'POST', body: form, isForm: true });
+  return data.url;
+}

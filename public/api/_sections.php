@@ -221,8 +221,8 @@ function content_sections(): array
         // -------------------------------------------------------------- music
         'music' => [
             'label' => 'Music',
-            'blurb' => 'The catalogue and the streaming links. Audio stays on its own '
-                     . 'host — paste the file URL rather than uploading it here.',
+            'blurb' => 'The catalogue and streaming links. Upload audio directly to the protected '
+                     . 'server media bucket, or paste an existing file URL.',
             'fields' => [
                 'platformLinks' => [
                     'kind' => 'group', 'label' => 'Streaming platforms',
@@ -247,7 +247,8 @@ function content_sections(): array
                         'mood'      => ['kind' => 'text', 'label' => 'Mood', 'maxLength' => 60],
                         'art'       => ['kind' => 'image', 'label' => 'Cover art', 'upload' => 'site'],
                         'thumbnail' => ['kind' => 'image', 'label' => 'Thumbnail', 'upload' => 'site'],
-                        'audioSrc'  => ['kind' => 'url', 'label' => 'Audio file URL'],
+                        'audioSrc'  => ['kind' => 'file', 'label' => 'Audio file', 'upload' => 'music',
+                                        'accept' => 'audio/mpeg,audio/mp4,audio/wav,audio/ogg,audio/flac'],
                         'previewStart'    => ['kind' => 'number', 'label' => 'Preview start (s)'],
                         'previewDuration' => ['kind' => 'number', 'label' => 'Preview length (s)'],
                         'summary'   => ['kind' => 'textarea', 'label' => 'Summary', 'maxLength' => 600],
@@ -265,7 +266,9 @@ function content_sections(): array
                         'year'      => ['kind' => 'text', 'label' => 'Year', 'maxLength' => 8],
                         'image'     => ['kind' => 'image', 'label' => 'Image', 'upload' => 'site'],
                         'thumbnail' => ['kind' => 'image', 'label' => 'Thumbnail', 'upload' => 'site'],
-                        'audioSrc'  => ['kind' => 'url', 'label' => 'Audio URL', 'nullable' => true],
+                        'audioSrc'  => ['kind' => 'file', 'label' => 'Audio file', 'upload' => 'music',
+                                        'accept' => 'audio/mpeg,audio/mp4,audio/wav,audio/ogg,audio/flac',
+                                        'nullable' => true],
                         'summary'   => ['kind' => 'textarea', 'label' => 'Summary', 'maxLength' => 600],
                     ]],
                 ],

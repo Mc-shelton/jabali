@@ -96,7 +96,7 @@ jobs:
       - name: Strip data directories from the build
         run: |
           set -euo pipefail
-          rm -rf dist/api/data dist/uploads dist/api/config.php
+          rm -rf dist/api/data dist/uploads dist/bucket dist/api/config.php
           echo "Build contains:"
           find dist -maxdepth 2 -type d | sed 's/^/  /'
 
@@ -156,6 +156,8 @@ jobs:
               --exclude-glob api/data/** \
               --exclude-glob uploads/ \
               --exclude-glob uploads/** \
+              --exclude-glob bucket/ \
+              --exclude-glob bucket/** \
               --exclude-glob .DS_Store \
               --exclude-glob __MACOSX/ \
               dist/ '$FTP_PATH';
@@ -206,4 +208,5 @@ jobs:
             echo "- \`api/config.php\` — secrets"
             echo "- \`api/data/\` — site content, orders, logs"
             echo "- \`uploads/\` — member and gallery photos"
+            echo "- \`bucket/\` — music and other server-managed media"
           } >> "$GITHUB_STEP_SUMMARY"

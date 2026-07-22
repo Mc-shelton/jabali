@@ -217,6 +217,16 @@
   .site-nav.is-open {
     background: tokens.$paper;
     height: 100dvh;
+
+    // The open panel is a column: the bar keeps its height and the menu takes
+    // whatever is left. Without this the menu is simply clipped at the bottom
+    // of the viewport and the last links cannot be reached at all.
+    display: flex;
+    flex-direction: column;
+
+    .site-nav-bar {
+      flex-shrink: 0;
+    }
   }
 
   .site-nav-menu {
@@ -228,6 +238,18 @@
     &[hidden] {
       display: none;
     }
+  }
+
+  .site-nav.is-open .site-nav-menu {
+    flex: 1;
+    // min-height:0 is what actually allows a flex child to shrink below its
+    // content height; flex:1 alone leaves it at full size and nothing scrolls.
+    min-height: 0;
+    overflow-y: auto;
+    // Keeps a rubber-band scroll at the end of the menu from scrolling the
+    // page underneath it.
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .site-nav-menu-link {

@@ -18,6 +18,7 @@ never uploads them:
 | `api/config.php` | M-Pesa keys, admin password | Payments and login break |
 | `api/data/` | Site content, events, **orders**, logs | Customer orders lost |
 | `uploads/` | Member and gallery photos | Photos lost |
+| `bucket/` | Music and other server-managed media | Music and media lost |
 
 This is why the old "zip `dist/` and upload it" step was dangerous: `dist/`
 contains seed copies of `api/data/`, so every manual upload overwrote live
@@ -25,6 +26,11 @@ content and order history with stale defaults.
 
 The pipeline strips those directories out of the build before it connects, and
 excludes them again during the sync — two independent safeguards.
+
+Audio uploaded from Admin → Site content → Music is written to
+`bucket/website/music/`. The PHP user must have write permission there, and the
+host's `upload_max_filesize` and `post_max_size` must permit the desired file
+size (the application itself caps media uploads at 50 MB).
 
 ---
 
