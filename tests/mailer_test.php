@@ -101,6 +101,30 @@ $stuffed = preg_replace('/^\./m', '..', "normal line\r\n.hidden\r\n..already\r\n
 check('leading dot doubled',      str_contains($stuffed, "\r\n..hidden"),    true);
 check('body text left untouched', str_contains($stuffed, 'normal line'),     true);
 
+// --- port and TLS mode must agree -------------------------------------------
+// The real failure (log ref 4EA3D4): port 465 with 'tls' opened a plaintext
+// socket and waited 20s for a greeting the server never sends in the clear. The
+// admin screen timed out with "the server did not return a valid response" and
+// the real cause was only visible in the log. Rejecting the pair costs nothing.
+$rejects = function (int $port, string $secure): string {
+    try {
+        smtp_scheme($port, $secure);
+        return '';                       // accepted — no message to report
+    } catch (Throwable $e) {
+        return $e->getMessage();
+    }
+};
+
+check('465 + tls rejected',  str_contains($rejects(465, 'tls'), "'secure' => 'ssl'"), true);
+check('587 + ssl rejected',  str_contains($rejects(587, 'ssl'), "'secure' => 'tls'"), true);
+check('25 + ssl rejected',   str_contains($rejects(25, 'ssl'),  "'secure' => 'tls'"), true);
+
+// The valid pairs must still map to the right scheme: 465 is encrypted from the
+// first byte, 587 starts in the clear and upgrades via STARTTLS.
+check('465 + ssl -> ssl://', smtp_scheme(465, 'ssl'), 'ssl://');
+check('587 + tls -> tcp://', smtp_scheme(587, 'tls'), 'tcp://');
+check('no mismatch on 2525', $rejects(2525, 'tls'), '');
+
 // --- no transport at all ----------------------------------------------------
 // With SMTP unset and mail() unavailable, this must report and return false,
 // never throw: fulfilment treats a failed confirmation as non-fatal, and an

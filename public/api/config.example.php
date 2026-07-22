@@ -85,8 +85,18 @@ const MAIL = [
     //
     // Create the mailbox in cPanel → Email Accounts, then use its full address
     // as the username. Connection Details on that page gives host and ports.
-    //   port 587 → 'secure' => 'tls'   (STARTTLS, the usual choice)
-    //   port 465 → 'secure' => 'ssl'   (implicit TLS)
+    //
+    // 'port' and 'secure' MUST agree — this is the easiest thing here to get
+    // wrong, and the two are not interchangeable:
+    //
+    //   'port' => 465,  'secure' => 'ssl'   implicit TLS: encrypted from the
+    //                                       first byte, no plaintext greeting
+    //   'port' => 587,  'secure' => 'tls'   STARTTLS: connect in the clear,
+    //                                       then upgrade
+    //
+    // Mismatch them and the connection hangs rather than failing — the server
+    // waits for a handshake while we wait for a greeting. The mailer rejects
+    // the combination up front rather than letting a request block on it.
     //
     // Leave 'host' empty to fall back to mail().
     'smtp' => [

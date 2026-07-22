@@ -96,6 +96,31 @@ function mime_header_encode(string $s): string
     return '=?UTF-8?B?' . base64_encode($s) . '?=';
 }
 
+// Maps a port and TLS mode to the stream scheme, rejecting pairs that cannot
+// work. Checked before any socket is opened, because the failure it prevents is
+// a silent block rather than an error: on 465 the server expects a handshake
+// immediately, so a plaintext connection sits waiting for a greeting that never
+// arrives in the clear, and the caller times out before the mailer does.
+//
+// Kept separate from smtp_send so the rule is testable without a mail server.
+function smtp_scheme(int $port, string $secure): string
+{
+    if ($port === 465 && $secure !== 'ssl') {
+        throw new RuntimeException(
+            "port 465 needs 'secure' => 'ssl' (implicit TLS). "
+            . "'tls' means STARTTLS, which belongs on port 587."
+        );
+    }
+    if (in_array($port, [25, 587], true) && $secure === 'ssl') {
+        throw new RuntimeException(
+            "port $port needs 'secure' => 'tls' (STARTTLS). "
+            . "'ssl' means implicit TLS, which belongs on port 465."
+        );
+    }
+
+    return $secure === 'ssl' ? 'ssl://' : 'tcp://';
+}
+
 // Reads one complete SMTP reply. Replies can span several lines ("250-SIZE",
 // "250-AUTH", "250 HELP"); only the line with a space in the 4th position ends
 // it, so stopping at the first newline would desynchronise the conversation.
@@ -175,13 +200,17 @@ function smtp_send(string $to, string $subject, array $headers, string $body, ar
     $fh = null;
 
     try {
-        $transport = ($c['secure'] === 'ssl' ? 'ssl://' : 'tcp://') . $c['host'] . ':' . (int) $c['port'];
+        $port = (int) $c['port'];
+        $transport = smtp_scheme($port, (string) $c['secure']) . $c['host'] . ':' . $port;
 
-        $fh = @stream_socket_client($transport, $errno, $errstr, 20);
+        // 10s, not 20: this runs inside an admin request and inside M-Pesa
+        // callback handling, and neither can afford to sit waiting on a mail
+        // server. A reachable one answers in well under a second.
+        $fh = @stream_socket_client($transport, $errno, $errstr, 10);
         if (!$fh) {
             throw new RuntimeException('connect: ' . ($errstr ?: 'no route') . ' (' . $errno . ')');
         }
-        stream_set_timeout($fh, 20);
+        stream_set_timeout($fh, 10);
 
         // The EHLO name should be a domain we own; the sender's is the one the
         // receiving server can actually verify against SPF.
