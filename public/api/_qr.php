@@ -62,9 +62,13 @@ function qr_rs_generator(int $n): array
 
     for ($i = 0; $i < $n; $i++) {
         $next = array_fill(0, count($g) + 1, 0);
+        // Coefficients run in descending powers. Multiplying by (x + a^i): the
+        // x term shifts each coefficient up a power, the a^i term scales it in
+        // place. Swapping these leaves a leading coefficient of a^i instead of
+        // 1, and every codeword built from it fails its own roots.
         foreach ($g as $j => $coef) {
-            $next[$j]     ^= qr_gf_mul($coef, $exp[$i]);
-            $next[$j + 1] ^= $coef;
+            $next[$j]     ^= $coef;
+            $next[$j + 1] ^= qr_gf_mul($coef, $exp[$i]);
         }
         $g = $next;
     }
@@ -171,10 +175,13 @@ function qr_format_bits(int $mask): int
 {
     $data = (0b00 << 3) | $mask;         // 0b00 = error correction level M
 
+    // Ten steps of polynomial division. The test is on bit 9 of the value
+    // BEFORE the shift — that bit is what lands in the degree-10 position and
+    // must be cancelled. Shifting first and testing bit 14 divides by the
+    // wrong term and yields a remainder that is not a BCH codeword at all.
     $rem = $data;
     for ($i = 0; $i < 10; $i++) {
-        $rem <<= 1;
-        if ($rem & (1 << 14)) $rem ^= 0b10100110111;
+        $rem = ($rem << 1) ^ ((($rem >> 9) & 1) * 0b10100110111);
     }
 
     return (($data << 10) | ($rem & 0x3FF)) ^ 0b101010000010010;
