@@ -55,19 +55,48 @@ Because `api/data/` is never deployed, upload it by hand **once**:
 
 After this, the dashboard owns that folder. Never upload over it again.
 
-### c. GitHub: add the secrets
+### c. GitHub: secrets and variables
 
-Repo → Settings → Secrets and variables → Actions → *New repository secret*:
+Repo → Settings → Secrets and variables → Actions.
+
+**Secrets** tab — credentials, masked in logs:
 
 | Secret | Value | Where to find it |
 |---|---|---|
 | `FTP_HOST` | e.g. `jabalichorale.com` | cPanel → FTP Accounts → Configure FTP Client |
-| `FTP_USER` | the FTP account username | same page |
+| `FTP_USER` | full username, e.g. `deployment_ftp@jabalichorale.com` | same page |
 | `FTP_PASSWORD` | that account's password | set when creating the account |
-| `FTP_PATH` | `/public_html` | the web root for the domain |
-| `SITE_URL` | `https://jabalichorale.com` | used by the post-deploy smoke test |
 
-Use a dedicated FTP account scoped to `public_html`, not your main cPanel login.
+**Variables** tab — deliberately *not* secrets:
+
+| Variable | Value |
+|---|---|
+| `FTP_PATH` | `public_html` — **no leading slash**, see below |
+| `SITE_URL` | `https://jabalichorale.com` |
+
+Neither is a credential, and making them secrets actively hurts. lftp echoes its
+target path, so a masked `FTP_PATH` turns the whole listing into `***/***` —
+exactly the detail you need when a deploy lands in the wrong folder.
+
+### d. The two FTP gotchas that will cost you an hour
+
+**The account's directory is fixed at creation.** cPanel offers Change Password,
+Change Quota, Delete — but no way to change the directory afterwards. If it is
+wrong you must delete the account and recreate it. When creating it, the
+Directory box has a fixed `/home2/<user>/` prefix; typing `public_html` there
+gives `/home2/<user>/public_html`. Leaving it blank silently gives you the whole
+home directory instead.
+
+**`FTP_PATH` is relative, with no leading slash.** These accounts are not
+chrooted, so `/public_html` means the *filesystem* root and fails with:
+
+```
+550 Can't change directory to /public_html: No such file or directory
+```
+
+`public_html` — relative to wherever login lands — is what works. If in doubt,
+the **Show remote layout** step prints where the account lands and what it can
+reach, before anything is written.
 
 ---
 
@@ -91,6 +120,11 @@ Before the first real deploy, Actions → *Build and deploy* → **Run workflow*
 tick **dry run**. It reports exactly what it would upload without writing
 anything. Check the list contains no `api/data` or `uploads` paths, then run it
 again for real.
+
+One caveat worth knowing: **`lftp --dry-run` never connects to check the
+target directory.** A green dry run proves the file list is correct — it does
+not prove `FTP_PATH` exists. A wrong path still fails on the real run with the
+550 above.
 
 ### Cleaning up stale files
 
