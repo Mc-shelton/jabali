@@ -44,6 +44,11 @@ const AdminContent = () => {
     setLoading(true);
     setError('');
     setSaved(false);
+    // Drop the previous section's values immediately. Without this the form
+    // renders the NEW section's fields bound to the OLD section's data until the
+    // fetch lands — a list would read as empty and a text field could briefly
+    // show a value from a different part of the site.
+    setValues(null);
 
     adminFetchContent(section)
       .then((data) => active && setValues(data))

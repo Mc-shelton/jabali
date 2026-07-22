@@ -1182,3 +1182,19 @@
     gap: 8px;
   }
 }
+
+// A paid order whose confirmation email never went out — the buyer has no
+// ticket, so this needs to stand out rather than sit quietly in the log.
+.admin-flag-warn {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 2px 8px;
+  border-radius: tokens.$r-pill;
+  background: #fff4e0;
+  color: #9a6b00;
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  cursor: help;
+}

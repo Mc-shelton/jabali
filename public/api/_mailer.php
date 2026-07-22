@@ -53,11 +53,36 @@ function order_email_html(array $order): string
     </div>";
 }
 
+// True when PHP can actually send mail here. Shared hosts often put mail() in
+// disable_functions; in PHP 8 calling a disabled function throws an Error, which
+// `@` does not suppress — so it has to be checked, not attempted.
+function mailer_available(): bool
+{
+    if (!function_exists('mail')) return false;
+
+    $disabled = array_map('trim', explode(',', (string) ini_get('disable_functions')));
+    return !in_array('mail', $disabled, true);
+}
+
 // Returns true if the message was accepted for delivery by the server.
 function send_order_email(array $order, ?string $pdf = null): bool
 {
     $to = $order['customer']['email'] ?? '';
-    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) return false;
+    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
+        log_warn('No valid email on the order, nothing sent', [
+            'orderId' => $order['id'] ?? null,
+        ]);
+        return false;
+    }
+
+    if (!mailer_available()) {
+        log_error('PHP mail() is unavailable on this server — confirmation not sent', [
+            'orderId'  => $order['id'] ?? null,
+            'to'       => $to,
+            'disabled' => ini_get('disable_functions'),
+        ]);
+        return false;
+    }
 
     $isTicket = ($order['itemType'] ?? 'ticket') !== 'merch';
     $subject = ($isTicket ? 'Your tickets — ' : 'Your order — ') . ($order['eventTitle'] ?? 'Jabali Chorale');
@@ -88,5 +113,21 @@ function send_order_email(array $order, ?string $pdf = null): bool
     }
     $body .= "--$boundary--";
 
-    return @mail($to, $subject, $body, implode("\r\n", $headers));
+    // The 5th parameter is deliberately omitted: passing -f requires the sender
+    // to be a trusted user on many hosts and errors out otherwise.
+    $sent = @mail($to, $subject, $body, implode("\r\n", $headers));
+
+    if (!$sent) {
+        // mail() gives no reason of its own; the last PHP error is the best
+        // clue available, and without it a silent non-delivery is untraceable.
+        $last = error_get_last();
+        log_error('mail() refused the message', [
+            'orderId' => $order['id'] ?? null,
+            'to'      => $to,
+            'reason'  => $last['message'] ?? 'no reason reported',
+            'from'    => MAIL['from_email'] ?? null,
+        ]);
+    }
+
+    return $sent;
 }

@@ -1,0 +1,173 @@
+name: Build and deploy
+
+# Pushes to main build the site, run the checks, and sync the result to cPanel
+# over FTPS. A failing check blocks the deploy — nothing reaches the live site
+# unless everything passes.
+#
+# Required repository secrets (Settings → Secrets and variables → Actions):
+#   FTP_HOST      e.g. jabalichorale.com  (or the server hostname from cPanel)
+#   FTP_USER      the FTP account username
+#   FTP_PASSWORD  that account's password
+#   FTP_PATH      remote web root, e.g. /public_html
+#
+# Run it by hand from the Actions tab (workflow_dispatch) with "dry run" ticked
+# to see exactly what WOULD change before letting it write anything.
+
+on:
+  push:
+    branches: [main]
+    # Docs-only edits don't need a deploy.
+    paths-ignore:
+      - '**/*.md'
+      - '.gitignore'
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: 'List changes without uploading anything'
+        type: boolean
+        default: false
+      prune:
+        description: 'Also DELETE remote files missing locally (see the warning in deploy.yml)'
+        type: boolean
+        default: false
+
+concurrency:
+  # Never let two deploys write to the server at once.
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # ------------------------------------------------------------ checks
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.2'
+
+      - name: Run API checks and test suites
+        run: php tests/run.php
+
+      - name: Set up Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # The build must not carry secrets to the server. config.php is created
+      # once on the server and is excluded from the sync below, but if a
+      # filled-in copy ever reaches dist/ we stop rather than upload it.
+      - name: Refuse to deploy a bundled config.php
+        run: |
+          if [ -f dist/api/config.php ]; then
+            echo "::error::dist/api/config.php exists — it would overwrite the server's config and may contain secrets."
+            exit 1
+          fi
+          echo "No config.php in the build, as expected."
+
+      # ------------------------------------------------------------ deploy
+      - name: Install lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      # Belt and braces: the excludes below are what protect the live data, so
+      # make it impossible for the build to even contain those paths. If dist/
+      # has no api/data or uploads directory, a mis-typed exclude can upload
+      # nothing harmful — it can still DELETE, which is why --delete is opt-in.
+      - name: Strip data directories from the build
+        run: |
+          set -euo pipefail
+          rm -rf dist/api/data dist/uploads dist/api/config.php
+          echo "Build contains:"
+          find dist -maxdepth 2 -type d | sed 's/^/  /'
+
+      - name: Sync to cPanel over FTPS
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PATH: ${{ secrets.FTP_PATH }}
+          DRY_RUN: ${{ inputs.dry_run && '--dry-run' || '' }}
+          # --delete is DELIBERATELY off by default. It is the only step here
+          # that can destroy data, and the excludes are the only thing standing
+          # between it and the live content, the customer orders and the
+          # uploaded photos. Vite fingerprints its filenames, so stale assets are
+          # harmless clutter — not worth risking the orders table to tidy up.
+          # Enable it by hand (prune: true) once a dry run shows what it removes.
+          PRUNE: ${{ inputs.prune && '--delete' || '' }}
+        run: |
+          set -euo pipefail
+
+          lftp -c "
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ssl:verify-certificate no;
+            set net:max-retries 3;
+            set net:timeout 20;
+            open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
+            mirror --reverse --continue --parallel=4 $PRUNE $DRY_RUN \
+              --exclude-glob api/config.php \
+              --exclude-glob api/data/ \
+              --exclude-glob api/data/** \
+              --exclude-glob uploads/ \
+              --exclude-glob uploads/** \
+              --exclude-glob .DS_Store \
+              --exclude-glob __MACOSX/ \
+              dist/ '$FTP_PATH';
+            bye
+          "
+
+      # Proves the deploy didn't break the site OR wipe the data. content.php
+      # only returns sections if api/data survived, so a healthy response here
+      # is direct evidence the excludes did their job.
+      - name: Smoke test the live site
+        if: ${{ !inputs.dry_run }}
+        env:
+          SITE: ${{ secrets.SITE_URL }}
+        run: |
+          set -euo pipefail
+          if [ -z "${SITE:-}" ]; then
+            echo "SITE_URL secret not set — skipping smoke test."
+            exit 0
+          fi
+          sleep 5
+
+          code=$(curl -sS -o /dev/null -w '%{http_code}' "$SITE/")
+          echo "homepage: $code"
+          [ "$code" = "200" ] || { echo "::error::Homepage returned $code"; exit 1; }
+
+          body=$(curl -sS "$SITE/api/content.php")
+          echo "content.php returned: $(echo "$body" | head -c 160)"
+
+          # A healthy response lists the stored sections. If api/data had been
+          # wiped, every section 404s and this returns "{}".
+          case "$body" in
+            *'"contact"'*|*'"members"'*)
+              echo "Live content is intact." ;;
+            *)
+              echo "::error::content.php returned no sections — api/data may be missing on the server"
+              exit 1 ;;
+          esac
+
+      - name: Summary
+        if: success()
+        run: |
+          {
+            echo "### Deployed to production"
+            echo ""
+            echo "Commit \`${GITHUB_SHA::7}\` is live."
+            echo ""
+            echo "Left untouched on the server:"
+            echo "- \`api/config.php\` — secrets"
+            echo "- \`api/data/\` — site content, orders, logs"
+            echo "- \`uploads/\` — member and gallery photos"
+          } >> "$GITHUB_STEP_SUMMARY"

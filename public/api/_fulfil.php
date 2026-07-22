@@ -12,11 +12,34 @@ function fulfil_order(array &$order): void
     if (!empty($order['emailed'])) return;                 // already done
     if (($order['status'] ?? '') !== 'success') return;    // only paid orders
 
-    $pdf = (($order['itemType'] ?? 'ticket') === 'merch') ? null : pdf_ticket($order);
-
-    // Mark as emailed regardless of the mail server's mood — one attempt, so a
-    // flaky mailer can't trigger repeated sends on every status poll.
+    // Mark as attempted BEFORE trying — one attempt only, so a flaky mailer
+    // can't trigger repeated sends on every status poll.
     $order['emailed'] = true;
     $order['emailedAt'] = date('c');
-    $order['emailOk'] = send_order_email($order, $pdf);
+
+    // Fulfilment is a side effect of a payment that has already happened. It
+    // must never be able to undo one: an exception escaping this function
+    // unwinds the caller before it saves, so a paid order would be written back
+    // as unpaid — the mail server deciding whether the money counts.
+    //
+    // So everything here is contained, recorded, and reported as a flag.
+    try {
+        $pdf = (($order['itemType'] ?? 'ticket') === 'merch') ? null : pdf_ticket($order);
+        $order['emailOk'] = send_order_email($order, $pdf);
+
+        if (!$order['emailOk']) {
+            log_warn('Confirmation email not sent', [
+                'orderId' => $order['id'] ?? null,
+                'to'      => $order['customer']['email'] ?? null,
+            ]);
+        }
+    } catch (Throwable $e) {
+        $order['emailOk'] = false;
+        $order['emailError'] = $e->getMessage();
+        log_error('Fulfilment failed but the payment stands: ' . $e->getMessage(), [
+            'orderId' => $order['id'] ?? null,
+            'file'    => basename($e->getFile()),
+            'line'    => $e->getLine(),
+        ]);
+    }
 }

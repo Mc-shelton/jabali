@@ -41,6 +41,7 @@ route([
         $checked = 0;
         $recovered = 0;
         $settled = 0;
+        $failedChecks = 0;
 
         foreach ($orders as $i => $order) {
             if (($order['status'] ?? '') === 'success') continue;
@@ -48,21 +49,44 @@ route([
 
             $was = $order['status'] ?? 'pending';
             $checked++;
-            $orders[$i] = refresh_order_status($order, true);
-            $now = $orders[$i]['status'] ?? 'pending';
 
+            // Contain each order: one that blows up (an unreachable Daraja, a
+            // mailer fault) must not abandon the whole run and throw away the
+            // orders already confirmed paid in this loop.
+            try {
+                $orders[$i] = refresh_order_status($order, true);
+            } catch (Throwable $e) {
+                $failedChecks++;
+                log_error('Reconcile failed for one order: ' . $e->getMessage(), [
+                    'orderId' => $order['id'] ?? null,
+                    'file'    => basename($e->getFile()),
+                    'line'    => $e->getLine(),
+                ]);
+                continue;
+            }
+
+            $now = $orders[$i]['status'] ?? 'pending';
             if ($now !== $was) {
                 $settled++;
                 if ($was === 'failed' && $now === 'success') $recovered++;
             }
         }
 
+        // Always persist whatever was resolved, even if some orders errored.
         store_write('orders', $orders);
+
+        log_info('Reconcile run', [
+            'checked'   => $checked,
+            'settled'   => $settled,
+            'recovered' => $recovered,
+            'errored'   => $failedChecks,
+        ]);
 
         json_out([
             'checked'   => $checked,
             'settled'   => $settled,
             'recovered' => $recovered,
+            'errored'   => $failedChecks,
         ]);
     },
 ]);

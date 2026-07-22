@@ -1,0 +1,81 @@
+<?php
+// ---------------------------------------------------------------------------
+// Jabali Chorale admin API — configuration TEMPLATE.
+//
+// Copy this to config.php ON THE SERVER and fill in the real values:
+//     cp api/config.example.php api/config.php
+//
+// config.php is git-ignored and is NEVER deployed by the pipeline, so the live
+// secrets exist in exactly one place: the server. Do not commit a filled-in
+// copy — this repository is public.
+// ---------------------------------------------------------------------------
+
+// --------------------------------------------------------------- admin login
+// Prefer the hash. Generate it in cPanel → Terminal:
+//     php -r "echo password_hash('your-password', PASSWORD_DEFAULT), PHP_EOL;"
+// If ADMIN_PASSWORD_HASH is non-empty it takes precedence and ADMIN_PASSWORD
+// is ignored.
+const ADMIN_PASSWORD = '';
+const ADMIN_PASSWORD_HASH = '';
+
+// Data lives beside this file but is blocked from the web by api/data/.htaccess.
+define('DATA_DIR', __DIR__ . '/data');
+
+// --------------------------------------------------------------- uploads
+// Uploaded images must be web-reachable, so they go in the public web root.
+// The folder comes from the admin UI but is only ever accepted from this
+// whitelist — a client-supplied path must never reach the filesystem.
+define('UPLOAD_BASE_DIR', dirname(__DIR__) . '/uploads');
+const UPLOAD_BASE_URL = '/uploads';
+const UPLOAD_FOLDERS = ['events', 'members', 'gallery', 'site'];
+const UPLOAD_FOLDER_DEFAULT = 'events';
+
+// Back-compat aliases for the original events-only upload path.
+define('UPLOAD_DIR', UPLOAD_BASE_DIR . '/' . UPLOAD_FOLDER_DEFAULT);
+const UPLOAD_URL = UPLOAD_BASE_URL . '/' . UPLOAD_FOLDER_DEFAULT;
+
+const MAX_UPLOAD_BYTES = 6 * 1024 * 1024; // 6 MB
+const ALLOWED_IMAGE_TYPES = [
+    'image/jpeg' => 'jpg',
+    'image/png'  => 'png',
+    'image/webp' => 'webp',
+];
+
+const SESSION_NAME = 'jc_admin';
+
+// --------------------------------------------------------------- M-Pesa
+// From your Daraja app + Lipa na M-Pesa (Paybill/Till) details.
+//   env               'sandbox' while testing, 'production' when live.
+//   shortcode         your Paybill or Till (Business Short Code).
+//   transaction_type  'CustomerPayBillOnline' (Paybill) or
+//                     'CustomerBuyGoodsOnline' (Till).
+//   callback_url      MUST be a public HTTPS URL to mpesa-callback.php on this
+//                     domain. M-Pesa cannot reach localhost.
+//
+// If these ever appear in a commit, treat them as compromised and rotate them
+// in the Daraja portal — scrapers watch public repositories for exactly this.
+const MPESA = [
+    'env'               => 'sandbox',
+    'consumer_key'      => '',
+    'consumer_secret'   => '',
+    'shortcode'         => '',
+    'passkey'           => '',
+    'transaction_type'  => 'CustomerPayBillOnline',
+    'callback_url'      => 'https://example.com/api/mpesa-callback.php',
+    'account_reference' => 'Jabali Chorale',
+];
+
+// Site-wide promo codes, checked after an event's own codes.
+//   'JC10' => ['type' => 'percent', 'value' => 10]
+//   'VIP'  => ['type' => 'flat',    'value' => 200]
+const PROMO_CODES = [];
+
+// --------------------------------------------------------------- email
+//   from_email  should be an address ON this domain for deliverability
+//               (set up SPF/DKIM in cPanel → Email Deliverability).
+//   bcc         optional address copied on every confirmation. '' to skip.
+const MAIL = [
+    'from_email' => 'tickets@example.com',
+    'from_name'  => 'Jabali Chorale',
+    'bcc'        => '',
+];

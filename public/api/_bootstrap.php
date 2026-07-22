@@ -5,6 +5,19 @@
 
 declare(strict_types=1);
 
+// config.php is deliberately NOT in git and NOT deployed — it holds the M-Pesa
+// keys and the admin password, and the repository is public. It is created once
+// on the server from config.example.php. Say so plainly rather than dying with
+// an undefined-constant error somewhere further in.
+if (!is_file(__DIR__ . '/config.php')) {
+    http_response_code(503);
+    header('Content-Type: application/json; charset=utf-8');
+    echo json_encode([
+        'error' => 'Server not configured: api/config.php is missing. '
+                 . 'Copy api/config.example.php to api/config.php and fill it in.',
+    ]);
+    exit;
+}
 require __DIR__ . '/config.php';
 
 // Diagnostics go to a log file, never into the response. A notice printed ahead

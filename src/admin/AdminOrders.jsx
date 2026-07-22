@@ -146,8 +146,14 @@ const AdminOrders = () => {
           : `Checked ${res.checked} unsettled order${res.checked === 1 ? '' : 's'}. ` +
             `${res.settled} now settled` +
             (res.recovered > 0
-              ? `, including ${res.recovered} that had been wrongly marked failed.`
-              : '.'),
+              ? `, including ${res.recovered} that had been wrongly marked failed`
+              : '') +
+            '.' +
+            // Surfaced rather than hidden: the payment status is still correct,
+            // but something went wrong and it's in the log.
+            (res.errored > 0
+              ? ` ${res.errored} could not be checked — see Logs for details.`
+              : ''),
       );
     } catch (err) {
       setError(err.message || 'Could not reconcile orders.');
@@ -342,6 +348,16 @@ const AdminOrders = () => {
                     {o.correctedFrom === 'failed' && o.status === 'success' && (
                       <div className="admin-cell-sub" title="This order was wrongly marked failed and has been corrected">
                         recovered
+                      </div>
+                    )}
+                    {/* Paid, but the confirmation never went out — the customer
+                        has no ticket and needs contacting. */}
+                    {o.status === 'success' && o.emailed && o.emailOk === false && (
+                      <div
+                        className="admin-flag-warn"
+                        title={o.emailError || 'The confirmation email could not be sent. See Logs.'}
+                      >
+                        no email sent
                       </div>
                     )}
                   </td>

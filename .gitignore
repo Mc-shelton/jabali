@@ -2,3 +2,29 @@ node_modules
 dist
 .DS_Store
 .vite
+
+# Local Claude Code settings — personal, not team config.
+.claude/settings.local.json
+
+# ---------------------------------------------------------------- secrets
+# config.php holds the M-Pesa keys and the admin password. It lives ONLY on the
+# server — see public/api/config.example.php for the template, and
+# ADMIN_DEPLOY.md for how to create it. Never commit this file: the repository
+# is public.
+public/api/config.php
+
+# Build artifact. It bundles api/config.php, so committing it leaks the same
+# secrets a second time.
+dist.zip
+*.zip
+
+# ---------------------------------------------------------------- runtime data
+# Written by the app on the server. The seed content_*.json / events.json /
+# jabali5.json ARE tracked so a fresh install has something to show — but
+# anything holding customer or runtime data is not.
+public/api/data/orders.json
+public/api/data/logs/api-*.log
+
+# Files uploaded through the admin. The folders are kept via .gitkeep.
+public/uploads/*/*
+!public/uploads/*/.gitkeep
