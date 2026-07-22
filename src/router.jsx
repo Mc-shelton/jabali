@@ -1,11 +1,13 @@
 import { createBrowserRouter, Navigate } from 'react-router-dom';
 import App from './App';
 import AdminApp from './admin/AdminApp';
+import MemberApp from './members/MemberApp';
 import AdminEvents from './admin/AdminEvents';
 import AdminEventForm from './admin/AdminEventForm';
 import AdminJabali5 from './admin/AdminJabali5';
 import AdminOrders from './admin/AdminOrders';
 import AdminContent from './admin/AdminContent';
+import AdminAccess from './admin/AdminAccess';
 import AdminLogs from './admin/AdminLogs';
 import AdminScan from './admin/AdminScan';
 import Home from './pages/Home';
@@ -57,8 +59,15 @@ const router = createBrowserRouter([
       // route of their own.
       { path: 'content', element: <AdminContent /> },
       { path: 'content/:section', element: <AdminContent /> },
+      { path: 'access', element: <AdminAccess /> },
       { path: 'logs', element: <AdminLogs /> }
     ]
+  },
+  // The member portal. Its own gate and its own credential — it is not a
+  // subsection of /admin, and signing in here grants nothing beyond the roster.
+  {
+    path: '/members',
+    element: <MemberApp />
   }
 ]);
 

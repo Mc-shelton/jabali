@@ -81,12 +81,53 @@ function validate_section_media(string $name, array $data): void
     }
 }
 
+// The only section a member may read the schema for or write to. A single
+// constant so the read path and the write path cannot drift apart and quietly
+// grant more than intended.
+const MEMBER_SECTIONS = ['members'];
+
+function member_may_edit(string $name): bool
+{
+    return is_admin() || in_array($name, MEMBER_SECTIONS, true);
+}
+
+// A one-line summary of what a save changed, for the log. The full before and
+// after would be several kilobytes of JSON per edit and unreadable in the log
+// viewer; the roster's shape — who is on it — is the part worth being able to
+// reconstruct after the fact.
+function content_change_summary(string $name, array $before, array $after): array
+{
+    if ($name !== 'members') {
+        return [];
+    }
+
+    $names = static fn(array $d) => array_values(array_filter(array_map(
+        static fn($m) => is_array($m) ? (string) ($m['name'] ?? '') : '',
+        (array) ($d['members'] ?? []),
+    )));
+
+    $was = $names($before);
+    $now = $names($after);
+
+    return [
+        'added'   => array_values(array_diff($now, $was)),
+        'removed' => array_values(array_diff($was, $now)),
+        'count'   => count($now),
+    ];
+}
+
 route([
     'GET' => function () {
         $sections = content_sections();
 
         if (!empty($_GET['schema'])) {
             require_auth();
+            // A member is served only the schema they can act on. They have no
+            // use for the rest, and the schema is a map of everything the
+            // dashboard can change.
+            if (!is_admin()) {
+                $sections = array_intersect_key($sections, array_flip(MEMBER_SECTIONS));
+            }
             json_out($sections);
         }
 
@@ -121,9 +162,28 @@ route([
             error_out('Unknown content section.', 404);
         }
 
+        // The real boundary for member access. The portal only ever offers them
+        // the roster, but the portal is JavaScript on their machine — this is
+        // the check that holds when the request doesn't come from it.
+        if (!member_may_edit($name)) {
+            log_warn('Blocked a member write outside their scope', ['section' => $name]);
+            error_out('This section is for administrators only.', 403);
+        }
+
+        $before = store_read(section_store($name), []);
+
         $clean = normalise_fields($schema['fields'], read_json_body());
         validate_section_media($name, $clean);
         store_write(section_store($name), $clean);
+
+        // Logged for every role, not just members: "who changed the roster and
+        // when" is the question this answers, and an admin edit is just as
+        // likely to be the one being reconstructed.
+        log_info('Content saved', [
+            'section' => $name,
+            'role'    => current_role(),
+        ] + content_change_summary($name, is_array($before) ? $before : [], $clean));
+
         json_out($clean);
     },
 ]);

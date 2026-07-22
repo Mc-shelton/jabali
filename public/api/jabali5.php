@@ -143,7 +143,7 @@ route([
         // Admin editor needs the raw stored overrides, not the enriched values,
         // so re-saving doesn't bake inherited event data into hard overrides.
         if (isset($_GET['raw'])) {
-            require_auth();
+            require_admin();
             json_out(store_read(STORE, default_config()));
             return;
         }
@@ -152,7 +152,7 @@ route([
     },
 
     'PUT' => function () {
-        require_auth();
+        require_admin();
         require_csrf();
         $in = read_json_body();
 

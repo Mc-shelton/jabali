@@ -120,15 +120,25 @@ function store_write(string $name, $data): void
 }
 
 // ---------------------------------------------------------------- auth + csrf
-function is_authenticated(): bool
-{
-    return !empty($_SESSION['admin']);
-}
+// Roles and credential checks live in _access.php so they can be tested without
+// a session, headers, or config.php.
+require __DIR__ . '/_access.php';
 
 function require_auth(): void
 {
     if (!is_authenticated()) {
         error_out('Not authenticated.', 401);
+    }
+}
+
+// For everything a member must never reach. 403 rather than 401: they are
+// signed in, they simply aren't allowed, and answering 401 would send the app
+// into a pointless re-login loop.
+function require_admin(): void
+{
+    require_auth();
+    if (!is_admin()) {
+        error_out('This area is for administrators only.', 403);
     }
 }
 
@@ -150,13 +160,36 @@ function require_csrf(): void
     }
 }
 
-function password_is_valid(string $password): bool
+// ---------------------------------------------------------------- settings
+// Operational switches the admin owns, kept apart from `content_*` because
+// those are served publicly and these must not be. Small enough to be one file.
+function settings_read(): array
 {
-    if (defined('ADMIN_PASSWORD_HASH') && ADMIN_PASSWORD_HASH !== '') {
-        return password_verify($password, ADMIN_PASSWORD_HASH);
+    $stored = store_read('settings', []);
+    if (!is_array($stored)) {
+        $stored = [];
     }
-    // Constant-time compare against the plaintext fallback.
-    return hash_equals(ADMIN_PASSWORD, $password);
+
+    return $stored + [
+        // Closed by default. Turning member access on is a deliberate act; a
+        // deploy that silently opened a second way into the dashboard would be
+        // the wrong failure direction.
+        'memberAccessOpen' => false,
+    ];
+}
+
+function settings_write(array $values): array
+{
+    $clean = ['memberAccessOpen' => (bool) ($values['memberAccessOpen'] ?? false)];
+    store_write('settings', $clean);
+    return $clean;
+}
+
+// Member sign-in needs both halves: the admin has opened the door, and a
+// credential actually exists to check against.
+function member_access_open(): bool
+{
+    return settings_read()['memberAccessOpen'] === true && member_credentials_configured();
 }
 
 // ---------------------------------------------------------------- sanitising

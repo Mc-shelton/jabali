@@ -8,6 +8,7 @@ import {
   ExportOutlined,
   EditOutlined,
   FileTextOutlined,
+  TeamOutlined,
 } from '@ant-design/icons';
 
 const AdminLayout = ({ onLogout, children }) => (
@@ -33,6 +34,9 @@ const AdminLayout = ({ onLogout, children }) => (
         </NavLink>
         <NavLink to="/admin/content" className="admin-nav-link">
           <EditOutlined /> Site content
+        </NavLink>
+        <NavLink to="/admin/access" className="admin-nav-link">
+          <TeamOutlined /> Member access
         </NavLink>
         <NavLink to="/admin/logs" className="admin-nav-link">
           <FileTextOutlined /> Logs

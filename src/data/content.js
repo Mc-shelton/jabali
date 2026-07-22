@@ -13,6 +13,7 @@ import { socialLinks } from './social';
 import { joinPageData } from './join';
 import { partnershipsPageData } from './partnerships';
 import { communityPageData } from './community';
+import { promoDefaults } from './promo';
 import {
   musicPlatformLinks,
   musicCatalog,
@@ -36,6 +37,8 @@ export const contentSeeds = {
     },
     items: contactItems.map(({ label, value }) => ({ label, value })),
   },
+
+  promo: promoDefaults,
 
   social: {
     links: socialLinks.map(({ id, label, url }) => ({ id, label, url: url ?? null })),

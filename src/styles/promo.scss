@@ -1,0 +1,198 @@
+@use 'tokens';
+
+// The arrival pop-up. Poster beside the details on a desktop, poster above them
+// on a phone — the artwork is the reason it exists, so it never gets cropped
+// down to a thumbnail.
+
+.promo-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 400; // above the fixed nav
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: clamp(12px, 4vw, 40px);
+  background: rgba(11, 31, 51, 0.82);
+  backdrop-filter: blur(6px);
+  overflow: hidden;
+  overscroll-behavior: contain;
+  animation: promo-fade 320ms tokens.$ease-out both;
+}
+
+.promo-card {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1fr);
+  width: min(880px, 100%);
+  max-height: 100%;
+  background: tokens.$paper-raised;
+  border-radius: tokens.$r-lg;
+  box-shadow: tokens.$shadow-lift;
+  overflow: hidden;
+  animation: promo-rise 420ms tokens.$ease-out both;
+}
+
+// ---------------------------------------------------------------- poster
+.promo-media {
+  min-height: 0;
+  background: tokens.$paper-sunk;
+
+  img {
+    width: 100%;
+    height: 100%;
+    // The poster is the point, but its aspect ratio is whatever the designer
+    // handed over — cover keeps the panel filled without letterboxing.
+    object-fit: cover;
+  }
+}
+
+// ---------------------------------------------------------------- body
+.promo-body {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-height: 0;
+  overflow-y: auto;
+  padding: clamp(24px, 3.2vw, 40px);
+  padding-right: clamp(48px, 5vw, 64px); // clears the close button
+}
+
+.promo-title {
+  font-size: clamp(1.5rem, 2.6vw, 2.1rem);
+  line-height: 1.1;
+  color: tokens.$ink;
+}
+
+.promo-meta {
+  display: grid;
+  gap: 10px;
+  margin: 2px 0 0;
+
+  div {
+    display: grid;
+    gap: 2px;
+  }
+
+  dt {
+    font-size: 0.68rem;
+    font-weight: 600;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: tokens.$ink-muted;
+  }
+
+  dd {
+    margin: 0;
+    font-size: 0.94rem;
+    font-weight: 600;
+    color: tokens.$ink-body;
+  }
+}
+
+.promo-blurb {
+  font-size: 0.95rem;
+  line-height: 1.65;
+  color: tokens.$ink-body;
+}
+
+.promo-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+// ---------------------------------------------------------------- close
+.promo-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  z-index: 2;
+  display: grid;
+  place-items: center;
+  width: 38px;
+  height: 38px;
+  border: 1px solid tokens.$line-strong;
+  border-radius: tokens.$r-pill;
+  // Opaque: it sits over the poster on a phone, where a transparent button
+  // disappears into whatever the artwork happens to be behind it.
+  background: tokens.$paper-raised;
+  color: tokens.$ink;
+  cursor: pointer;
+  transition: background tokens.$dur tokens.$ease, transform tokens.$dur tokens.$ease;
+
+  &:hover {
+    background: tokens.$paper-sunk;
+    transform: rotate(90deg);
+  }
+
+  &:focus-visible {
+    outline: 2px solid tokens.$brass-lit;
+    outline-offset: 2px;
+  }
+}
+
+// ---------------------------------------------------------------- motion
+@keyframes promo-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+@keyframes promo-rise {
+  from { opacity: 0; transform: translateY(18px) scale(0.98); }
+  to   { opacity: 1; transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .promo-overlay,
+  .promo-card {
+    animation: none;
+  }
+}
+
+// ---------------------------------------------------------------- responsive
+@media (max-width: 780px) {
+  .promo-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .promo-card {
+    // One column: side by side at this width leaves the poster too narrow to
+    // read and the text too narrow to scan.
+    grid-template-columns: 1fr;
+    grid-template-rows: auto minmax(0, 1fr);
+    width: 100%;
+    max-height: 92dvh;
+    border-radius: tokens.$r-lg tokens.$r-lg 0 0;
+  }
+
+  // Capped so the poster can't push the headline and the button off-screen —
+  // the whole point is that the call to action is visible without scrolling.
+  .promo-media {
+    max-height: 38dvh;
+  }
+
+  .promo-body {
+    padding: 20px;
+    padding-bottom: max(20px, env(safe-area-inset-bottom));
+    gap: 12px;
+  }
+
+  .promo-actions .btn {
+    flex: 1 1 auto;
+    justify-content: center;
+  }
+}
+
+// Landscape phone: the poster costs more than it's worth when there are only a
+// few hundred pixels of height to spend.
+@media (max-height: 520px) and (max-width: 900px) {
+  .promo-media {
+    display: none;
+  }
+
+  .promo-card {
+    max-height: 100%;
+  }
+}

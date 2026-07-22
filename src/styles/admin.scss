@@ -55,6 +55,33 @@
   font-size: 0.9rem;
 }
 
+.admin-login-foot {
+  margin: 4px 0 0;
+  color: tokens.$ink-muted;
+  font-size: 0.8rem;
+  line-height: 1.6;
+  text-align: center;
+
+  a {
+    color: tokens.$ink;
+    font-weight: 600;
+  }
+}
+
+// Neutral information, as distinct from .admin-error (something went wrong) and
+// .admin-success (something you did worked). "Member access is closed" is
+// neither — it is the state of the world.
+.admin-notice {
+  margin: 0;
+  padding: 11px 14px;
+  border: 1px solid rgba(204, 123, 0, 0.32);
+  border-radius: tokens.$r-sm;
+  background: tokens.$brass-glow;
+  color: tokens.$ink-body;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
 // ---------------------------------------------------------------- shell
 .admin-shell {
   display: grid;
@@ -523,6 +550,46 @@
 
   textarea {
     resize: vertical;
+  }
+}
+
+// A checkbox is not a text field. The `input` rule above stretches every input
+// to full width and pads it, which rendered the only toggles in the dashboard
+// as large empty boxes with a tick adrift in the middle — not obviously a
+// switch, and not obviously clickable. Label left, control right, help below.
+.admin-field.is-bool {
+  grid-template-columns: 1fr auto;
+  align-items: center;
+  column-gap: 12px;
+  cursor: pointer;
+
+  input[type='checkbox'] {
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    accent-color: tokens.$ink;
+    cursor: pointer;
+  }
+
+  small {
+    grid-column: 1 / -1;
+  }
+}
+
+.admin-list-search {
+  width: min(320px, 100%);
+  padding: 9px 12px;
+  border: 1px solid tokens.$line-strong;
+  border-radius: tokens.$r-sm;
+  background: #fff;
+  color: tokens.$ink-body;
+  font: inherit;
+  font-size: 0.9rem;
+
+  &:focus {
+    outline: none;
+    border-color: tokens.$ink;
+    box-shadow: 0 0 0 3px rgba(23, 73, 122, 0.12);
   }
 }
 

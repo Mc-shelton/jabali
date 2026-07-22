@@ -60,7 +60,7 @@ function find_by_code(array $orders, string $code): ?int
 route([
     // Look up without consuming. Safe to call as often as a camera fires.
     'GET' => function () {
-        require_auth();
+        require_admin();
 
         $orders = store_read(STORE, []);
         $i = find_by_code($orders, (string) ($_GET['code'] ?? ''));
@@ -72,7 +72,7 @@ route([
     // Admit the order. The whole order is admitted at once — a code covers the
     // full quantity, so a group of three enters on one scan.
     'POST' => function () {
-        require_auth();
+        require_admin();
         require_csrf();
 
         $orders = store_read(STORE, []);

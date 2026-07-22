@@ -121,11 +121,18 @@ export async function getSession() {
   return data;
 }
 
-export async function login(password) {
-  const data = await request('auth.php', { method: 'POST', body: { password } });
+// `username` selects which credential is being offered. The admin form omits
+// it, which the server reads as the admin credential.
+export async function login(password, username) {
+  const body = username ? { username, password } : { password };
+  const data = await request('auth.php', { method: 'POST', body });
   if (data.csrf) setCsrf(data.csrf);
   return data;
 }
+
+// ---------------------------------------------------------------- settings
+export const adminFetchSettings = () => request('settings.php');
+export const saveSettings = (data) => request('settings.php', { method: 'PUT', body: data });
 
 export async function logout() {
   await request('auth.php?logout=1', { method: 'POST' });

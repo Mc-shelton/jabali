@@ -110,6 +110,30 @@ const ScalarInput = ({ spec, value, onChange, id, context }) => {
     );
   }
 
+  // Like `track`, but sourced from the events store rather than from this
+  // section's own values — AdminContent fetches it and puts it on the context.
+  if (kind === 'event') {
+    const events = Array.isArray(context?.eventOptions) ? context.eventOptions : [];
+    const currentExists = !value || events.some((event) => event.slug === value);
+
+    return (
+      <select id={id} value={value ?? ''} onChange={(e) => onChange(e.target.value)}>
+        <option value="">Select an event…</option>
+        {/* A chosen event that has since been deleted stays visible and stays
+            selected. Dropping it would silently rewrite the admin's choice to
+            whatever happened to be first in the list. */}
+        {!currentExists && <option value={value}>{value} (deleted)</option>}
+        {events.map((event) => (
+          <option key={event.slug} value={event.slug}>
+            {event.title}
+            {event.date ? ` — ${event.date}` : ''}
+            {event.status === 'past' ? ' (past)' : ''}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
   if (kind === 'bool') {
     return (
       <input
@@ -136,6 +160,20 @@ const ScalarInput = ({ spec, value, onChange, id, context }) => {
 // unusable — a 23-member roster is otherwise several screens of scrolling.
 const COLLAPSE_THRESHOLD = 5;
 
+// Past this many rows, finding one by scrolling stops being reasonable — the
+// roster is around 200 people.
+const SEARCH_THRESHOLD = 8;
+
+// Every scalar in a row, flattened, so a search matches on whatever the row
+// actually contains rather than on a guessed "name" field.
+const rowText = (item) => {
+  if (item == null) return '';
+  if (typeof item !== 'object') return String(item);
+  return Object.values(item)
+    .filter((v) => v != null && typeof v !== 'object')
+    .join(' ');
+};
+
 const ListField = ({ name, spec, value, onChange, path, context }) => {
   const items = Array.isArray(value) ? value : [];
   const of = spec.of ?? { kind: 'text' };
@@ -145,6 +183,18 @@ const ListField = ({ name, spec, value, onChange, path, context }) => {
   // per row and reads better left open.
   const collapsible = of.kind === 'group' && items.length > COLLAPSE_THRESHOLD;
   const [openRows, setOpenRows] = useState(() => new Set());
+
+  const searchable = items.length > SEARCH_THRESHOLD;
+  const [query, setQuery] = useState('');
+  const q = query.trim().toLowerCase();
+  const filtering = searchable && q !== '';
+
+  // Rows are carried with their real index. Every edit, move, and delete below
+  // addresses that index, so filtering changes only what is drawn — never
+  // which row an action lands on.
+  const visible = items
+    .map((item, index) => ({ item, index }))
+    .filter(({ item }) => !filtering || rowText(item).toLowerCase().includes(q));
 
   const isOpen = (i) => !collapsible || openRows.has(i);
   const toggle = (i) =>
@@ -211,6 +261,16 @@ const ListField = ({ name, spec, value, onChange, path, context }) => {
 
       <div className="admin-list-head">
         {spec.help && <p className="admin-hint">{spec.help}</p>}
+        {searchable && (
+          <input
+            type="search"
+            className="admin-list-search"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            placeholder={`Search ${items.length} ${(spec.label ?? 'items').toLowerCase()}…`}
+            aria-label={`Search ${spec.label ?? 'list'}`}
+          />
+        )}
         {collapsible && (
           <button
             type="button"
@@ -224,7 +284,15 @@ const ListField = ({ name, spec, value, onChange, path, context }) => {
         )}
       </div>
 
-      {items.map((item, i) => {
+      {filtering && (
+        <p className="admin-hint">
+          {visible.length === 0
+            ? `Nothing matches “${query.trim()}”.`
+            : `${visible.length} of ${items.length} shown. Reordering is off while searching.`}
+        </p>
+      )}
+
+      {visible.map(({ item, index: i }) => {
         const open = isOpen(i);
         const summary = rowSummary(of, item, i);
 
@@ -246,11 +314,14 @@ const ListField = ({ name, spec, value, onChange, path, context }) => {
               )}
 
               <div className="admin-list-row-tools">
+                {/* Disabled while filtering: "up" would swap with a row that
+                    isn't on screen, so the visible result would be the row
+                    vanishing rather than moving. */}
                 <button
                   type="button"
                   className="admin-icon-btn"
                   onClick={() => move(i, -1)}
-                  disabled={i === 0}
+                  disabled={filtering || i === 0}
                   aria-label={`Move ${summary} up`}
                 >
                   <ArrowUpOutlined />
@@ -259,7 +330,7 @@ const ListField = ({ name, spec, value, onChange, path, context }) => {
                   type="button"
                   className="admin-icon-btn"
                   onClick={() => move(i, 1)}
-                  disabled={i === items.length - 1}
+                  disabled={filtering || i === items.length - 1}
                   aria-label={`Move ${summary} down`}
                 >
                   <ArrowDownOutlined />
@@ -356,7 +427,7 @@ const SchemaField = ({ name, spec, value, onChange, path = '', context }) => {
   }
 
   return (
-    <label className="admin-field" htmlFor={fieldId}>
+    <label className={`admin-field ${kind === 'bool' ? 'is-bool' : ''}`} htmlFor={fieldId}>
       <span>{spec.label ?? name}</span>
       <ScalarInput spec={spec} value={value} onChange={onChange} id={fieldId} context={context} />
       {spec.help && <small className="admin-hint">{spec.help}</small>}

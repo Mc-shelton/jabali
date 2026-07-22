@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { NavLink, useParams, Navigate } from 'react-router-dom';
-import { adminFetchContent, adminFetchContentSchema, saveContent } from '../lib/api';
+import { adminFetchContent, adminFetchContentSchema, adminFetchEvents, saveContent } from '../lib/api';
 import { contentSeed } from '../data/content';
 import SchemaField, { emptyValue } from './SchemaField';
 import PageLoader from '../components/PageLoader';
@@ -17,6 +17,26 @@ const AdminContent = () => {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [saved, setSaved] = useState(false);
+  const [events, setEvents] = useState([]);
+
+  // Events back the `event` picker (the promo pop-up chooses one). Fetched once
+  // alongside the schema and offered to every section — a section with no event
+  // field simply never reads it. A failure here is not surfaced: it would leave
+  // the picker empty, which the field itself already explains, and it must not
+  // block editing the sections that don't need it.
+  useEffect(() => {
+    let active = true;
+    adminFetchEvents()
+      .then((data) => {
+        if (!active) return;
+        const all = [...(data.upcoming ?? []), ...(data.past ?? [])];
+        setEvents(all);
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
 
   // Schema is fetched once and reused across section switches.
   useEffect(() => {
@@ -138,7 +158,12 @@ const AdminContent = () => {
               spec={fieldSpec}
               path={name}
               value={values[name]}
-              context={values}
+              // Context is normally a section's own values (that's how `track`
+              // reads the music catalogue). `eventOptions` comes from a
+              // different store, so it gets a name no section is likely to use
+              // as a field — a plain `events` key would be shadowed by, or
+              // would shadow, a section that stored something under that name.
+              context={{ ...values, eventOptions: events }}
               onChange={(next) => setValues((v) => ({ ...v, [name]: next }))}
             />
           ))}

@@ -7,9 +7,16 @@
 // editing the schema — never this file, and never the React form.
 //
 // Field kinds:
-//   text | textarea | url | image | file | email | select | track | number | bool → scalar
+//   text | textarea | url | image | file | email | select | track | event | number | bool → scalar
 //   group  ['fields' => [name => spec, ...]]   → nested object
 //   list   ['of' => spec, 'maxItems' => int]   → repeatable
+//
+// `track` and `event` are references: they store an id/slug that belongs to
+// another store, and the admin renders them as a picker rather than a text box.
+// Deliberately NOT validated against that store on write — an event can be
+// deleted after it was chosen, and rejecting the save (or silently blanking the
+// field) would be a worse answer than storing the slug and letting the page
+// that reads it decide what to do when the target is gone.
 //
 // Every spec may carry 'label' (admin UI), 'help' (admin UI), 'maxLength', and
 // 'nullable' (empty stores as null instead of '').
@@ -108,6 +115,8 @@ function normalise_field(array $spec, $value)
         'select' => in_array($value, $spec['options'] ?? [], true)
             ? $value
             : (string) ($spec['options'][0] ?? ''),
+        // A slug, so the same character set the event store itself produces.
+        'event'  => preg_replace('/[^a-z0-9-]/', '', mb_strtolower(clean_string($value, 120))),
         default  => clean_string($value, $maxLen),
     };
 

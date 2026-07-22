@@ -204,7 +204,7 @@ route([
     },
 
     'POST' => function () {
-        require_auth();
+        require_admin();
         require_csrf();
         $events = load_events();
         $event = normalise_event(read_json_body(), $events);
@@ -214,7 +214,7 @@ route([
     },
 
     'PUT' => function () {
-        require_auth();
+        require_admin();
         require_csrf();
         $slug = $_GET['slug'] ?? '';
         $events = load_events();
@@ -230,7 +230,7 @@ route([
     },
 
     'DELETE' => function () {
-        require_auth();
+        require_admin();
         require_csrf();
         $slug = $_GET['slug'] ?? '';
         $events = load_events();

@@ -45,6 +45,16 @@ route([
             $folder = UPLOAD_FOLDER_DEFAULT;
         }
 
+        // A member may upload, because keeping their own photo current is the
+        // point of the member portal — but only into the members folder. Left
+        // to the client's value they could file an image under `site` or
+        // `events` and use the portal as general storage for the public web
+        // root. Overridden rather than rejected: the only folder they have any
+        // business writing to is this one.
+        if (!is_admin()) {
+            $folder = 'members';
+        }
+
         $dir = UPLOAD_BASE_DIR . '/' . $folder;
         if (!is_dir($dir) && !mkdir($dir, 0775, true) && !is_dir($dir)) {
             error_out('Upload directory is not writable.', 500);

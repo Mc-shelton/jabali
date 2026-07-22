@@ -29,7 +29,7 @@ const MEDIA_UPLOADS = [
 
 route([
     'POST' => function () {
-        require_auth();
+        require_admin();
         require_csrf();
 
         if (empty($_FILES['file']) || !is_uploaded_file($_FILES['file']['tmp_name'] ?? '')) {

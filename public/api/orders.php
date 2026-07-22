@@ -7,7 +7,7 @@ require __DIR__ . '/_orders.php';
 
 route([
     'GET' => function () {
-        require_auth();
+        require_admin();
 
         $orders = store_read('orders', []);
         // Newest first.
@@ -30,7 +30,7 @@ route([
     // for orders that status polling wrongly marked failed while the customer
     // was still paying — those had their money taken but never got an e-ticket.
     'POST' => function () {
-        require_auth();
+        require_admin();
         require_csrf();
 
         // Re-send one buyer's confirmation. Separate from reconcile: that asks

@@ -1,0 +1,126 @@
+@use 'tokens';
+
+// The member portal's own pieces. Everything else it needs — shell, sidebar,
+// fields, buttons — comes from admin.scss, so the two portals stay visually
+// identical without either one owning the other's styles.
+
+.mp-search {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  max-width: 560px;
+  margin-bottom: 18px;
+  padding: 0 14px;
+  border: 1px solid tokens.$line-strong;
+  border-radius: tokens.$r-sm;
+  background: #fff;
+  color: tokens.$ink-muted;
+
+  &:focus-within {
+    border-color: tokens.$ink;
+    box-shadow: 0 0 0 3px rgba(23, 73, 122, 0.12);
+  }
+
+  input {
+    flex: 1;
+    min-width: 0;
+    padding: 13px 0;
+    border: 0;
+    background: transparent;
+    color: tokens.$ink-body;
+    font: inherit;
+    font-size: 16px; // no zoom-on-focus in mobile Safari
+
+    &:focus {
+      outline: none;
+    }
+  }
+}
+
+.mp-empty {
+  margin-top: 4px;
+}
+
+// ---------------------------------------------------------------- results
+.mp-results {
+  display: grid;
+  gap: 8px;
+  max-width: 560px;
+  margin: 0 0 18px;
+  padding: 0;
+  list-style: none;
+}
+
+.mp-result {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  padding: 10px 14px;
+  border: 1px solid tokens.$line;
+  border-radius: tokens.$r-sm;
+  background: #fff;
+  text-align: left;
+  cursor: pointer;
+  transition: border-color tokens.$dur tokens.$ease, background tokens.$dur tokens.$ease;
+
+  &:hover {
+    border-color: tokens.$ink;
+    background: tokens.$paper-sunk;
+  }
+
+  &:focus-visible {
+    outline: 2px solid tokens.$brass-lit;
+    outline-offset: 2px;
+  }
+}
+
+.mp-result-photo {
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  border-radius: tokens.$r-pill;
+  object-fit: cover;
+  background: tokens.$paper-sunk;
+
+  &.is-blank {
+    display: block;
+    border: 1px dashed tokens.$line-strong;
+  }
+}
+
+.mp-result-text {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+
+  strong {
+    color: tokens.$ink;
+    font-size: 0.95rem;
+  }
+
+  small {
+    color: tokens.$ink-muted;
+    font-size: 0.82rem;
+  }
+}
+
+.mp-add {
+  max-width: 560px;
+}
+
+.mp-form {
+  max-width: 720px;
+}
+
+// ---------------------------------------------------------------- responsive
+// The sidebar is a nav of one item here, so it costs more than it earns on a
+// phone: it becomes a header strip and the roster gets the whole width.
+@media (max-width: 720px) {
+  .mp-search,
+  .mp-results,
+  .mp-add,
+  .mp-form {
+    max-width: none;
+  }
+}

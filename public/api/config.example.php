@@ -18,6 +18,32 @@
 const ADMIN_PASSWORD = '';
 const ADMIN_PASSWORD_HASH = '';
 
+// Optional. The admin sign-in form asks only for a password, so this is not
+// used there; it exists so the name can't collide with the member one.
+const ADMIN_USERNAME = 'admin';
+
+// --------------------------------------------------------------- member portal
+// A SHARED credential for the choir, used at /members. It opens a portal that
+// can do exactly one thing: search the roster and edit or add a member's name,
+// voice part, church, and photo. It cannot reach events, orders, tickets,
+// logs, or any other part of the site.
+//
+// Shared, not per-person: anyone with this password can edit ANY member's
+// entry, not only their own. Hand it out on that understanding, and rotate it
+// when someone leaves the chorale.
+//
+// Two independent switches have to be on before a member can sign in:
+//   1. a password is set here, and
+//   2. Member access is switched on in Admin → Member access.
+// Either one off means no member sign-in. Leave the password blank and member
+// access can never be opened, whatever the dashboard says.
+//
+// Generate the hash the same way as the admin one:
+//     php -r "echo password_hash('their-password', PASSWORD_DEFAULT), PHP_EOL;"
+const MEMBER_USERNAME = 'jabali-member';
+const MEMBER_PASSWORD = '';
+const MEMBER_PASSWORD_HASH = '';
+
 // Data lives beside this file but is blocked from the web by api/data/.htaccess.
 define('DATA_DIR', __DIR__ . '/data');
 

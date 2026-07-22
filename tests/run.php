@@ -41,7 +41,12 @@ echo '  ' . count($banned) . " patterns checked\n";
 
 // A filled-in config.php must never be committed: the repository is public.
 echo "\n=== secrets are not tracked ===\n";
-exec('cd ' . escapeshellarg($root) . ' && git ls-files public/api/config.php dist.zip 2>/dev/null', $tracked);
+// dist/api/config.php is included deliberately: `npm run build` copies public/
+// into dist/, so a filled-in config lands there as a second copy of the live
+// M-Pesa and mail credentials. dist/ is gitignored today, and this is the check
+// that notices if that ever stops being true.
+exec('cd ' . escapeshellarg($root)
+    . ' && git ls-files public/api/config.php dist/api/config.php dist.zip 2>/dev/null', $tracked);
 if ($tracked) {
     foreach ($tracked as $t) {
         $failed[] = "tracked secret: $t";
@@ -52,7 +57,7 @@ if ($tracked) {
 }
 
 echo "\n=== suites ===\n";
-foreach (['schema_test', 'merch_test', 'log_test', 'fulfil_test', 'mailer_test', 'enquiry_test', 'qr_test', 'admit_test'] as $suite) {
+foreach (['schema_test', 'merch_test', 'log_test', 'fulfil_test', 'mailer_test', 'enquiry_test', 'access_test', 'access_unset_test', 'qr_test', 'admit_test'] as $suite) {
     $out = [];
     exec('php ' . escapeshellarg(__DIR__ . "/$suite.php") . ' 2>&1', $out, $code);
     $summary = trim((string) end($out));

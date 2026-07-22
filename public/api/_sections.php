@@ -58,6 +58,56 @@ function content_sections(): array
             ],
         ],
 
+        // -------------------------------------------------------------- promo
+        // The pop-up shown once per visit. Everything except the event itself is
+        // optional and falls back to that event's own details, so promoting
+        // something is a two-field job: pick it, switch it on.
+        'promo' => [
+            'label' => 'Event pop-up',
+            'blurb' => 'A poster shown once per visit, over whichever page the visitor lands on. '
+                     . 'It appears again on a reload, but not while they browse from page to page. '
+                     . 'Switch it off to show nothing.',
+            'fields' => [
+                'enabled' => [
+                    'kind'    => 'bool',
+                    'label'   => 'Show the pop-up',
+                    'default' => false,
+                    'help'    => 'The single switch. Everything below is ignored while this is off.',
+                ],
+                'eventSlug' => [
+                    'kind'  => 'event',
+                    'label' => 'Event to promote',
+                    'help'  => 'The pop-up shows this event and links to its page. If the event '
+                             . 'is later deleted, the pop-up simply stops appearing.',
+                ],
+                'headline' => [
+                    'kind'      => 'text',
+                    'label'     => 'Headline',
+                    'maxLength' => 70,
+                    'help'      => 'Optional — defaults to the event title.',
+                ],
+                'blurb' => [
+                    'kind'      => 'textarea',
+                    'label'     => 'Short line',
+                    'maxLength' => 200,
+                    'help'      => 'Optional — defaults to the event summary. Two lines at most.',
+                ],
+                'ctaLabel' => [
+                    'kind'      => 'text',
+                    'label'     => 'Button label',
+                    'maxLength' => 30,
+                    'help'      => 'Optional — defaults to “See the event”.',
+                ],
+                'image' => [
+                    'kind'   => 'image',
+                    'label'  => 'Poster override',
+                    'upload' => 'events',
+                    'help'   => 'Optional — defaults to the event’s own poster. Upload one here '
+                              . 'only if the promo needs different artwork.',
+                ],
+            ],
+        ],
+
         // ------------------------------------------------------------- social
         'social' => [
             'label' => 'Social links',

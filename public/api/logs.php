@@ -11,7 +11,7 @@ require __DIR__ . '/_bootstrap.php';
 
 route([
     'GET' => function () {
-        require_auth();
+        require_admin();
 
         $day = (string) ($_GET['day'] ?? date('Y-m-d'));
         if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $day)) {
@@ -57,7 +57,7 @@ route([
 
     // Clear a day's log once an issue has been dealt with.
     'DELETE' => function () {
-        require_auth();
+        require_admin();
         require_csrf();
 
         $day = (string) ($_GET['day'] ?? '');
