@@ -1,0 +1,216 @@
+@use 'tokens';
+
+// The enquiry form, shared by the contact page. Sized mobile-first: this is the
+// one thing on the site people are most likely to fill in on a phone, one
+// thumb, in a hurry.
+
+.eq-form {
+  display: grid;
+  gap: 18px;
+  padding: clamp(20px, 4vw, 40px);
+  border: 1px solid tokens.$line;
+  border-radius: tokens.$r-lg;
+  background: tokens.$paper-raised;
+  box-shadow: tokens.$shadow-soft;
+}
+
+.eq-head {
+  display: grid;
+  justify-items: start;
+  gap: 12px;
+}
+
+.eq-head-note {
+  color: tokens.$ink-muted;
+  font-size: 0.92rem;
+  line-height: 1.6;
+}
+
+// ---------------------------------------------------------------- fields
+.eq-row {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.eq-field {
+  display: grid;
+  gap: 7px;
+  min-width: 0;
+}
+
+.eq-label {
+  font-size: 0.78rem;
+  font-weight: 600;
+  color: tokens.$ink-body;
+  padding: 0; // legend
+}
+
+.eq-field {
+  input,
+  select,
+  textarea {
+    width: 100%;
+    padding: 13px 14px;
+    border: 1px solid tokens.$line-strong;
+    border-radius: tokens.$r-sm;
+    background: tokens.$paper;
+    color: tokens.$ink-body;
+    font-family: tokens.$font-sans;
+    // 16px exactly. Anything smaller and iOS Safari zooms the page on focus,
+    // which on a phone leaves the visitor scrolled sideways into a field they
+    // then have to pinch back out of.
+    font-size: 16px;
+    transition: border-color tokens.$dur tokens.$ease, box-shadow tokens.$dur tokens.$ease;
+
+    &::placeholder {
+      color: tokens.$ink-muted;
+      opacity: 0.7;
+    }
+
+    &:focus {
+      outline: none;
+      border-color: tokens.$ink;
+      box-shadow: 0 0 0 3px rgba(23, 73, 122, 0.12);
+    }
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 130px;
+    line-height: 1.6;
+  }
+}
+
+// ---------------------------------------------------------------- topics
+.eq-topics {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.eq-topic-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+// Chips rather than a select: five options is few enough to show at once, and a
+// visitor arriving from the partnerships page can see the choice was already
+// made for them instead of having to open a menu to find out.
+.eq-topic {
+  position: relative;
+  cursor: pointer;
+
+  input {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+  }
+}
+
+.eq-topic-label {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 16px;
+  border: 1px solid tokens.$line-strong;
+  border-radius: tokens.$r-pill;
+  background: tokens.$paper;
+  color: tokens.$ink-body;
+  font-size: 0.86rem;
+  font-weight: 600;
+  line-height: 1.2;
+  transition: border-color tokens.$dur tokens.$ease, background tokens.$dur tokens.$ease,
+    color tokens.$dur tokens.$ease;
+}
+
+.eq-topic:hover .eq-topic-label {
+  border-color: tokens.$ink;
+}
+
+.eq-topic.is-on .eq-topic-label {
+  background: tokens.$ink;
+  border-color: tokens.$ink;
+  color: tokens.$paper;
+}
+
+.eq-topic input:focus-visible + .eq-topic-label {
+  outline: 2px solid tokens.$brass-lit;
+  outline-offset: 2px;
+}
+
+.eq-topic-blurb {
+  font-size: 0.86rem;
+  line-height: 1.6;
+  color: tokens.$ink-muted;
+}
+
+// ---------------------------------------------------------------- honeypot
+// Off-canvas rather than display:none — some bots skip hidden inputs, and this
+// one is only useful if they fill it.
+.eq-trap {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+}
+
+// ---------------------------------------------------------------- states
+.eq-error {
+  padding: 11px 15px;
+  border-radius: tokens.$r-sm;
+  background: #fdeaea;
+  color: #a12727;
+  font-size: 0.88rem;
+  line-height: 1.55;
+}
+
+.eq-submit {
+  width: 100%;
+  margin-top: 2px;
+}
+
+.eq-note {
+  font-size: 0.78rem;
+  line-height: 1.6;
+  color: tokens.$ink-muted;
+  text-align: center;
+}
+
+.eq-done {
+  justify-items: center;
+  text-align: center;
+  gap: 14px;
+  padding-block: clamp(36px, 7vw, 64px);
+
+  h3 {
+    font-size: 1.4rem;
+  }
+
+  p {
+    max-width: 46ch;
+    color: tokens.$ink-body;
+    line-height: 1.7;
+  }
+}
+
+.eq-done-icon {
+  font-size: 46px;
+  color: #1f9d55;
+}
+
+// ---------------------------------------------------------------- responsive
+@media (max-width: 640px) {
+  .eq-row {
+    grid-template-columns: 1fr;
+  }
+
+  .eq-topic-label {
+    padding: 9px 14px;
+    font-size: 0.82rem;
+  }
+}

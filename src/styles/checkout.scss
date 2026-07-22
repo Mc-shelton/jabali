@@ -4,16 +4,28 @@
   position: fixed;
   inset: 0;
   z-index: 300;
-  display: grid;
-  place-items: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   padding: clamp(12px, 4vw, 40px);
   background: rgba(11, 31, 51, 0.78);
   backdrop-filter: blur(6px);
-  overflow-y: auto;
+  // The overlay itself never scrolls — the modal body does. Scrolling here as
+  // well meant a tall form on a short screen could be centred past the top of
+  // the viewport, putting the close button somewhere you couldn't reach.
+  overflow: hidden;
+  overscroll-behavior: contain;
 }
 
+// A column so the head and step bar stay put while the fields scroll under
+// them. 100dvh rather than 100vh: on mobile Safari the vh unit is the height
+// with the browser chrome hidden, so a modal sized to it is taller than what
+// you can actually see, and the Pay button sits below the address bar.
 .co-modal {
+  display: flex;
+  flex-direction: column;
   width: min(520px, 100%);
+  max-height: 100%;
   background: tokens.$paper-raised;
   border-radius: tokens.$r-lg;
   box-shadow: tokens.$shadow-lift;
@@ -26,6 +38,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 16px;
+  flex: 0 0 auto;
   padding: clamp(20px, 3vw, 28px) clamp(20px, 3vw, 28px) 16px;
   border-bottom: 1px solid tokens.$line;
 }
@@ -70,6 +83,7 @@
 .co-steps {
   display: flex;
   gap: 8px;
+  flex: 0 0 auto;
   padding: 14px clamp(20px, 3vw, 28px) 0;
 }
 
@@ -92,10 +106,18 @@
 }
 
 // ---------------------------------------------------------------- body
+// The only scrolling region in the modal.
 .co-body {
   display: grid;
+  align-content: start;
   gap: 16px;
+  flex: 1 1 auto;
+  min-height: 0; // without this a grid child refuses to shrink and never scrolls
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  -webkit-overflow-scrolling: touch;
   padding: clamp(20px, 3vw, 28px);
+  padding-bottom: max(clamp(20px, 3vw, 28px), env(safe-area-inset-bottom));
 }
 
 .co-grid-2 {
@@ -117,13 +139,17 @@
   input,
   select {
     width: 100%;
+    min-width: 0;
     padding: 12px 13px;
     border: 1px solid tokens.$line-strong;
     border-radius: tokens.$r-sm;
     background: tokens.$paper;
     color: tokens.$ink-body;
     font: inherit;
-    font-size: 0.94rem;
+    // 16px exactly. Below that iOS Safari zooms in when the field takes focus
+    // and does not zoom back out, so tapping Phone left the buyer scrolled
+    // sideways through a form they then had to pinch their way around.
+    font-size: 16px;
 
     &:focus {
       outline: none;
@@ -230,6 +256,7 @@
 
 // ---------------------------------------------------------------- messages
 .co-error {
+  flex: 0 0 auto;
   margin: 0 clamp(20px, 3vw, 28px);
   margin-top: 16px;
   padding: 10px 14px;
@@ -312,8 +339,77 @@
   }
 }
 
+// ---------------------------------------------------------------- responsive
+@media (max-width: 560px) {
+  // A bottom sheet rather than a floating card. A centred card with a margin on
+  // every side wastes the two dimensions a phone has least of, and the gap
+  // under it was never enough to be legible as a gap — it just made the modal
+  // look like it had failed to fit.
+  .co-overlay {
+    align-items: flex-end;
+    padding: 0;
+  }
+
+  .co-modal {
+    width: 100%;
+    max-height: 92dvh;
+    border-radius: tokens.$r-lg tokens.$r-lg 0 0;
+  }
+
+  .co-head {
+    padding: 18px 18px 14px;
+  }
+
+  .co-title {
+    font-size: 1.08rem;
+    line-height: 1.35;
+  }
+
+  .co-steps {
+    padding: 12px 18px 0;
+  }
+
+  .co-step {
+    font-size: 0.66rem;
+    letter-spacing: 0.02em;
+  }
+
+  .co-body {
+    padding: 18px;
+    padding-bottom: max(18px, env(safe-area-inset-bottom));
+    gap: 14px;
+  }
+
+  .co-error {
+    margin-inline: 18px;
+  }
+
+  // Stacked, full width, primary action last — the same order as every other
+  // form on the site, and each one a full-width tap target.
+  .co-actions {
+    flex-direction: column-reverse;
+
+    .btn {
+      width: 100%;
+      min-width: 0;
+    }
+  }
+}
+
 @media (max-width: 480px) {
   .co-grid-2 {
     grid-template-columns: 1fr;
+  }
+}
+
+// A landscape phone has almost no vertical room; the sheet takes what it can
+// and the body scrolls inside it.
+@media (max-height: 460px) {
+  .co-modal {
+    max-height: 100%;
+  }
+
+  .co-centre {
+    padding-block: 20px;
   }
 }

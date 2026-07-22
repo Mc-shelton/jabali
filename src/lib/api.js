@@ -88,6 +88,13 @@ export const initiateTicketPayment = (payload) =>
 export const getPaymentStatus = (orderId, { force = false } = {}) =>
   request(`tickets.php?orderId=${encodeURIComponent(orderId)}${force ? '&force=1' : ''}`);
 
+// ---------------------------------------------------------------- enquiries
+// The contact and join forms. No fallback: unlike a page read, there is nothing
+// useful to substitute for a message that wasn't delivered, so a failure has to
+// surface to the person who wrote it.
+export const sendEnquiry = (payload) =>
+  request('enquiries.php', { method: 'POST', body: payload });
+
 export async function fetchJabali5() {
   try {
     return await request('jabali5.php');

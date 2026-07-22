@@ -224,7 +224,9 @@
     background: tokens.$paper;
     color: tokens.$ink-body;
     font-family: tokens.$font-sans;
-    font-size: 0.94rem;
+    // 16px exactly — see the note in enquiry-form.scss. Anything smaller and
+    // iOS Safari zooms the page when the field takes focus.
+    font-size: 16px;
     transition: border-color tokens.$dur tokens.$ease, box-shadow tokens.$dur tokens.$ease;
 
     &::placeholder {

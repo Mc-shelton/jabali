@@ -48,8 +48,8 @@ export const partnershipsPageData = {
   inquiry: {
     label: 'Start A Conversation',
     title: 'Let’s discuss scope, venue, and goals.',
-    text: 'Use the contact page for booking and partnership inquiries, then we can shape the right format for the collaboration.',
-    ctaLabel: 'Go To Contact',
-    ctaTo: '/contact',
+    text: 'Send us the objective, the format you have in mind, and your timelines — we’ll come back with how the chorale can fit.',
+    ctaLabel: 'Start A Partnership Enquiry',
+    ctaTo: '/contact?topic=partnership',
   },
 };

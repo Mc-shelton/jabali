@@ -77,7 +77,7 @@ const Events = () => {
       ) : (
         <div className="ev-empty reveal">
           <p>No public dates are on the calendar right now.</p>
-          <Link className="btn btn-primary" to="/contact">
+          <Link className="btn btn-primary" to="/contact?topic=booking">
             Invite the chorale
             <ArrowRightOutlined />
           </Link>
@@ -124,7 +124,7 @@ const Events = () => {
           </p>
         </div>
 
-        <Link className="btn btn-primary" to="/contact">
+        <Link className="btn btn-primary" to="/contact?topic=booking">
           Book the chorale
           <ArrowRightOutlined />
         </Link>

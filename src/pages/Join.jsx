@@ -1,43 +1,29 @@
-import { ArrowRightOutlined } from '@ant-design/icons';
+import { ArrowRightOutlined, CheckCircleFilled, LoadingOutlined } from '@ant-design/icons';
 import '../styles/join-page.scss';
+import '../styles/enquiry-form.scss';
 import { useContent } from '../hooks/usePublicData';
+import { useEnquirySubmit, revealOnMount } from '../hooks/useEnquirySubmit';
 import { cssUrl } from '../utils/assetPath';
 
-// The form previously had no submit handler at all: pressing the button did a
-// default form submission, reloading the page and silently discarding everything
-// the applicant typed. With no backend to post to, the honest fix is to hand the
-// details to their mail client, addressed to the chorale.
-const buildMailto = (formData, contactEmail) => {
-  const field = (name) => String(formData.get(name) ?? '').trim();
-
-  const lines = [
-    `Full name: ${field('fullName') || '—'}`,
-    `Email: ${field('email') || '—'}`,
-    `Phone: ${field('phone') || '—'}`,
-    `Church / fellowship: ${field('church') || '—'}`,
-    `Voice part / area: ${field('voicePart') || '—'}`,
-    '',
-    'Why I want to join:',
-    field('motivation') || '—',
-  ];
-
-  const subject = `Chorale interest — ${field('fullName') || 'New applicant'}`;
-
-  return `mailto:${contactEmail}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(
-    lines.join('\n')
-  )}`;
-};
-
+// This form used to build a mailto: link. That worked on a desktop with a mail
+// client configured and did nothing at all on a phone — the applicant pressed
+// Submit, no mail app opened, and their answers were gone. It now posts to
+// api/enquiries.php like every other form on the site.
 const Join = () => {
   // Shadowing the old module-level name keeps the JSX below unchanged.
   const { data: joinPageData } = useContent('join');
-  const { data: contact } = useContent('contact');
-  const contactEmail = contact.items.find((item) => item.label === 'Email')?.value ?? '';
 
-  const handleSubmit = (event) => {
-    event.preventDefault();
-    window.location.href = buildMailto(new FormData(event.currentTarget), contactEmail);
-  };
+  const { status, error, submit, reset, sending } = useEnquirySubmit({
+    topic: 'membership',
+    mapFields: (value) => ({
+      name: value('fullName'),
+      email: value('email'),
+      phone: value('phone'),
+      organisation: value('church'),
+      voicePart: value('voicePart'),
+      message: value('motivation'),
+    }),
+  });
 
   return (
     <main className="apply-page">
@@ -100,7 +86,20 @@ const Join = () => {
         </div>
 
         <aside className="apply-sidebar">
-          <form className="apply-form" onSubmit={handleSubmit}>
+          {status === 'sent' ? (
+            <div className="apply-form eq-done" role="status" ref={revealOnMount}>
+              <CheckCircleFilled className="eq-done-icon" />
+              <h3>Thank you</h3>
+              <p>
+                We’ve received your details. Someone from the chorale will be in touch about the next
+                rehearsal and what to expect when you visit.
+              </p>
+              <button type="button" className="btn btn-ghost" onClick={reset}>
+                Submit another
+              </button>
+            </div>
+          ) : (
+          <form className="apply-form" onSubmit={submit}>
             <div className="apply-form-head">
               <p className="eyebrow">Join Form</p>
               <h2 className="display-md">Tell us where you fit.</h2>
@@ -142,19 +141,40 @@ const Join = () => {
             </label>
 
             <label className="apply-field">
-              <span>Why do you want to join?</span>
-              <textarea name="motivation" rows="5" placeholder="Tell us a bit about yourself and your interest." />
+              <span>Why do you want to join? *</span>
+              <textarea
+                name="motivation"
+                rows="5"
+                required
+                placeholder="Tell us a bit about yourself and your interest."
+              />
             </label>
 
-            <button type="submit" className="btn btn-primary apply-submit">
-              Submit interest
-              <ArrowRightOutlined />
+            {/* Honeypot — see EnquiryForm. */}
+            <div className="eq-trap" aria-hidden="true">
+              <label>
+                Do not fill this in
+                <input type="text" name="website" tabIndex={-1} autoComplete="off" />
+              </label>
+            </div>
+
+            {error && (
+              <p className="eq-error" role="alert">
+                {error}
+              </p>
+            )}
+
+            <button type="submit" className="btn btn-primary apply-submit" disabled={sending}>
+              {sending ? <LoadingOutlined /> : null}
+              {sending ? 'Sending…' : 'Submit interest'}
+              {!sending && <ArrowRightOutlined />}
             </button>
 
             <p className="apply-form-note">
-              This opens your email app with the details filled in, addressed to {contactEmail}.
+              Your details go straight to the chorale. We use them only to reply about joining.
             </p>
           </form>
+          )}
         </aside>
       </section>
     </main>

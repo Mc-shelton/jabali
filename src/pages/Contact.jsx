@@ -1,12 +1,12 @@
-import { Link } from 'react-router-dom';
+import { useSearchParams } from 'react-router-dom';
 import {
-  ArrowRightOutlined,
   CalendarOutlined,
   MailOutlined,
   PhoneOutlined,
 } from '@ant-design/icons';
 import '../styles/contact-page.scss';
 import { useContent } from '../hooks/usePublicData';
+import EnquiryForm from '../components/EnquiryForm';
 
 const icons = {
   Email: <MailOutlined />,
@@ -25,6 +25,12 @@ const linkFor = (item) => {
 const Contact = () => {
   const { data } = useContent('contact');
   const { intro, items } = data;
+
+  // Partnerships, Events, and the community page all send people here for
+  // different reasons. They say which in the URL, so the form opens on the
+  // right one instead of making the visitor restate why they clicked.
+  const [params] = useSearchParams();
+  const topic = params.get('topic') ?? 'booking';
 
   return (
   <main className="ct-page">
@@ -62,23 +68,11 @@ const Contact = () => {
       </div>
 
       <p className="ct-note reveal">{intro.note}</p>
+    </section>
 
-      <div className="ct-cta reveal">
-        <div>
-          <p className="eyebrow">Next Steps</p>
-          <h2 className="display-md">Singing with us, or working with us?</h2>
-        </div>
-
-        <div className="ct-cta-actions">
-          <Link className="btn btn-primary" to="/join">
-            Join the chorale
-            <ArrowRightOutlined />
-          </Link>
-          <Link className="btn btn-ghost" to="/partnerships">
-            Partner with us
-            <ArrowRightOutlined />
-          </Link>
-        </div>
+    <section className="section shell ct-form-section">
+      <div className="ct-form-wrap reveal">
+        <EnquiryForm initialTopic={topic} />
       </div>
     </section>
   </main>

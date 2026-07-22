@@ -4,6 +4,16 @@ import '../styles/partnerships-page.scss';
 import { useContent } from '../hooks/usePublicData';
 import { cssUrl } from '../utils/assetPath';
 
+// The closing button's destination is editable from the dashboard, so it may
+// still be a bare '/contact' saved before the enquiry form existed. Landing
+// there with no topic would make a partnership enquiry open on the booking
+// form, so the reason is re-attached here rather than depending on the stored
+// value carrying it.
+const withPartnershipTopic = (to) => {
+  if (typeof to !== 'string' || !to.startsWith('/contact')) return to;
+  return to.includes('topic=') ? to : `${to.split('?')[0]}?topic=partnership`;
+};
+
 const Partnerships = () => {
   // Shadowing the old module-level name keeps the JSX below unchanged.
   const { data: partnershipsPageData } = useContent('partnerships');
@@ -87,7 +97,7 @@ const Partnerships = () => {
           <p className="pt-cta-copy">{partnershipsPageData.inquiry.text}</p>
         </div>
 
-        <Link className="btn btn-primary" to={partnershipsPageData.inquiry.ctaTo}>
+        <Link className="btn btn-primary" to={withPartnershipTopic(partnershipsPageData.inquiry.ctaTo)}>
           {partnershipsPageData.inquiry.ctaLabel}
           <ArrowRightOutlined />
         </Link>

@@ -155,16 +155,20 @@ function smtp_cmd($fh, ?string $cmd, string $expect, string $stage): string
 // deliberately absent: mail() takes the recipient as an argument, and over SMTP
 // a Bcc must travel as an envelope recipient only — putting it in the headers
 // shows every blind copy to the buyer.
-function order_mime(array $order, ?string $pdf = null): array
+//
+// $replyTo overrides the default reply address. Enquiries set it to the person
+// who filled the form, so the chorale can answer by pressing Reply; From stays
+// on our own domain either way, because a From carrying someone else's address
+// fails SPF and lands the whole message in spam.
+function build_mime(string $subject, string $html, ?string $pdf = null, ?string $pdfName = null, ?string $replyTo = null): array
 {
-    $isTicket = ($order['itemType'] ?? 'ticket') !== 'merch';
-    $subject = ($isTicket ? 'Your tickets — ' : 'Your order — ') . ($order['eventTitle'] ?? 'Jabali Chorale');
-
     $boundary = 'jc_' . bin2hex(random_bytes(10));
 
     $headers = [
         'From: ' . mime_header_encode(MAIL['from_name']) . ' <' . MAIL['from_email'] . '>',
-        'Reply-To: ' . MAIL['from_email'],
+        'Reply-To: ' . ($replyTo !== null && filter_var($replyTo, FILTER_VALIDATE_EMAIL)
+            ? $replyTo
+            : MAIL['from_email']),
         'MIME-Version: 1.0',
         'Content-Type: multipart/mixed; boundary="' . $boundary . '"',
     ];
@@ -175,10 +179,10 @@ function order_mime(array $order, ?string $pdf = null): array
     $body  = "--$boundary\r\n";
     $body .= "Content-Type: text/html; charset=UTF-8\r\n";
     $body .= "Content-Transfer-Encoding: base64\r\n\r\n";
-    $body .= chunk_split(base64_encode(order_email_html($order))) . "\r\n";
+    $body .= chunk_split(base64_encode($html)) . "\r\n";
 
     if ($pdf !== null) {
-        $filename = 'jabali-ticket-' . ($order['ticketCode'] ?? 'ticket') . '.pdf';
+        $filename = $pdfName ?? 'attachment.pdf';
         $body .= "--$boundary\r\n";
         $body .= "Content-Type: application/pdf; name=\"$filename\"\r\n";
         $body .= "Content-Transfer-Encoding: base64\r\n";
@@ -190,11 +194,25 @@ function order_mime(array $order, ?string $pdf = null): array
     return ['subject' => $subject, 'headers' => $headers, 'body' => $body];
 }
 
+// The buyer's confirmation, in the shape build_mime wants.
+function order_mime(array $order, ?string $pdf = null): array
+{
+    $isTicket = ($order['itemType'] ?? 'ticket') !== 'merch';
+    $subject = ($isTicket ? 'Your tickets — ' : 'Your order — ') . ($order['eventTitle'] ?? 'Jabali Chorale');
+
+    return build_mime(
+        $subject,
+        order_email_html($order),
+        $pdf,
+        'jabali-ticket-' . ($order['ticketCode'] ?? 'ticket') . '.pdf'
+    );
+}
+
 // Minimal SMTP client, used when the host disables mail(). Sockets are not in
 // disable_functions, so this speaks to the mail server directly rather than
 // pulling in a library that would have to be vendored and FTP'd alongside.
 // Never throws: fulfilment must not unwind because a confirmation bounced.
-function smtp_send(string $to, string $subject, array $headers, string $body, array $context = []): bool
+function smtp_send(string $to, string $subject, array $headers, string $body, array $context = [], bool $bcc = true): bool
 {
     $c = smtp_config();
     $fh = null;
@@ -235,7 +253,7 @@ function smtp_send(string $to, string $subject, array $headers, string $body, ar
         smtp_cmd($fh, 'MAIL FROM:<' . MAIL['from_email'] . '>', '250', 'mail-from');
 
         $rcpts = [$to];
-        if (!empty(MAIL['bcc'])) $rcpts[] = MAIL['bcc'];
+        if ($bcc && !empty(MAIL['bcc'])) $rcpts[] = MAIL['bcc'];
         foreach ($rcpts as $rcpt) {
             smtp_cmd($fh, 'RCPT TO:<' . $rcpt . '>', '250', 'rcpt');
         }
@@ -274,25 +292,17 @@ function smtp_send(string $to, string $subject, array $headers, string $body, ar
     }
 }
 
-// Returns true if the message was accepted for delivery by the server.
-function send_order_email(array $order, ?string $pdf = null): bool
+// Picks a transport and hands the message over. Returns true if it was accepted
+// for delivery. $bcc is opt-in per message: a confirmation going to a customer
+// may warrant an archive copy, an enquiry already addressed to the chorale does
+// not need to be blind-copied to the chorale.
+function deliver_mime(string $to, array $mime, array $context = [], bool $bcc = true): bool
 {
-    $to = $order['customer']['email'] ?? '';
-    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
-        log_warn('No valid email on the order, nothing sent', [
-            'orderId' => $order['id'] ?? null,
-        ]);
-        return false;
-    }
-
-    $mime = order_mime($order, $pdf);
-    $context = ['orderId' => $order['id'] ?? null];
-
     // SMTP wins when configured, even where mail() works: it authenticates, so
     // the message is far likelier to survive SPF/DKIM checks than one handed to
     // a shared host's local sendmail.
     if (smtp_configured()) {
-        return smtp_send($to, $mime['subject'], $mime['headers'], $mime['body'], $context);
+        return smtp_send($to, $mime['subject'], $mime['headers'], $mime['body'], $context, $bcc);
     }
 
     if (!mailer_available()) {
@@ -304,7 +314,7 @@ function send_order_email(array $order, ?string $pdf = null): bool
     }
 
     $headers = $mime['headers'];
-    if (!empty(MAIL['bcc'])) $headers[] = 'Bcc: ' . MAIL['bcc'];
+    if ($bcc && !empty(MAIL['bcc'])) $headers[] = 'Bcc: ' . MAIL['bcc'];
 
     // The 5th parameter is deliberately omitted: passing -f requires the sender
     // to be a trusted user on many hosts and errors out otherwise.
@@ -322,4 +332,88 @@ function send_order_email(array $order, ?string $pdf = null): bool
     }
 
     return $sent;
+}
+
+// Returns true if the message was accepted for delivery by the server.
+function send_order_email(array $order, ?string $pdf = null): bool
+{
+    $to = $order['customer']['email'] ?? '';
+    if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
+        log_warn('No valid email on the order, nothing sent', [
+            'orderId' => $order['id'] ?? null,
+        ]);
+        return false;
+    }
+
+    return deliver_mime($to, order_mime($order, $pdf), ['orderId' => $order['id'] ?? null]);
+}
+
+// ---------------------------------------------------------------- enquiries
+// The form on the contact and join pages. This message goes to the chorale, not
+// to the public, so it is laid out for reading and answering: every field the
+// person filled, in the order they filled it, with Reply going back to them.
+
+function enquiry_email_html(array $enquiry): string
+{
+    $esc = fn($v) => htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8');
+
+    $rows = '';
+    foreach ($enquiry['fields'] as $label => $value) {
+        if ((string) $value === '') continue;
+        $rows .= '<tr>'
+            . '<td style="padding:9px 16px 9px 0;color:#5a6875;vertical-align:top;white-space:nowrap">'
+            . $esc($label) . '</td>'
+            . '<td style="padding:9px 0;font-weight:600;color:#2a3a4d">' . $esc($value) . '</td>'
+            . '</tr>';
+    }
+
+    // nl2br over an escaped string: the message is free text, and a paragraph
+    // break the person typed should survive into the inbox.
+    $message = nl2br($esc($enquiry['message'] ?? ''));
+    $messageBlock = $message === ''
+        ? ''
+        : '<p style="margin:26px 0 6px;font:600 12px/1 Arial,sans-serif;letter-spacing:1px;'
+          . 'color:#5a6875;text-transform:uppercase">Message</p>'
+          . '<div style="padding:14px 16px;background:#f4f5f7;border-radius:8px;line-height:1.65">'
+          . $message . '</div>';
+
+    $replyTo = $enquiry['email'] ?? '';
+    $replyLine = filter_var($replyTo, FILTER_VALIDATE_EMAIL)
+        ? '<p style="margin-top:24px;font-size:13px;color:#5a6875">Reply to this email to answer '
+          . $esc($enquiry['name'] ?? 'them') . ' directly at <strong>' . $esc($replyTo) . '</strong>.</p>'
+        : '';
+
+    return '<div style="max-width:560px;margin:0 auto;font-family:Arial,sans-serif;color:#2a3a4d">'
+        . '<p style="font:700 20px/1 Arial;color:#17497a;margin:0 0 4px">Jabali Chorale</p>'
+        . '<h1 style="font-size:22px;color:#0e1b2a;margin:8px 0 4px">' . $esc($enquiry['heading']) . '</h1>'
+        . '<p style="margin:0;font-size:13px;color:#5a6875">Submitted ' . $esc($enquiry['submittedAt']) . '</p>'
+        . '<table style="width:100%;border-collapse:collapse;margin:22px 0 0;font-size:14px">' . $rows . '</table>'
+        . $messageBlock
+        . $replyLine
+        . '<p style="margin-top:28px;font-size:12px;color:#5a6875">Sent from the jabalichorale.com website.</p>'
+        . '</div>';
+}
+
+// Where enquiries land. Configurable so the address can change without a deploy,
+// but it has a real default: an unconfigured server should still deliver the
+// form rather than drop it.
+function enquiry_recipient(): string
+{
+    $to = defined('ENQUIRY_TO') ? trim((string) ENQUIRY_TO) : '';
+    return filter_var($to, FILTER_VALIDATE_EMAIL) ? $to : 'jabalichorale@gmail.com';
+}
+
+function send_enquiry_email(array $enquiry): bool
+{
+    $mime = build_mime(
+        $enquiry['subject'],
+        enquiry_email_html($enquiry),
+        null,
+        null,
+        $enquiry['email'] ?? null
+    );
+
+    // No Bcc: this is already going to the chorale's own inbox, and MAIL['bcc']
+    // is a ticket-archive address that has no reason to see enquiries.
+    return deliver_mime(enquiry_recipient(), $mime, ['enquiryId' => $enquiry['id'] ?? null], false);
 }

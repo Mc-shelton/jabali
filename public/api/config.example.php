@@ -74,6 +74,12 @@ const PROMO_CODES = [];
 //   from_email  should be an address ON this domain for deliverability
 //               (set up SPF/DKIM in cPanel → Email Deliverability).
 //   bcc         optional address copied on every confirmation. '' to skip.
+// Where contact / partnership / booking / membership form submissions are sent.
+// The forms post to api/enquiries.php, which stores every submission under
+// DATA_DIR as well — so a message is never lost if mail delivery fails.
+// Falls back to jabalichorale@gmail.com if left blank.
+const ENQUIRY_TO = 'jabalichorale@gmail.com';
+
 const MAIL = [
     'from_email' => 'tickets@example.com',
     'from_name'  => 'Jabali Chorale',

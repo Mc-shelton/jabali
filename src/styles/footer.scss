@@ -118,19 +118,63 @@
 @media (max-width: 860px) {
   .footer-inner {
     grid-template-columns: 1fr;
-    gap: 44px;
+    gap: 40px;
   }
 }
 
+// Two columns, not one. Stacking all three groups turned the footer into about
+// a screen and a half of links on a phone — you scrolled past the copyright
+// notice to reach the last one. Two columns keeps the whole thing in view.
 @media (max-width: 560px) {
-  .footer-nav {
-    grid-template-columns: 1fr;
+  .footer {
+    padding-top: 48px;
+  }
+
+  .footer-inner {
     gap: 32px;
+    padding-bottom: 32px;
+  }
+
+  .footer-nav {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 28px 18px;
+  }
+
+  .footer-group a {
+    // A tap target of ~16px of text is hard to hit accurately; the padding
+    // costs nothing visually here and makes the links reliably tappable.
+    padding-block: 3px;
+  }
+
+  // Reach Us is the odd group out — a long address and a row of icons, neither
+  // of which fits a half-width track. In one column it broke the address
+  // mid-word with the other half of the row left empty, so it takes the full
+  // width and the address wraps at the @ or not at all.
+  .footer-group:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .footer-group a[href^='mailto:'] {
+    overflow-wrap: anywhere;
+  }
+
+  .footer-social {
+    flex-wrap: wrap;
   }
 
   .footer-base {
     flex-direction: column;
     align-items: flex-start;
-    gap: 6px;
+    gap: 4px;
+    // Clears the iOS home indicator, which otherwise sits over the last line.
+    padding-bottom: max(22px, env(safe-area-inset-bottom));
+  }
+}
+
+// Below this the two columns start truncating link labels.
+@media (max-width: 360px) {
+  .footer-nav {
+    grid-template-columns: 1fr;
+    gap: 26px;
   }
 }
