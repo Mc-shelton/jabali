@@ -90,6 +90,32 @@ jobs:
           echo "Build contains:"
           find dist -maxdepth 2 -type d | sed 's/^/  /'
 
+      # Read-only. Prints where the FTP account actually lands and what it can
+      # see, which is the only reliable way to know what FTP_PATH should be —
+      # a cPanel FTP account's home is often NOT the web root, and the 550 that
+      # results ("Can't change directory") names a masked secret, so the logs
+      # alone can't tell you whether the path or the account is wrong.
+      - name: Show remote layout
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+        run: |
+          set -euo pipefail
+          lftp -c "
+            set ftp:ssl-force true;
+            set ftp:ssl-protect-data true;
+            set ssl:verify-certificate no;
+            open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
+            echo '--- login lands in: ---'; pwd;
+            echo '--- contents here: ---'; ls;
+            echo '--- is public_html reachable from here? ---';
+            ls public_html || echo '(no public_html in this directory)';
+            echo '--- one level up: ---';
+            ls .. || echo '(cannot go up — account is chrooted)';
+            bye
+          " || echo "(diagnostic could not connect)"
+
       - name: Sync to cPanel over FTPS
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
