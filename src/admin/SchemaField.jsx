@@ -24,7 +24,7 @@ export function emptyValue(spec) {
     );
   }
   if (kind === 'list') return [];
-  if (kind === 'bool') return false;
+  if (kind === 'bool') return spec.default ?? false;
   if (kind === 'number') return 0;
   if (kind === 'select') return spec.options?.[0] ?? '';
   return '';
@@ -43,7 +43,7 @@ const rowSummary = (spec, value, index) => {
   return `Item ${index + 1}`;
 };
 
-const ScalarInput = ({ spec, value, onChange, id }) => {
+const ScalarInput = ({ spec, value, onChange, id, context }) => {
   const kind = spec.kind ?? 'text';
 
   if (kind === 'image') {
@@ -93,6 +93,23 @@ const ScalarInput = ({ spec, value, onChange, id }) => {
     );
   }
 
+  if (kind === 'track') {
+    const tracks = Array.isArray(context?.catalog) ? context.catalog : [];
+    const currentExists = !value || tracks.some((track) => track.id === value);
+
+    return (
+      <select id={id} value={value ?? ''} onChange={(e) => onChange(e.target.value)}>
+        <option value="">Select a track…</option>
+        {!currentExists && <option value={value}>{value} (missing from catalogue)</option>}
+        {tracks.map((track) => (
+          <option key={track.id} value={track.id}>
+            {track.title || track.id}
+          </option>
+        ))}
+      </select>
+    );
+  }
+
   if (kind === 'bool') {
     return (
       <input
@@ -119,7 +136,7 @@ const ScalarInput = ({ spec, value, onChange, id }) => {
 // unusable — a 23-member roster is otherwise several screens of scrolling.
 const COLLAPSE_THRESHOLD = 5;
 
-const ListField = ({ name, spec, value, onChange, path }) => {
+const ListField = ({ name, spec, value, onChange, path, context }) => {
   const items = Array.isArray(value) ? value : [];
   const of = spec.of ?? { kind: 'text' };
   const atCap = spec.maxItems != null && items.length >= spec.maxItems;
@@ -268,6 +285,7 @@ const ListField = ({ name, spec, value, onChange, path }) => {
                       spec={childSpec}
                       path={`${path}.${i}.${childName}`}
                       value={item?.[childName]}
+                      context={context}
                       onChange={(next) => replace(i, { ...(item ?? {}), [childName]: next })}
                     />
                   ))}
@@ -278,6 +296,7 @@ const ListField = ({ name, spec, value, onChange, path }) => {
                   spec={{ ...of, label: undefined }}
                   path={`${path}.${i}`}
                   value={item}
+                  context={context}
                   onChange={(next) => replace(i, next)}
                 />
               ))}
@@ -298,7 +317,7 @@ const ListField = ({ name, spec, value, onChange, path }) => {
   );
 };
 
-const SchemaField = ({ name, spec, value, onChange, path = '' }) => {
+const SchemaField = ({ name, spec, value, onChange, path = '', context }) => {
   const kind = spec.kind ?? 'text';
   const fieldId = `f-${path || name}`;
 
@@ -316,6 +335,7 @@ const SchemaField = ({ name, spec, value, onChange, path = '' }) => {
               spec={childSpec}
               path={`${path}.${childName}`}
               value={value?.[childName]}
+              context={context}
               onChange={(next) => onChange({ ...(value ?? {}), [childName]: next })}
             />
           ))}
@@ -326,19 +346,19 @@ const SchemaField = ({ name, spec, value, onChange, path = '' }) => {
 
   // ------------------------------------------------------------------- list
   if (kind === 'list') {
-    return <ListField name={name} spec={spec} value={value} onChange={onChange} path={path} />;
+    return <ListField name={name} spec={spec} value={value} onChange={onChange} path={path} context={context} />;
   }
 
   // ----------------------------------------------------------------- scalar
   // Upload fields render their own labels, so don't wrap them in a second one.
   if (kind === 'image' || kind === 'file') {
-    return <ScalarInput spec={spec} value={value} onChange={onChange} id={fieldId} />;
+    return <ScalarInput spec={spec} value={value} onChange={onChange} id={fieldId} context={context} />;
   }
 
   return (
     <label className="admin-field" htmlFor={fieldId}>
       <span>{spec.label ?? name}</span>
-      <ScalarInput spec={spec} value={value} onChange={onChange} id={fieldId} />
+      <ScalarInput spec={spec} value={value} onChange={onChange} id={fieldId} context={context} />
       {spec.help && <small className="admin-hint">{spec.help}</small>}
     </label>
   );

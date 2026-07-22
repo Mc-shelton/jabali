@@ -44,6 +44,43 @@ function read_section(string $name, array $schema): array
     return enrich_section($name, $stored);
 }
 
+// Uploaded music must still exist when the editor saves. This catches a failed
+// or manually removed bucket upload before a broken player is published. Older
+// external URLs remain readable only so existing content can be replaced from
+// the new upload-only admin control without making unrelated edits impossible.
+function validate_section_media(string $name, array $data): void
+{
+    if ($name !== 'music') {
+        return;
+    }
+
+    $groups = [
+        $data['catalog'] ?? [],
+        $data['featuredReleases'] ?? [],
+    ];
+    foreach ($groups as $items) {
+        foreach ($items as $item) {
+            $url = (string) ($item['audioSrc'] ?? '');
+            if ($url === '' || !str_starts_with($url, '/bucket/')) {
+                continue;
+            }
+            if (!str_starts_with($url, '/bucket/website/music/')) {
+                error_out('Audio file points outside the music bucket.', 422);
+            }
+
+            $namePart = rawurldecode(substr($url, strlen('/bucket/website/music/')));
+            if ($namePart === '' || basename($namePart) !== $namePart) {
+                error_out('Audio file path is invalid.', 422);
+            }
+            $path = dirname(__DIR__) . '/bucket/website/music/' . $namePart;
+            if (!is_file($path)) {
+                $title = clean_string($item['title'] ?? 'Track', 120);
+                error_out('The uploaded audio for “' . $title . '” is missing. Upload it again, then save.', 422);
+            }
+        }
+    }
+}
+
 route([
     'GET' => function () {
         $sections = content_sections();
@@ -85,6 +122,7 @@ route([
         }
 
         $clean = normalise_fields($schema['fields'], read_json_body());
+        validate_section_media($name, $clean);
         store_write(section_store($name), $clean);
         json_out($clean);
     },

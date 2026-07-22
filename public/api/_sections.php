@@ -222,7 +222,7 @@ function content_sections(): array
         'music' => [
             'label' => 'Music',
             'blurb' => 'The catalogue and streaming links. Upload audio directly to the protected '
-                     . 'server media bucket, or paste an existing file URL.',
+                     . 'server media bucket, then save changes to publish it.',
             'fields' => [
                 'platformLinks' => [
                     'kind' => 'group', 'label' => 'Streaming platforms',
@@ -245,6 +245,10 @@ function content_sections(): array
                         'year'      => ['kind' => 'text', 'label' => 'Year', 'maxLength' => 8],
                         'duration'  => ['kind' => 'text', 'label' => 'Duration', 'maxLength' => 10],
                         'mood'      => ['kind' => 'text', 'label' => 'Mood', 'maxLength' => 60],
+                        'listInCatalogue' => ['kind' => 'bool',
+                                              'label' => 'Show in “Some of our music”',
+                                              'default' => true,
+                                              'help' => 'Turn this off to keep the track available for selected sections without listing it in the main catalogue.'],
                         'art'       => ['kind' => 'image', 'label' => 'Cover art', 'upload' => 'site'],
                         'thumbnail' => ['kind' => 'image', 'label' => 'Thumbnail', 'upload' => 'site'],
                         'audioSrc'  => ['kind' => 'file', 'label' => 'Audio file', 'upload' => 'music',
@@ -259,7 +263,7 @@ function content_sections(): array
                     'help' => 'The release cards at the top of the Music page.',
                     'of' => ['kind' => 'group', 'fields' => [
                         'id'        => ['kind' => 'text', 'label' => 'ID', 'maxLength' => 60],
-                        'trackId'   => ['kind' => 'text', 'label' => 'Track ID', 'maxLength' => 60,
+                        'trackId'   => ['kind' => 'track', 'label' => 'Track', 'maxLength' => 60,
                                         'help' => 'Optional — links this card to a track in the catalogue.'],
                         'title'     => ['kind' => 'text', 'label' => 'Title', 'maxLength' => 120],
                         'type'      => ['kind' => 'text', 'label' => 'Type', 'maxLength' => 40],
@@ -275,12 +279,12 @@ function content_sections(): array
                 'recentRecordIds' => [
                     'kind' => 'list', 'label' => 'Recent records', 'maxItems' => 12,
                     'help' => 'Track IDs, in order, for the Recent Records strip.',
-                    'of' => ['kind' => 'text', 'maxLength' => 60],
+                    'of' => ['kind' => 'track', 'maxLength' => 60],
                 ],
                 'homePromoTrackIds' => [
                     'kind' => 'list', 'label' => 'Home page tracks', 'maxItems' => 12,
                     'help' => 'Track IDs, in order, promoted on the home page.',
-                    'of' => ['kind' => 'text', 'maxLength' => 60],
+                    'of' => ['kind' => 'track', 'maxLength' => 60],
                 ],
             ],
         ],

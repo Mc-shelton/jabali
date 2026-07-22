@@ -30,7 +30,15 @@ const AdminFileField = ({ label, value, onChange, folder = 'music', accept = 'au
         {value ? (
           <div className="admin-file-current">
             <CustomerServiceOutlined />
-            <a href={value} target="_blank" rel="noreferrer">Open uploaded file</a>
+            <a href={value} target="_blank" rel="noreferrer">Open current audio</a>
+            <button
+              type="button"
+              className="admin-file-replace"
+              onClick={() => inputRef.current?.click()}
+              disabled={busy}
+            >
+              {busy ? 'Uploading…' : 'Replace'}
+            </button>
             <button type="button" onClick={() => onChange('')} aria-label="Remove media file">
               <CloseOutlined />
             </button>
@@ -42,15 +50,8 @@ const AdminFileField = ({ label, value, onChange, folder = 'music', accept = 'au
         )}
         <input ref={inputRef} type="file" accept={accept} onChange={pick} hidden />
       </div>
-
-      <input
-        type="url"
-        className="admin-image-url"
-        placeholder="…or paste a media URL"
-        value={value || ''}
-        onChange={(event) => onChange(event.target.value)}
-      />
       {value?.startsWith('/bucket/') && <small className="admin-hint">Uploaded to the protected server media bucket. Save changes to publish it.</small>}
+      {value && !value.startsWith('/bucket/') && <small className="admin-hint">This is an older linked file. Replace it with an upload to move it into the protected media bucket.</small>}
       {error && <p className="admin-error">{error}</p>}
     </div>
   );

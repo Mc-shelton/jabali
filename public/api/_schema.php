@@ -7,7 +7,7 @@
 // editing the schema — never this file, and never the React form.
 //
 // Field kinds:
-//   text | textarea | url | image | file | email | select | number | bool → scalar
+//   text | textarea | url | image | file | email | select | track | number | bool → scalar
 //   group  ['fields' => [name => spec, ...]]   → nested object
 //   list   ['of' => spec, 'maxItems' => int]   → repeatable
 //
@@ -104,7 +104,7 @@ function normalise_field(array $spec, $value)
         'url', 'image', 'file' => clean_url($value, $maxLen),
         'email'  => clean_email($value),
         'number' => (int) $value,
-        'bool'   => (bool) $value,
+        'bool'   => $value === null ? (bool) ($spec['default'] ?? false) : (bool) $value,
         'select' => in_array($value, $spec['options'] ?? [], true)
             ? $value
             : (string) ($spec['options'][0] ?? ''),

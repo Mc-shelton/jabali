@@ -122,8 +122,8 @@ const AdminContent = () => {
         ))}
       </nav>
 
-      {error && <p className="admin-error">{error}</p>}
-      {saved && <p className="admin-success">Saved. The site is updated.</p>}
+      {error && <p className="admin-error" role="alert">{error}</p>}
+      {saved && <p className="admin-success" role="status">Saved. The site is updated.</p>}
 
       {loading || !values ? (
         <PageLoader label={`Loading ${spec.label ?? section}…`} compact />
@@ -138,6 +138,7 @@ const AdminContent = () => {
               spec={fieldSpec}
               path={name}
               value={values[name]}
+              context={values}
               onChange={(next) => setValues((v) => ({ ...v, [name]: next }))}
             />
           ))}
@@ -146,6 +147,10 @@ const AdminContent = () => {
             <button type="submit" className="admin-btn admin-btn-primary" disabled={saving}>
               {saving ? 'Saving…' : 'Save changes'}
             </button>
+            <div className="admin-save-status" aria-live="polite">
+              {error && <p className="admin-error" role="alert">Could not save: {error}</p>}
+              {saved && <p className="admin-success" role="status">Saved. The site is updated.</p>}
+            </div>
           </div>
         </form>
       )}

@@ -722,6 +722,15 @@
     color: tokens.$ink-body;
     cursor: pointer;
   }
+
+  .admin-file-replace {
+    width: auto;
+    padding-inline: 9px;
+    color: tokens.$ink;
+    font: inherit;
+    font-size: 0.82rem;
+    font-weight: 700;
+  }
 }
 
 .admin-media-grid {
@@ -962,8 +971,27 @@
 
 .admin-form-foot {
   display: flex;
+  align-items: flex-start;
   gap: 10px;
   padding-top: 4px;
+}
+
+.admin-save-status {
+  flex: 1;
+
+  .admin-success {
+    margin: 0;
+  }
+}
+
+@media (max-width: 620px) {
+  .admin-form-foot {
+    flex-direction: column;
+  }
+
+  .admin-save-status {
+    width: 100%;
+  }
 }
 
 @media (max-width: 720px) {

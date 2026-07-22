@@ -19,6 +19,7 @@ const Music = () => {
     featuredReleases,
   } = useMusic();
   const { toggleTrack, isTrackActive, isTrackLoading, getTrackLoadingProgress } = useAudioPlayer();
+  const listedTracks = musicCatalog.filter((track) => track.listInCatalogue !== false);
 
   return (
     <main className="music-page">
@@ -79,12 +80,12 @@ const Music = () => {
             <p className="eyebrow is-centered on-dark">Catalogue</p>
             <h2 className="display-md">Some of our music.</h2>
             <p className="catalogue-note">
-              {musicCatalog.length} pieces from the repertoire. Press play for a thirty-second preview.
+              {listedTracks.length} pieces from the repertoire. Press play for a thirty-second preview.
             </p>
           </div>
 
           <ol className="catalogue-list reveal">
-            {musicCatalog.map((track, index) => {
+            {listedTracks.map((track, index) => {
               const isActive = isTrackActive(track.id);
               const isLoading = isTrackLoading(track.id);
 
