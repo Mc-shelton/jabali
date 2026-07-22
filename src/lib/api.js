@@ -147,6 +147,15 @@ export const reconcileOrders = () => request('orders.php?reconcile=1', { method:
 export const resendConfirmation = (orderId) =>
   request(`orders.php?resend=${encodeURIComponent(orderId)}`, { method: 'POST' });
 
+// ---------------------------------------------------------------- door
+// Looking a code up is a read, and safe to call as often as the camera fires —
+// it never consumes the ticket. Only admitTicket does that, and only once.
+export const lookupTicket = (code) =>
+  request(`admit.php?code=${encodeURIComponent(code)}`);
+
+export const admitTicket = (code) =>
+  request(`admit.php?code=${encodeURIComponent(code)}`, { method: 'POST' });
+
 // ---------------------------------------------------------------- logs
 export const adminFetchLogs = ({ day = '', level = '' } = {}) => {
   const params = new URLSearchParams();

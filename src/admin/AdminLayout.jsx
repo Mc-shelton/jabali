@@ -3,6 +3,7 @@ import {
   CalendarOutlined,
   StarOutlined,
   ShoppingOutlined,
+  ScanOutlined,
   LogoutOutlined,
   ExportOutlined,
   EditOutlined,
@@ -23,6 +24,9 @@ const AdminLayout = ({ onLogout, children }) => (
         </NavLink>
         <NavLink to="/admin/orders" className="admin-nav-link">
           <ShoppingOutlined /> Orders
+        </NavLink>
+        <NavLink to="/admin/scan" className="admin-nav-link">
+          <ScanOutlined /> Door check-in
         </NavLink>
         <NavLink to="/admin/jabali5" className="admin-nav-link">
           <StarOutlined /> Jabali @5

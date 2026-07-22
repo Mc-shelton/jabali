@@ -7,6 +7,7 @@ import AdminJabali5 from './admin/AdminJabali5';
 import AdminOrders from './admin/AdminOrders';
 import AdminContent from './admin/AdminContent';
 import AdminLogs from './admin/AdminLogs';
+import AdminScan from './admin/AdminScan';
 import Home from './pages/Home';
 import About from './pages/About';
 import Music from './pages/Music';
@@ -50,6 +51,7 @@ const router = createBrowserRouter([
       { path: 'events/new', element: <AdminEventForm /> },
       { path: 'events/:slug/edit', element: <AdminEventForm /> },
       { path: 'orders', element: <AdminOrders /> },
+      { path: 'scan', element: <AdminScan /> },
       { path: 'jabali5', element: <AdminJabali5 /> },
       // Section is resolved from the schema at runtime, so new sections need no
       // route of their own.
