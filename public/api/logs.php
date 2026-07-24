@@ -7,6 +7,8 @@
 // Reads the newest entries from the JSON-lines files written by _log.php. The
 // files themselves are blocked from the web by api/data/.htaccess, so this is
 // the only way to see them without shell access.
+
+// just for the deployment commit
 require __DIR__ . '/_bootstrap.php';
 
 route([
