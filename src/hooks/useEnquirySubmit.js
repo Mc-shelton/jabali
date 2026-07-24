@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { sendEnquiry } from '../lib/api';
+import { generateLead } from '../lib/analytics';
 
 // Submit state for any form that posts to api/enquiries.php.
 //
@@ -35,15 +36,18 @@ export const useEnquirySubmit = ({ topic, mapFields }) => {
     setStatus('sending');
     setError('');
 
+    const resolvedTopic = typeof topic === 'function' ? topic(value) : topic;
+
     try {
       await sendEnquiry({
-        topic: typeof topic === 'function' ? topic(value) : topic,
+        topic: resolvedTopic,
         // The honeypot travels under its own name on every form, so the server
         // check is one rule rather than one per page.
         website: value('website'),
         ...mapFields(value),
       });
       setStatus('sent');
+      generateLead(resolvedTopic); // GA4 lead — contact / join form submitted
       form.reset();
     } catch (err) {
       // A network failure and a 422 both land here; the server's own wording is

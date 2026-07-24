@@ -57,7 +57,8 @@ define('DATA_DIR', __DIR__ . '/data');
 // the client, and a spoofed one would put someone else's domain into the
 // preview image URL of a link you shared. Left blank, it falls back to the
 // request host so a staging copy still works.
-const SITE_URL = 'https://jabalichorale.com';
+
+
 
 // --------------------------------------------------------------- uploads
 // Uploaded images must be web-reachable, so they go in the public web root.

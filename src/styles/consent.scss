@@ -1,0 +1,68 @@
+@use './tokens';
+
+// A quiet, fixed strip at the foot of the viewport. Deliberately unobtrusive —
+// it should inform, not block the page.
+.consent {
+  position: fixed;
+  left: 50%;
+  bottom: clamp(12px, 3vw, 24px);
+  transform: translateX(-50%);
+  z-index: 1000;
+
+  width: min(680px, calc(100vw - 24px));
+  display: flex;
+  align-items: center;
+  gap: clamp(12px, 3vw, 24px);
+  flex-wrap: wrap;
+
+  padding: 14px clamp(16px, 3vw, 22px);
+  background: tokens.$navy;
+  color: #fff;
+  border-radius: tokens.$r-md;
+  box-shadow: tokens.$shadow-lift;
+
+  animation: consent-rise tokens.$dur tokens.$ease-out both;
+}
+
+@keyframes consent-rise {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 16px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+.consent-text {
+  flex: 1 1 260px;
+  margin: 0;
+  font-size: 0.85rem;
+  line-height: 1.5;
+  color: rgba(255, 255, 255, 0.88);
+}
+
+.consent-actions {
+  display: flex;
+  gap: 10px;
+  flex-shrink: 0;
+}
+
+// The two buttons reuse the site's .btn base; these just tighten them for the
+// strip and give the ghost variant contrast against the navy.
+.consent-accept,
+.consent-decline {
+  padding: 8px 18px;
+  font-size: 0.82rem;
+}
+
+.consent-decline {
+  color: #fff;
+  border-color: tokens.$line-light;
+  background: transparent;
+
+  &:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+}

@@ -73,6 +73,12 @@ jobs:
 
       - name: Build
         run: npm run build
+        # Analytics IDs are inlined into the bundle at build time. They are not
+        # secrets (they ship in client JS regardless), so they live in repo
+        # Variables. Unset → the site tracks nobody and shows no cookie banner.
+        env:
+          VITE_GA_ID: ${{ vars.VITE_GA_ID }}
+          VITE_CLARITY_ID: ${{ vars.VITE_CLARITY_ID }}
 
       # The build must not carry secrets to the server. config.php is created
       # once on the server and is excluded from the sync below, but if a

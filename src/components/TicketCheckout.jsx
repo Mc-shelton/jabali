@@ -12,6 +12,7 @@ import {
 } from '@ant-design/icons';
 import '../styles/checkout.scss';
 import { getPaymentStatus, initiateTicketPayment } from '../lib/api';
+import { beginCheckout, purchase } from '../lib/analytics';
 
 // Poll every 5s for the first 30s. After that we stop polling automatically but
 // deliberately do NOT declare failure: M-Pesa can take minutes when the customer
@@ -158,6 +159,16 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
       setResult(status);
       setError('');
       setStage('success');
+      // GA4 purchase — the value M-Pesa actually confirmed, falling back to our
+      // estimate if the server didn't echo one back.
+      purchase({
+        orderId: order?.orderId,
+        value: status.amount ?? amount,
+        item,
+        quantity: status.quantity ?? qty,
+        kind,
+        receipt: status.receipt,
+      });
       return true;
     }
     if (status.status === 'failed') {
@@ -235,6 +246,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
     e.preventDefault();
     setError('');
     setStage('processing');
+    beginCheckout({ item, quantity: qty, value: estTotal, kind });
     try {
       const res = await initiateTicketPayment({
         eventSlug: event.slug,

@@ -10,6 +10,7 @@ import {
 } from '@ant-design/icons';
 import '../styles/event-detail.scss';
 import { buildCalendarUrl, formatEventDate } from '../data/events';
+import { viewItem } from '../lib/analytics';
 import { useEvent } from '../hooks/usePublicData';
 import { cssUrl } from '../utils/assetPath';
 import PageLoader from '../components/PageLoader';
@@ -24,6 +25,11 @@ const EventDetail = () => {
   const [checkout, setCheckout] = useState(null);
 
   const closeLightbox = useCallback(() => setActiveImage(null), []);
+
+  // Record the event view once loaded (GA4 view_item).
+  useEffect(() => {
+    if (event) viewItem({ id: event.slug, name: event.title }, 'event');
+  }, [event]);
 
   useEffect(() => {
     if (!activeImage) return undefined;

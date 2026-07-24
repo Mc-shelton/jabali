@@ -3,6 +3,12 @@ dist
 .DS_Store
 .vite
 
+# Local env — holds the analytics IDs (VITE_GA_ID / VITE_CLARITY_ID). The
+# committed template is .env.example; the real values stay out of git.
+.env
+.env.local
+.env.*.local
+
 # Local Claude Code settings — personal, not team config.
 .claude/settings.local.json
 

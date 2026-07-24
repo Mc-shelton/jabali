@@ -79,8 +79,15 @@ Repo → Settings → Secrets and variables → Actions.
 |---|---|
 | `FTP_PATH` | `public_html` — **no leading slash**, see below |
 | `SITE_URL` | `https://jabalichorale.com` |
+| `VITE_GA_ID` | *(optional)* Google Analytics 4 Measurement ID, `G-XXXXXXXXXX` |
+| `VITE_CLARITY_ID` | *(optional)* Microsoft Clarity project id |
 
-Neither is a credential, and making them secrets actively hurts. lftp echoes its
+The two `VITE_*` variables turn on analytics — see *§7. Analytics* below. Leave
+them unset and the site tracks nobody and shows no cookie banner. They are not
+credentials (they ship in the client bundle either way), so they belong in
+Variables, not Secrets.
+
+Neither `FTP_PATH` nor `SITE_URL` is a credential, and making them secrets actively hurts. lftp echoes its
 target path, so a masked `FTP_PATH` turns the whole listing into `***/***` —
 exactly the detail you need when a deploy lands in the wrong folder.
 
@@ -189,3 +196,39 @@ site stays up by design. Re-do step 2b.
 **M-Pesa callbacks never arrive** — `callback_url` in `config.php` must be a
 public HTTPS URL ending `/api/mpesa-callback.php`. Safaricom cannot reach
 localhost, and will not accept a plain-HTTP callback.
+
+---
+
+## 7. Analytics
+
+Traffic and behaviour tracking is off until you supply IDs, and it asks each
+visitor's consent before setting any cookie.
+
+**Two tools, each optional and independent:**
+
+- **Google Analytics 4** (`VITE_GA_ID`) — page views, the buy funnel
+  (`view_item → begin_checkout → purchase`), enquiry leads (`generate_lead`),
+  and a `ui_click` event on every button/link so you can see what people press.
+- **Microsoft Clarity** (`VITE_CLARITY_ID`) — heatmaps and session replay. This
+  is the tool that actually *draws* heatmaps; GA counts the clicks, Clarity
+  shows you where they land.
+
+**To turn it on:**
+
+1. Create a GA4 property (and/or a Clarity project) and copy the ID.
+2. Add `VITE_GA_ID` / `VITE_CLARITY_ID` under repo → Settings → Secrets and
+   variables → Actions → **Variables** (see §2c).
+3. Push to `main`. The next build inlines the IDs; nothing else to do server-side.
+
+For local testing, copy `.env.example` to `.env`, fill in the IDs, and run
+`npm run build` / `npm run dev`.
+
+**Privacy.** GA runs under Consent Mode v2 — until a visitor accepts the cookie
+banner it sends only cookieless, modelled pings; Clarity doesn't load at all.
+Declining is remembered. Admin and the member portal are never tracked. IP
+anonymisation is on. This is the shape Kenya's Data Protection Act expects; if
+you change what's tracked, revisit the banner wording in
+`src/components/ConsentBanner.jsx`.
+
+**Where to look.** Reports live in the GA and Clarity dashboards, not in
+`/admin` — those are Google/Microsoft products, outside this app.

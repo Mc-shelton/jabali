@@ -1,7 +1,8 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { ArrowLeftOutlined, ArrowRightOutlined, ShoppingOutlined } from '@ant-design/icons';
 import '../styles/merch.scss';
+import { viewItem } from '../lib/analytics';
 import { useMerch, useMerchProduct } from '../hooks/usePublicData';
 import TicketCheckout from '../components/TicketCheckout';
 import PageLoader from '../components/PageLoader';
@@ -25,6 +26,11 @@ const MerchDetail = () => {
   const { product, loading } = useMerchProduct(id);
   const { products } = useMerch();
   const [buying, setBuying] = useState(false);
+
+  // Record the product view once it has loaded (GA4 view_item).
+  useEffect(() => {
+    if (product) viewItem(product, 'merch');
+  }, [product]);
 
   if (loading) {
     return (
