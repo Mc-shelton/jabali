@@ -68,7 +68,7 @@ define('UPLOAD_BASE_DIR', dirname(__DIR__) . '/uploads');
 const UPLOAD_BASE_URL = '/uploads';
 const UPLOAD_FOLDERS = ['events', 'members', 'gallery', 'site'];
 const UPLOAD_FOLDER_DEFAULT = 'events';
-
+const SITE_URL = 'https://jabalichorale.com';
 // Back-compat aliases for the original events-only upload path.
 define('UPLOAD_DIR', UPLOAD_BASE_DIR . '/' . UPLOAD_FOLDER_DEFAULT);
 const UPLOAD_URL = UPLOAD_BASE_URL . '/' . UPLOAD_FOLDER_DEFAULT;
