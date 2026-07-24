@@ -8,6 +8,7 @@ import TicketCheckout from '../components/TicketCheckout';
 import PageLoader from '../components/PageLoader';
 import Price from '../components/Price';
 import NotFound from './NotFound';
+import Seo from '../components/Seo';
 
 // A product's own page — the merch equivalent of the event detail page. Buying
 // opens the same checkout used everywhere else, so there is exactly one payment
@@ -47,6 +48,20 @@ const MerchDetail = () => {
 
   return (
     <main className="mr-page">
+      <Seo
+        title={`${product.name} | Official Shop`}
+        description={product.description || `Buy ${product.name} from the official Jabali Chorale shop and support our gospel music ministry.`}
+        path={`/merch/${product.id}`}
+        image={product.image}
+        type="product"
+        structuredData={{
+          '@context': 'https://schema.org', '@type': 'Product', name: product.name,
+          description: product.description || `Official ${product.name} from Jabali Chorale.`,
+          image: product.image ? [product.image] : undefined,
+          brand: { '@type': 'Brand', name: 'Jabali Chorale' },
+          ...(product.priceFinal ? { offers: { '@type': 'Offer', priceCurrency: 'KES', price: product.priceFinal, availability: 'https://schema.org/InStock', url: `https://jabalichorale.com/merch/${product.id}` } } : {}),
+        }}
+      />
       <div className="shell mr-back">
         <Link className="mr-back-link" to="/merch">
           <ArrowLeftOutlined /> All merchandise

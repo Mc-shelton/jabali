@@ -16,6 +16,7 @@ import { cssUrl } from '../utils/assetPath';
 import PageLoader from '../components/PageLoader';
 import TicketCheckout from '../components/TicketCheckout';
 import Price from '../components/Price';
+import Seo from '../components/Seo';
 
 const EventDetail = () => {
   const { slug } = useParams();
@@ -56,6 +57,7 @@ const EventDetail = () => {
     }
     return (
       <main className="evd-page section">
+        <Seo title="Event Not Found" description="The requested Jabali Chorale event could not be found." path={`/events/${slug}`} noindex />
         <div className="shell evd-missing">
           <p className="eyebrow">Not found</p>
           <h1 className="display-md">We couldn&rsquo;t find that event.</h1>
@@ -73,6 +75,22 @@ const EventDetail = () => {
 
   return (
     <main className="evd-page">
+      <Seo
+        title={`${event.title} | Events`}
+        description={event.summary}
+        path={`/events/${event.slug}`}
+        image={event.poster}
+        type="event"
+        structuredData={{
+          '@context': 'https://schema.org', '@type': 'Event', name: event.title,
+          description: event.summary, startDate: event.date,
+          eventStatus: past ? 'https://schema.org/EventCompleted' : 'https://schema.org/EventScheduled',
+          eventAttendanceMode: 'https://schema.org/OfflineEventAttendanceMode', image: [event.poster],
+          location: { '@type': 'Place', name: event.venue, address: { '@type': 'PostalAddress', addressLocality: 'Nairobi', addressCountry: 'KE' } },
+          organizer: { '@type': 'MusicGroup', name: 'Jabali Chorale', url: 'https://jabalichorale.com/' },
+          url: `https://jabalichorale.com/events/${event.slug}`,
+        }}
+      />
       <div className="shell evd-back">
         <Link className="evd-back-link" to="/events">
           <ArrowLeftOutlined />

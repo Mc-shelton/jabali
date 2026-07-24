@@ -13,6 +13,12 @@ const AdminApp = () => {
   const [role, setRole] = useState('');
 
   useEffect(() => {
+    document.title = 'Administration | Jabali Chorale';
+    const robots = document.head.querySelector('meta[name="robots"]');
+    if (robots) robots.content = 'noindex, nofollow';
+  }, []);
+
+  useEffect(() => {
     let active = true;
     getSession()
       .then((s) => {

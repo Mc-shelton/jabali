@@ -39,23 +39,59 @@ header('Cache-Control: public, max-age=300');
  */
 // $html by reference: the width/height tags are stripped after this closure is
 // defined, and a by-value copy would render the pre-strip markup.
-$render = static function (array $meta) use (&$html): void {
+// $extra carries the search-facing tags — the <title>, meta description,
+// canonical, and JSON-LD Google reads for the result snippet and rich results.
+// The social crawlers only ever wanted the og:/twitter: tags in $meta; adding
+// $extra makes this file the single server-rendered source for detail pages,
+// so their SEO no longer depends on the app's JavaScript running first.
+$render = static function (array $meta, array $extra = []) use (&$html): void {
+    // A literal "$5" in a value must not be read as a backreference by
+    // preg_replace, so dynamic content is passed through $rq. The ${1}/${2}
+    // groups in the patterns below are written directly and stay intact.
+    $rq = static fn(string $s): string => str_replace('$', '\\$', $s);
+    $sub = static function (string $pattern, string $replacement) use (&$html): void {
+        $replaced = preg_replace($pattern, $replacement, $html, 1);
+        if ($replaced !== null) $html = $replaced;   // null on failure — keep original
+    };
+
     if ($meta) {
         // Replace only the content of the tags we own. Anchoring on the exact
         // property/name attribute means a tag we don't set is left alone.
         foreach ($meta as $key => $value) {
             $attr = str_starts_with($key, 'twitter:') ? 'name' : 'property';
             $escaped = htmlspecialchars($value, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-
             $pattern = '~(<meta\s+' . $attr . '="' . preg_quote($key, '~') . '"\s+content=")[^"]*(")~i';
-            $replaced = preg_replace($pattern, '${1}' . str_replace('$', '\$', $escaped) . '${2}', $html, 1);
-
-            // preg_replace returns null on failure; keep the original if so.
-            if ($replaced !== null) {
-                $html = $replaced;
-            }
+            $sub($pattern, '${1}' . $rq($escaped) . '${2}');
         }
     }
+
+    if (!empty($extra['title'])) {
+        $t = htmlspecialchars($extra['title'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $sub('~<title>.*?</title>~is', '<title>' . $rq($t) . '</title>');
+    }
+    if (!empty($extra['description'])) {
+        $d = htmlspecialchars($extra['description'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $sub('~(<meta\s+name="description"\s+content=")[^"]*(")~i', '${1}' . $rq($d) . '${2}');
+    }
+    if (!empty($extra['canonical'])) {
+        // index.html ships a canonical pointing at /, so replace its href when
+        // present rather than adding a second tag; inject only if none exists.
+        $c = htmlspecialchars($extra['canonical'], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        if (preg_match('~<link\s+rel="canonical"\s+href="~i', $html)) {
+            $sub('~(<link\s+rel="canonical"\s+href=")[^"]*(")~i', '${1}' . $rq($c) . '${2}');
+        } else {
+            $sub('~</head>~i', '  <link rel="canonical" href="' . $rq($c) . '" />' . "\n</head>");
+        }
+    }
+    if (!empty($extra['jsonld']) && is_array($extra['jsonld'])) {
+        // JSON_HEX_TAG escapes < and > so nothing in the data can close the
+        // <script> early. Best-effort: a failed encode simply adds nothing.
+        $json = json_encode($extra['jsonld'], JSON_HEX_TAG | JSON_UNESCAPED_UNICODE);
+        if ($json !== false) {
+            $sub('~</head>~i', '  <script type="application/ld+json">' . $rq($json) . '</script>' . "\n</head>");
+        }
+    }
+
     echo $html;
     exit;
 };
@@ -107,6 +143,7 @@ try {
     $path = rtrim($path, '/');
 
     $meta = [];
+    $extra = [];
 
     if (preg_match('~^/events/([^/]+)$~', $path, $m)) {
         $slug = rawurldecode($m[1]);
@@ -147,6 +184,34 @@ try {
                 'twitter:image'      => $image,
                 'twitter:image:alt'  => $title,
             ], static fn($v) => $v !== '');
+
+            // Search-facing tags (title / description / canonical / schema),
+            // built from the same live event so Google's snippet and rich
+            // result don't wait for the app's JS to run.
+            $extra = array_filter([
+                'title'       => $title !== '' ? $title . ' | Events | Jabali Chorale' : '',
+                'description' => $full,
+                'canonical'   => $origin . '/events/' . rawurlencode($slug),
+                'jsonld'      => array_filter([
+                    '@context'            => 'https://schema.org',
+                    '@type'               => 'Event',
+                    'name'                => $title,
+                    'description'         => $full,
+                    'startDate'           => $day !== '' ? $iso : null,
+                    'eventStatus'         => ($event['status'] ?? '') === 'past'
+                        ? 'https://schema.org/EventCompleted'
+                        : 'https://schema.org/EventScheduled',
+                    'eventAttendanceMode' => 'https://schema.org/OfflineEventAttendanceMode',
+                    'image'               => $image !== '' ? [$image] : null,
+                    'location'            => $where !== '' ? [
+                        '@type'   => 'Place',
+                        'name'    => $where,
+                        'address' => ['@type' => 'PostalAddress', 'addressLocality' => 'Nairobi', 'addressCountry' => 'KE'],
+                    ] : null,
+                    'organizer'           => ['@type' => 'MusicGroup', 'name' => 'Jabali Chorale', 'url' => $origin . '/'],
+                    'url'                 => $origin . '/events/' . rawurlencode($slug),
+                ], static fn($v) => $v !== null && $v !== ''),
+            ], static fn($v) => $v !== '' && $v !== []);
             break;
         }
     } elseif (preg_match('~^/merch/([^/]+)$~', $path, $m)) {
@@ -179,6 +244,28 @@ try {
                 'twitter:image'      => $image,
                 'twitter:image:alt'  => $name,
             ], static fn($v) => $v !== '');
+
+            // Search-facing tags, from the same live product.
+            $extra = array_filter([
+                'title'       => $name !== '' ? $name . ' | Official Shop | Jabali Chorale' : '',
+                'description' => $desc,
+                'canonical'   => $origin . '/merch/' . rawurlencode($id),
+                'jsonld'      => array_filter([
+                    '@context'    => 'https://schema.org',
+                    '@type'       => 'Product',
+                    'name'        => $name,
+                    'description' => $desc,
+                    'image'       => $image !== '' ? [$image] : null,
+                    'brand'       => ['@type' => 'Brand', 'name' => 'Jabali Chorale'],
+                    'offers'      => !empty($product['priceFinal']) ? [
+                        '@type'         => 'Offer',
+                        'priceCurrency' => 'KES',
+                        'price'         => $product['priceFinal'],
+                        'availability'  => 'https://schema.org/InStock',
+                        'url'           => $origin . '/merch/' . rawurlencode($id),
+                    ] : null,
+                ], static fn($v) => $v !== null && $v !== ''),
+            ], static fn($v) => $v !== '' && $v !== []);
             break;
         }
     }
@@ -194,7 +281,7 @@ try {
         ) ?? $html;
     }
 
-    $render($meta);
+    $render($meta, $extra);
 
 } catch (Throwable $e) {
     // A broken preview must never take a page down with it.

@@ -1,9 +1,13 @@
-import { Link } from 'react-router-dom';
+import { Link, useLocation } from 'react-router-dom';
 import { ArrowRightOutlined } from '@ant-design/icons';
 import '../styles/not-found.scss';
+import Seo from '../components/Seo';
 
-const NotFound = () => (
+const NotFound = () => {
+  const location = useLocation();
+  return (
   <main className="not-found section">
+    <Seo title="Page Not Found" description="The requested page could not be found." path={location.pathname} noindex />
     <div className="not-found-inner shell">
       <p className="eyebrow">Error 404</p>
       <h1 className="display-lg not-found-title">
@@ -17,6 +21,7 @@ const NotFound = () => (
       </Link>
     </div>
   </main>
-);
+  );
+};
 
 export default NotFound;

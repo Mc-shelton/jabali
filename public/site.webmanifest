@@ -1,0 +1,12 @@
+{
+  "name": "Jabali Chorale",
+  "short_name": "Jabali",
+  "description": "Gospel in song from Nairobi, Kenya.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0E1B2A",
+  "theme_color": "#0E1B2A",
+  "icons": [
+    { "src": "/graphics/jc_logo_nopg.png", "sizes": "512x512", "type": "image/png" }
+  ]
+}

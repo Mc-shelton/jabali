@@ -22,6 +22,12 @@ const MemberApp = () => {
   const [accessOpen, setAccessOpen] = useState(true);
 
   useEffect(() => {
+    document.title = 'Members | Jabali Chorale';
+    const robots = document.head.querySelector('meta[name="robots"]');
+    if (robots) robots.content = 'noindex, nofollow';
+  }, []);
+
+  useEffect(() => {
     let active = true;
     getSession()
       .then((s) => {

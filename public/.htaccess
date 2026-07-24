@@ -9,6 +9,11 @@ Options -MultiViews
   RewriteRule ^api/ - [L]
   RewriteRule ^uploads/ - [L]
 
+  # The sitemap is generated live from the current events and merch, so requests
+  # for /sitemap.xml are served by sitemap.php. This must come before the asset
+  # rule below, which 404s a missing .xml — there is no sitemap.xml file.
+  RewriteRule ^sitemap\.xml$ sitemap.php [L]
+
   RewriteRule ^index\.html$ - [L]
 
   RewriteCond %{REQUEST_FILENAME} -f [OR]

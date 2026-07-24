@@ -6,10 +6,13 @@ import Footer from './components/footer';
 import SiteNav from './components/SiteNav';
 import useReveal from './hooks/useReveal';
 import { pageview } from './lib/analytics';
+import Seo from './components/Seo';
+import { routeSeo, organizationSchema } from './data/seo';
 
 const App = () => {
   const location = useLocation();
   const isHome = location.pathname === '/';
+  const seo = routeSeo[location.pathname];
 
   useReveal(location.pathname);
 
@@ -25,6 +28,14 @@ const App = () => {
 
   return (
     <div className={`app-shell ${isHome ? 'is-home' : 'is-page'}`}>
+      {seo && (
+        <Seo
+          title={seo[0]}
+          description={seo[1]}
+          path={location.pathname}
+          structuredData={isHome ? organizationSchema : undefined}
+        />
+      )}
       <SiteNav variant={isHome ? 'home' : 'page'} />
       <Outlet />
       <Footer />

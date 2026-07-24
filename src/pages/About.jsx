@@ -65,7 +65,7 @@ const About = () => {
         <div className="shell about-story-grid">
           <article className="story-panel reveal">
             <p className="eyebrow">{story.eyebrow}</p>
-            <h2 className="display-md">{story.title}</h2>
+            <h1 className="display-md">{story.title}</h1>
             {story.paragraphs.map((paragraph) => (
               <p key={paragraph}>{paragraph}</p>
             ))}
