@@ -16,14 +16,37 @@ const buyerName = (o) =>
   `${o.customer?.preferredName ?? ''} ${o.customer?.otherNames ?? ''}`.trim();
 const reference = (o) => o.receipt || o.ticketCode || '';
 
+// Present every purchase as lines, including merchandise added while buying a
+// ticket. The API has always persisted these in `addOns`; keeping this shaping
+// here also lets older, single-item orders use the same rendering path.
+const orderLines = (o) => [
+  {
+    name: o.itemName,
+    type: o.itemType ?? 'ticket',
+    quantity: Number(o.quantity ?? 0),
+    amount: o.itemAmount ?? (o.addOns?.length ? null : o.amount),
+    options: o.options ?? [],
+  },
+  ...(o.addOns ?? []).map((line) => ({ ...line, type: 'merch' })),
+].filter((line) => line.name);
+
+const optionText = (options = []) =>
+  options.map((opt) => `${opt.name}: ${opt.choice}`).join(' · ');
+const itemText = (o) =>
+  orderLines(o)
+    .map((line) => [line.name, optionText(line.options)].filter(Boolean).join(' '))
+    .join(' ');
+const totalUnits = (o) =>
+  orderLines(o).reduce((sum, line) => sum + Number(line.quantity ?? 0), 0);
+
 // Each column declares how to sort itself, so the header row and the sort logic
 // can't drift apart.
 const COLUMNS = [
   { key: 'createdAt', label: 'Date', value: (o) => o.createdAt ?? '' },
   { key: 'buyer', label: 'Buyer', value: (o) => buyerName(o).toLowerCase() },
   { key: 'event', label: 'Event', value: (o) => (o.eventTitle ?? '').toLowerCase() },
-  { key: 'item', label: 'Item', value: (o) => (o.itemName ?? '').toLowerCase() },
-  { key: 'quantity', label: 'Qty', value: (o) => Number(o.quantity ?? 0), numeric: true },
+  { key: 'item', label: 'Items', value: (o) => itemText(o).toLowerCase() },
+  { key: 'quantity', label: 'Qty', value: (o) => totalUnits(o), numeric: true },
   { key: 'amount', label: 'Amount', value: (o) => Number(o.amount ?? 0), numeric: true },
   { key: 'status', label: 'Status', value: (o) => o.status ?? '' },
   { key: 'reference', label: 'Reference', value: (o) => reference(o).toLowerCase() },
@@ -68,7 +91,7 @@ const AdminOrders = () => {
     [orders],
   );
   const itemOptions = useMemo(
-    () => [...new Set(orders.map((o) => o.itemName).filter(Boolean))].sort(),
+    () => [...new Set(orders.flatMap((o) => orderLines(o).map((line) => line.name)))].sort(),
     [orders],
   );
 
@@ -96,7 +119,7 @@ const AdminOrders = () => {
         if (!haystack.includes(q)) return false;
       }
       if (filters.event && o.eventTitle !== filters.event) return false;
-      if (filters.item && o.itemName !== filters.item) return false;
+      if (filters.item && !orderLines(o).some((line) => line.name === filters.item)) return false;
       if (filters.status && o.status !== filters.status) return false;
 
       // Date bounds are inclusive of the whole `to` day.
@@ -352,20 +375,27 @@ const AdminOrders = () => {
                   </td>
                   <td>{o.eventTitle}</td>
                   <td>
-                    {o.itemName}
-                    <span
-                      className={`admin-pill ${o.itemType === 'merch' ? 'is-merch' : 'is-ticket'}`}
-                    >
-                      {o.itemType}
-                    </span>
-                    {/* Chosen size / colour etc., recorded at checkout. */}
-                    {o.options?.length > 0 && (
-                      <div className="admin-cell-sub">
-                        {o.options.map((opt) => `${opt.name}: ${opt.choice}`).join(' · ')}
-                      </div>
-                    )}
+                    <div className="admin-order-lines">
+                      {orderLines(o).map((line, index) => (
+                        <div className="admin-order-line" key={`${line.name}-${index}`}>
+                          <div>
+                            <span className="admin-cell-strong">{line.name}</span>
+                            <span className={`admin-pill ${line.type === 'merch' ? 'is-merch' : 'is-ticket'}`}>
+                              {line.type}
+                            </span>
+                            <span className="admin-line-qty">× {line.quantity}</span>
+                          </div>
+                          {line.options?.length > 0 && (
+                            <div className="admin-cell-sub">{optionText(line.options)}</div>
+                          )}
+                          {line.amount != null && (
+                            <div className="admin-cell-sub">Line total: {money(line.amount)}</div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
                   </td>
-                  <td>{o.quantity}</td>
+                  <td>{totalUnits(o)}</td>
                   <td className="admin-nowrap">{money(o.amount)}</td>
                   <td>
                     <span className={`admin-status is-${o.status}`}>{o.status}</span>

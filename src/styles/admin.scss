@@ -1356,6 +1356,27 @@
   }
 }
 
+// A checkout can contain a ticket plus one or more merchandise add-ons. Keep
+// each line visually distinct so fulfilment details such as polo size cannot
+// disappear into the order summary.
+.admin-order-lines {
+  display: grid;
+  gap: 10px;
+  min-width: 220px;
+}
+
+.admin-order-line + .admin-order-line {
+  padding-top: 10px;
+  border-top: 1px solid tokens.$line;
+}
+
+.admin-line-qty {
+  margin-left: 7px;
+  color: tokens.$ink-body;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
 // ---------------------------------------------------------------- door check-in
 // Read at arm's length, in poor light, with a queue waiting — so the verdict
 // carries the weight and everything else stays quiet.

@@ -14,18 +14,24 @@ export const SITE_URL = 'https://jabalichorale.com';
 export const DEFAULT_IMAGE = `${SITE_URL}/images/jc_splash.jpeg`;
 
 // [path]: [title, description]
+//
+// The recurring anchors — "Jabali Chorale", "Nairobi", "gospel choir", the
+// Seventh-day Adventist (SDA) tradition, "young / youth", and the University of
+// Nairobi campus where it was founded — are woven in naturally rather than
+// stacked, because Google ranks on the terms that genuinely match the page.
+// Keep these honest: the copy must stay true to what the pages actually say.
 export const routeSeo = {
-  '/': ['Jabali Chorale — Gospel in Song', 'Nairobi gospel choir sharing Christ through rich choral music, worship and community ministry. Listen, attend an event, book us or join Jabali Chorale.'],
-  '/about': ['About Our Nairobi Gospel Choir', 'Meet Jabali Chorale, a Christ-centred gospel choir founded in Nairobi in 2022, and discover our calling, story and chorale members.'],
-  '/music': ['Gospel & Choral Music', 'Listen to Jabali Chorale’s gospel songs, featured releases and Christ-centred choral music from Nairobi, Kenya.'],
-  '/events': ['Gospel Choir Events in Nairobi', 'Discover upcoming Jabali Chorale concerts, cantatas, worship services and community ministry events in Nairobi, Kenya.'],
-  '/merch': ['Jabali Chorale Merchandise', 'Shop official Jabali Chorale merchandise and support our gospel music and ministry in Nairobi.'],
-  '/jabali-at-5': ['Jabali at 5', 'Celebrate five years of Jabali Chorale through the music, ministry, milestones and stories that shaped our Nairobi gospel choir.'],
-  '/join': ['Join Jabali Chorale', 'Join Jabali Chorale in Nairobi as a singer, musician or ministry volunteer. Learn about rehearsals and how to apply.'],
-  '/partnerships': ['Partner With Jabali Chorale', 'Partner with Jabali Chorale for gospel concerts, church ministry, outreach, events and creative collaborations in Kenya.'],
-  '/community': ['Jabali Chorale Community', 'Explore the people, fellowship and community outreach surrounding Jabali Chorale’s gospel music ministry in Nairobi.'],
-  '/gallery': ['Photo Gallery', 'See Jabali Chorale in worship, rehearsal, concert and community ministry through our latest photo collections.'],
-  '/contact': ['Contact & Book Jabali Chorale', 'Book Jabali Chorale for a church service, concert or special event in Kenya, or contact us about joining and partnerships.'],
+  '/': ['Jabali Chorale — Nairobi SDA Gospel Choir', 'Jabali Chorale is a young, Christ-centred gospel choir in Nairobi, rooted in the Seventh-day Adventist (SDA) tradition and founded at the University of Nairobi campus. Listen to our music, attend an event, book us or join.'],
+  '/about': ['About Jabali Chorale | Nairobi Youth Gospel Choir', 'Meet Jabali Chorale — a young, Christ-centred gospel choir founded at the University of Nairobi campus in 2022 and rooted in the Seventh-day Adventist (SDA) tradition. Discover our calling, story and members.'],
+  '/music': ['Gospel & Choral Music | Jabali Chorale, Nairobi', 'Listen to Jabali Chorale’s gospel songs and Christ-centred choral music — a young Nairobi choir in the Seventh-day Adventist (SDA) tradition.'],
+  '/events': ['Events | Jabali Chorale, Nairobi Gospel Choir', 'Upcoming Jabali Chorale concerts, cantatas, camp meetings and worship events in Nairobi — a young gospel choir in the Seventh-day Adventist (SDA) tradition.'],
+  '/merch': ['Shop | Jabali Chorale Merchandise, Nairobi', 'Shop official Jabali Chorale merchandise and support a young Nairobi gospel choir rooted in the Seventh-day Adventist (SDA) tradition.'],
+  '/jabali-at-5': ['Jabali at 5 | Jabali Chorale, Nairobi', 'Celebrate five years of Jabali Chorale — the music, ministry and milestones of a young Nairobi gospel choir founded at the University of Nairobi campus.'],
+  '/join': ['Join Jabali Chorale | Nairobi Youth Gospel Choir', 'Join Jabali Chorale, a young Nairobi gospel choir founded at the University of Nairobi and rooted in the Seventh-day Adventist (SDA) tradition. Sing, play or serve — see rehearsals and how to apply.'],
+  '/partnerships': ['Partner With Jabali Chorale | Nairobi', 'Partner with Jabali Chorale — a young Nairobi gospel choir in the Seventh-day Adventist (SDA) tradition — for concerts, church ministry, outreach and creative collaborations in Kenya.'],
+  '/community': ['Community | Jabali Chorale, Nairobi', 'The people, fellowship and outreach around Jabali Chorale — a young Nairobi gospel choir with roots at the University of Nairobi campus and in the Seventh-day Adventist (SDA) tradition.'],
+  '/gallery': ['Photo Gallery | Jabali Chorale, Nairobi', 'See Jabali Chorale in worship, rehearsal and concert — a young Nairobi gospel choir in the Seventh-day Adventist (SDA) tradition — through our latest photos.'],
+  '/contact': ['Contact & Book Jabali Chorale | Nairobi SDA Choir', 'Book Jabali Chorale — a young Nairobi gospel choir in the Seventh-day Adventist (SDA) tradition — for a church service, concert or event, or reach us about joining and partnerships.'],
 };
 
 // Priorities for the fixed routes in the sitemap. Anything not listed defaults
@@ -47,8 +53,14 @@ export const organizationSchema = {
   url: 'https://jabalichorale.com/',
   logo: 'https://jabalichorale.com/graphics/jc_logo_nopg.png',
   image: 'https://jabalichorale.com/images/jc_splash.jpeg',
-  description: 'A Christ-centred gospel chorale based in Nairobi, Kenya.',
+  description: 'A young, Christ-centred gospel choir in Nairobi, rooted in the Seventh-day Adventist (SDA) tradition and founded at the University of Nairobi campus in 2022.',
+  genre: ['Gospel', 'Choral', 'Christian'],
   foundingDate: '2022-08-18',
+  foundingLocation: {
+    '@type': 'Place',
+    name: 'University of Nairobi',
+    address: { '@type': 'PostalAddress', addressLocality: 'Nairobi', addressCountry: 'KE' },
+  },
   email: 'outreach@jabalichorale.com',
   telephone: '+254743349733',
   address: { '@type': 'PostalAddress', addressLocality: 'Nairobi', addressCountry: 'KE' },
