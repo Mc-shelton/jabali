@@ -8,7 +8,7 @@ import useReveal from './hooks/useReveal';
 import { pageview } from './lib/analytics';
 import Seo from './components/Seo';
 import { routeSeo, organizationSchema } from './data/seo';
-
+// something
 const App = () => {
   const location = useLocation();
   const isHome = location.pathname === '/';
