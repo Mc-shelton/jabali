@@ -1356,18 +1356,15 @@
   }
 }
 
-// A checkout can contain a ticket plus one or more merchandise add-ons. Keep
-// each line visually distinct so fulfilment details such as polo size cannot
-// disappear into the order summary.
-.admin-order-lines {
-  display: grid;
-  gap: 10px;
+// A checkout can contain a ticket plus one or more merchandise add-ons. The
+// table shows only the lead line — stacking every line made rows tall enough to
+// lose the grid — and the button opens the rest in a dialog.
+.admin-order-lead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   min-width: 220px;
-}
-
-.admin-order-line + .admin-order-line {
-  padding-top: 10px;
-  border-top: 1px solid tokens.$line;
 }
 
 .admin-line-qty {
@@ -1375,6 +1372,219 @@
   color: tokens.$ink-body;
   font-size: 0.78rem;
   white-space: nowrap;
+}
+
+.admin-line-more {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
+  min-width: 26px;
+  height: 26px;
+  padding: 0 7px;
+  border: 1px solid tokens.$line-strong;
+  border-radius: tokens.$r-pill;
+  background: tokens.$paper-raised;
+  color: tokens.$ink;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background tokens.$dur tokens.$ease, border-color tokens.$dur tokens.$ease;
+
+  &:hover,
+  &:focus-visible {
+    background: tokens.$paper-sunk;
+    border-color: tokens.$ink;
+  }
+}
+
+// ---------------------------------------------------------------- order detail
+.admin-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+  background: rgba(11, 31, 51, 0.55);
+  backdrop-filter: blur(2px);
+}
+
+.admin-modal {
+  width: min(680px, 100%);
+  max-height: min(86vh, 780px);
+  display: flex;
+  flex-direction: column;
+  border-radius: tokens.$r-md;
+  background: tokens.$paper-raised;
+  box-shadow: tokens.$shadow-lift;
+  overflow: hidden;
+}
+
+.admin-modal-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 20px 22px;
+  border-bottom: 1px solid tokens.$line;
+
+  h2 {
+    margin: 0 0 4px;
+    font-size: 1.1rem;
+    color: tokens.$ink;
+  }
+
+  p {
+    margin: 0;
+  }
+}
+
+.admin-modal-head-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex: none;
+}
+
+.admin-modal-close {
+  display: grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: tokens.$r-pill;
+  background: tokens.$paper-sunk;
+  color: tokens.$ink-body;
+  cursor: pointer;
+
+  &:hover,
+  &:focus-visible {
+    background: tokens.$line;
+    color: tokens.$ink;
+  }
+}
+
+.admin-modal-body {
+  display: grid;
+  gap: 26px;
+  padding: 20px 22px 24px;
+  overflow-y: auto;
+}
+
+.admin-modal-heading {
+  margin: 0 0 12px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: tokens.$ink-muted;
+
+  .admin-cell-sub {
+    text-transform: none;
+    letter-spacing: 0;
+    font-weight: 500;
+  }
+}
+
+.admin-detail-lines {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 14px;
+}
+
+.admin-detail-line + .admin-detail-line {
+  padding-top: 14px;
+  border-top: 1px solid tokens.$line;
+}
+
+.admin-detail-line-head {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 2px;
+}
+
+.admin-detail-line-amount {
+  margin-left: auto;
+  padding-left: 12px;
+  color: tokens.$ink-body;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+// Fulfilment choices — read off when the merchandise is handed over, so each
+// gets its own labelled row rather than a run-on line.
+.admin-detail-options {
+  margin: 8px 0 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 8px 18px;
+
+  dt {
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: tokens.$ink-muted;
+  }
+
+  dd {
+    margin: 2px 0 0;
+    font-weight: 600;
+    color: tokens.$ink-body;
+  }
+}
+
+.admin-detail-total {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 16px 0 0;
+  padding-top: 14px;
+  border-top: 1px solid tokens.$line-strong;
+  color: tokens.$ink-muted;
+
+  strong {
+    color: tokens.$ink;
+    font-size: 1.05rem;
+    font-variant-numeric: tabular-nums;
+  }
+}
+
+.admin-detail-meta {
+  margin: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px 18px;
+
+  dt {
+    font-size: 0.7rem;
+    letter-spacing: 0.05em;
+    text-transform: uppercase;
+    color: tokens.$ink-muted;
+  }
+
+  dd {
+    margin: 3px 0 0;
+    color: tokens.$ink-body;
+    overflow-wrap: anywhere;
+  }
+}
+
+@media (max-width: 640px) {
+  .admin-modal-backdrop {
+    padding: 0;
+    align-items: stretch;
+  }
+
+  .admin-modal {
+    width: 100%;
+    max-height: 100%;
+    border-radius: 0;
+  }
 }
 
 // ---------------------------------------------------------------- door check-in

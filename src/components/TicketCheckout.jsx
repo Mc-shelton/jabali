@@ -162,7 +162,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
       // GA4 purchase — the value M-Pesa actually confirmed, falling back to our
       // estimate if the server didn't echo one back.
       purchase({
-        orderId: order?.orderId,
+        orderId: status.orderId ?? order?.orderId,
         value: status.amount ?? amount,
         item,
         quantity: status.quantity ?? qty,
@@ -277,6 +277,9 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
         },
       });
       setOrder(res);
+      // A guarded local-development bypass returns an already-settled order,
+      // so there is no M-Pesa result to wait and poll for.
+      if (res.status === 'success') applyStatus(res);
     } catch (err) {
       setError(err.message || 'Could not start the payment.');
       setStage('payment');

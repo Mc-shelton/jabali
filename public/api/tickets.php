@@ -10,6 +10,7 @@ require __DIR__ . '/_mpesa.php';
 require __DIR__ . '/_fulfil.php';
 require __DIR__ . '/_orders.php';
 require __DIR__ . '/_merch.php';
+require __DIR__ . '/_payment_bypass.php';
 
 const STORE = 'orders';
 
@@ -227,7 +228,8 @@ function public_order(array $order): array
 route([
     // ----------------------------------------------------------- initiate
     'POST' => function () {
-        if (!mpesa_configured()) {
+        $bypassPayment = payment_bypass_authorized();
+        if (!$bypassPayment && !mpesa_configured()) {
             error_out('Online payment is not set up yet. Please contact us to book.', 503);
         }
 
@@ -305,7 +307,15 @@ route([
         $amount = $discounted + $addOnTotal;
 
         $reference = mb_substr(preg_replace('/[^A-Za-z0-9]/', '', $event['title']) ?: 'JabaliChorale', 0, 12);
-        [$ok, $res] = mpesa_stk_push($amount, $payPhone, $reference, ($itemType === 'merch' ? 'Merch ' : 'Tickets ') . $itemName);
+        if ($bypassPayment) {
+            $ok = true;
+            $res = [
+                'CheckoutRequestID' => 'DEV-' . strtoupper(bin2hex(random_bytes(6))),
+                'MerchantRequestID' => 'DEV-BYPASS',
+            ];
+        } else {
+            [$ok, $res] = mpesa_stk_push($amount, $payPhone, $reference, ($itemType === 'merch' ? 'Merch ' : 'Tickets ') . $itemName);
+        }
 
         if (!$ok) {
             error_out($res['error'] ?? 'Could not start the payment. Please try again.', 502);
@@ -319,7 +329,7 @@ route([
             'id'                => bin2hex(random_bytes(12)),
             'ticketCode'        => mint_ticket_code($orders),
             'createdAt'         => date('c'),
-            'status'            => 'pending',
+            'status'            => $bypassPayment ? 'success' : 'pending',
             'eventSlug'         => $slug,
             'eventTitle'        => $event['title'],
             'eventDate'         => $event['date'] ?? '',
@@ -346,16 +356,21 @@ route([
             'mpesaPhone'        => $payPhone,
             'checkoutRequestId' => $res['CheckoutRequestID'] ?? '',
             'merchantRequestId' => $res['MerchantRequestID'] ?? '',
-            'receipt'           => null,
-            'resultDesc'        => null,
-            'emailed'           => false,
+            'receipt'           => $bypassPayment ? 'DEV-BYPASS-' . strtoupper(bin2hex(random_bytes(4))) : null,
+            'resultDesc'        => $bypassPayment ? 'Payment bypassed for local development.' : null,
+            // Synthetic purchases must not send messages to real addresses.
+            'emailed'           => $bypassPayment,
+            'emailOk'           => $bypassPayment ? true : null,
+            'paidAt'            => $bypassPayment ? date('c') : null,
+            'settledBy'         => $bypassPayment ? 'dev-bypass' : null,
+            'paymentBypassed'   => $bypassPayment,
             'lastQueryAt'       => 0,
         ];
 
         $orders[] = $order;
         store_write(STORE, $orders);
 
-        json_out(['orderId' => $order['id'], 'status' => 'pending', 'amount' => $amount], 201);
+        json_out(public_order($order), 201);
     },
 
     // ----------------------------------------------------------- status

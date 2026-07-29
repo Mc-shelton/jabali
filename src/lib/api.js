@@ -10,6 +10,9 @@ import { contentSeed } from '../data/content';
 
 const BASE = '/api';
 const CSRF_KEY = 'jc_csrf';
+// Optional local-build credential. Vite replaces this at build time; the API
+// additionally requires an enabled server config and a loopback connection.
+const PAYMENT_BYPASS_KEY = import.meta.env.VITE_PAYMENT_BYPASS_KEY || '';
 
 let csrf = typeof sessionStorage !== 'undefined' ? sessionStorage.getItem(CSRF_KEY) : null;
 
@@ -81,7 +84,13 @@ export async function fetchEvent(slug) {
 // ---------------------------------------------------------------- ticket checkout
 // Public M-Pesa flow. No fallback — these require the server.
 export const initiateTicketPayment = (payload) =>
-  request('tickets.php', { method: 'POST', body: payload });
+  request('tickets.php', {
+    method: 'POST',
+    body: payload,
+    ...(PAYMENT_BYPASS_KEY
+      ? { headers: { 'X-JC-Payment-Bypass': PAYMENT_BYPASS_KEY } }
+      : {}),
+  });
 
 // `force` is the customer pressing Refresh: it skips the server-side rate limit
 // and asks Daraja right now.

@@ -1,0 +1,23 @@
+[
+    {
+        "id": "bad2a93e1f0ed07f7203284f",
+        "topic": "partnership",
+        "fields": {
+            "Enquiry type": "Partnership",
+            "Name": "Shellton",
+            "Email": "m.o.shellton@gmail.com",
+            "Phone": "+254741741381",
+            "Organisation / church": "Jabali Chorale",
+            "Preferred date": "flexible",
+            "Location / venue": "My home"
+        },
+        "name": "Shellton",
+        "email": "m.o.shellton@gmail.com",
+        "message": "Some test message",
+        "heading": "New partnership enquiry",
+        "subject": "New partnership enquiry — Shellton",
+        "submittedAt": "Wed 22 Jul 2026, 09:59",
+        "receivedAt": "2026-07-22T09:59:30+00:00",
+        "ip": "41.90.136.90"
+    }
+]

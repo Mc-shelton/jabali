@@ -1,0 +1,271 @@
+{
+    "products": [
+        {
+            "name": "Polo Shirt",
+            "price": "900",
+            "description": "White, Blue, Gray",
+            "image": "/uploads/events/20260722-e9a26d84281fa1ca.jpg",
+            "openAmount": {
+                "enabled": false,
+                "min": 1
+            },
+            "discount": {
+                "enabled": false,
+                "type": "percent",
+                "value": 0
+            },
+            "options": [
+                {
+                    "name": "Size",
+                    "required": true,
+                    "choices": [
+                        {
+                            "label": "XXL",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "XL",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "L",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "M",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "S",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "XS",
+                            "priceDelta": 0
+                        }
+                    ]
+                },
+                {
+                    "name": "Color",
+                    "required": true,
+                    "choices": [
+                        {
+                            "label": "White",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "Blue",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "Gray",
+                            "priceDelta": 0
+                        }
+                    ]
+                }
+            ],
+            "id": "polo-shirt",
+            "createdAt": "2026-07-22T11:51:45+00:00",
+            "updatedAt": "2026-07-23T16:55:56+00:00"
+        },
+        {
+            "name": "Round Neck",
+            "price": "600",
+            "description": "White, Orange, Blue, Gray, Black",
+            "image": "/uploads/events/20260722-e67c6313016e730a.jpg",
+            "openAmount": {
+                "enabled": false,
+                "min": 1
+            },
+            "discount": {
+                "enabled": false,
+                "type": "percent",
+                "value": 10
+            },
+            "options": [
+                {
+                    "name": "Size",
+                    "required": true,
+                    "choices": [
+                        {
+                            "label": "XXL",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "XL",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "L",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "M",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "S",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "XS",
+                            "priceDelta": 0
+                        }
+                    ]
+                },
+                {
+                    "name": "Color",
+                    "required": true,
+                    "choices": [
+                        {
+                            "label": "White",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "Mustard",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "Blue",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "Gray",
+                            "priceDelta": 0
+                        }
+                    ]
+                }
+            ],
+            "id": "round-neck",
+            "createdAt": "2026-07-22T11:51:45+00:00",
+            "updatedAt": "2026-07-23T09:14:44+00:00"
+        },
+        {
+            "name": "Classic Hoodie",
+            "price": "2500",
+            "description": "White, Blue, Gray",
+            "image": "/uploads/events/20260722-289964418ad4a7d5.jpg",
+            "openAmount": {
+                "enabled": false,
+                "min": 1
+            },
+            "discount": {
+                "enabled": false,
+                "type": "percent",
+                "value": 0
+            },
+            "options": [
+                {
+                    "name": "Size",
+                    "required": true,
+                    "choices": [
+                        {
+                            "label": "XXL",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "XL",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "L",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "M",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "S",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "XS",
+                            "priceDelta": 0
+                        }
+                    ]
+                },
+                {
+                    "name": "Color",
+                    "required": true,
+                    "choices": [
+                        {
+                            "label": "White",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "Blue",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "Gray",
+                            "priceDelta": 0
+                        }
+                    ]
+                }
+            ],
+            "id": "classic-hoodie",
+            "createdAt": "2026-07-22T11:51:45+00:00",
+            "updatedAt": "2026-07-23T16:56:20+00:00"
+        },
+        {
+            "name": "Support",
+            "price": "200",
+            "description": "If you'd like to support Jabali Chorale towards our ministration though this concert, we'll be glad to receive this token with a thankful heart.",
+            "image": "/uploads/events/20260722-34ff9ff2ebdb5b32.jpg",
+            "openAmount": {
+                "enabled": true,
+                "min": 10
+            },
+            "options": [],
+            "id": "support",
+            "createdAt": "2026-07-22T11:51:45+00:00",
+            "updatedAt": "2026-07-22T11:51:45+00:00"
+        },
+        {
+            "name": "Classic Cape",
+            "price": "500",
+            "description": "White, Blue, Gray",
+            "image": "/uploads/events/20260722-13219e976cb1902f.jpg",
+            "openAmount": {
+                "enabled": false,
+                "min": 50
+            },
+            "discount": {
+                "enabled": false,
+                "type": "percent",
+                "value": 0
+            },
+            "options": [
+                {
+                    "name": "Color",
+                    "required": true,
+                    "choices": [
+                        {
+                            "label": "White",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "Blue",
+                            "priceDelta": 0
+                        },
+                        {
+                            "label": "Gray",
+                            "priceDelta": 0
+                        }
+                    ]
+                }
+            ],
+            "id": "classic-cape",
+            "createdAt": "2026-07-22T11:51:45+00:00",
+            "updatedAt": "2026-07-23T09:15:49+00:00"
+        }
+    ],
+    "promoCodes": [
+        {
+            "code": "INTL_PC02",
+            "type": "percent",
+            "value": 99
+        }
+    ]
+}

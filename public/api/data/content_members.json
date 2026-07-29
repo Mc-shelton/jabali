@@ -1,142 +1,166 @@
 {
-  "members": [
-    {
-      "name": "Alice Ayieko",
-      "voice": "Chorale member",
-      "photo": "/images/members/IMG-20221123-WA0019 - Alice Ayieko.jpg",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Anfenee Keago",
-      "voice": "Chorale member",
-      "photo": "/images/members/IMG-20230217-WA0004 - anfenee keago.jpg",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Anyes Moh",
-      "voice": "Chorale member",
-      "photo": "/images/members/AGGY1 - Anyes Moh.jpg",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Beryl Ateng",
-      "voice": "Chorale member",
-      "photo": "/images/members/IMG-20230216-WA0011 - Beryl Ateng.jpg",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Beryl Ouya",
-      "voice": "Chorale member",
-      "photo": "/images/members/IMG-20230216-WA0031 - Beryl Ouya.jpg",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Brian Odera",
-      "voice": "Chorale member",
-      "photo": "/images/members/IMG-20230216-WA0007 - Brian Odera.jpg",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Collins Mlamba",
-      "voice": "Chorale member",
-      "photo": "/images/members/20220625_164403 - Collins Mlamba.jpg",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Davis Mogeni",
-      "voice": "Chorale member",
-      "photo": "/images/members/croped - Davis Mogeni.JPG",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Elsie Nyangweso",
-      "voice": "Chorale member",
-      "photo": "/images/members/DSC07591 - Elsie Nyangweso.jpg",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Elvis Okoth Dick",
-      "voice": "Chorale member",
-      "photo": "/images/members/Screenshot_20230517-170708 - ELVIS OKOTH DICK.png",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Fidel Lelei",
-      "voice": "Chorale member",
-      "photo": "/images/members/IMG_5054~4 - Fidel Lelei.jpg",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Grace Apondi",
-      "voice": "Chorale member",
-      "photo": "/images/members/IMG_20220423_135530 - Grace Apondi.jpg",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Jerry Collins Otieno (Oti)",
-      "voice": "Chorale member",
-      "photo": "/images/members/IMG_20220409_144211 - Jerry Collins Otieno (Oti).jpg",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Kevin Mose",
-      "voice": "Chorale member",
-      "photo": "/images/members/_MG_6512 - kevin mose.JPG",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Lynn Okumu",
-      "voice": "Chorale member",
-      "photo": "/images/members/DSC_6732~3 - LYNN Okumu.jpg",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Midiang'a Benja",
-      "voice": "Chorale member",
-      "photo": "/images/members/20230616_190658 - Midiang'a Benja.jpg",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Miriam Lelei",
-      "voice": "Chorale member",
-      "photo": "/images/members/IMG-20210508-WA0052 - miriam lelei.jpg",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Mutuku Kennedy",
-      "voice": "Chorale member",
-      "photo": "/images/members/IMG_1579 - Mutuku Kennedy.jpg",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Olivia Akinyi",
-      "voice": "Chorale member",
-      "photo": "/images/members/627FBD83-D251-482E-8F7D-0E9201927474 - olivia akinyi.jpeg",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Ruth Mayenga",
-      "voice": "Chorale member",
-      "photo": "/images/members/+254 719 636654 20230103_205558 - Ruth Mayenga.jpg",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Saigon Felix",
-      "voice": "Chorale member",
-      "photo": "/images/members/DSC07395 - SAIGON FELIX.jpg",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Sarah Peris",
-      "voice": "Chorale member",
-      "photo": "/images/members/254759086751_status_d29ba009bc444771ba5b6a42bbf2971d - Sarah peris.jpg",
-      "church": "Jabali Chorale"
-    },
-    {
-      "name": "Young Scout",
-      "voice": "Chorale member",
-      "photo": "/images/members/IMG-2021090 - Young Scout.jpg",
-      "church": "Jabali Chorale"
-    }
-  ]
+    "members": [
+        {
+            "name": "Agnes Maureen [Anyes]",
+            "voice": "Chorale member",
+            "photo": "/images/members/AGGY1 - Anyes Moh.jpg",
+            "church": "Jabali Chorale"
+        },
+        {
+            "name": "Effie Ateng",
+            "voice": "Chorale member",
+            "photo": "/uploads/members/20260722-d89fb3938d3609a1.png",
+            "church": "Jabali Chorale"
+        },
+        {
+            "name": "Lavender Ouya",
+            "voice": "Chorale member",
+            "photo": "/images/members/IMG-20230216-WA0031 - Beryl Ouya.jpg",
+            "church": "Jabali Chorale"
+        },
+        {
+            "name": "Brian Odera",
+            "voice": "Chorale member",
+            "photo": "/images/members/IMG-20230216-WA0007 - Brian Odera.jpg",
+            "church": "Jabali Chorale"
+        },
+        {
+            "name": "Collins Mlamba",
+            "voice": "Tenor",
+            "photo": "/uploads/members/20260725-313187937b01ec0d.jpg",
+            "church": "SDA Church Satellite Newlife"
+        },
+        {
+            "name": "Davis Nyakundi",
+            "voice": "Tenor",
+            "photo": "/images/members/croped - Davis Mogeni.JPG",
+            "church": "Eden Springs SDA Church"
+        },
+        {
+            "name": "Elsie Nyangweso",
+            "voice": "Chorale member",
+            "photo": "/images/members/DSC07591 - Elsie Nyangweso.jpg",
+            "church": "Jabali Chorale"
+        },
+        {
+            "name": "Elvis Okoth",
+            "voice": "Bass",
+            "photo": "/images/members/Screenshot_20230517-170708 - ELVIS OKOTH DICK.png",
+            "church": "Kileleshwa Community"
+        },
+        {
+            "name": "Faithful Choni",
+            "voice": "Alto",
+            "photo": "/images/members/IMG_20220423_135530 - Grace Apondi.jpg",
+            "church": "Jabali Chorale"
+        },
+        {
+            "name": "Jerry Collins Otieno (Oti)",
+            "voice": "Chorale member",
+            "photo": "/images/members/IMG_20220409_144211 - Jerry Collins Otieno (Oti).jpg",
+            "church": "Jabali Chorale"
+        },
+        {
+            "name": "Kevin Mose",
+            "voice": "Chorale member",
+            "photo": "/images/members/_MG_6512 - kevin mose.JPG",
+            "church": "Jabali Chorale"
+        },
+        {
+            "name": "Lynn Okumu",
+            "voice": "Chorale member",
+            "photo": "/images/members/DSC_6732~3 - LYNN Okumu.jpg",
+            "church": "Jabali Chorale"
+        },
+        {
+            "name": "Midiang'a Benjamin",
+            "voice": "Tenor",
+            "photo": "/uploads/members/20260722-c70c85bf66079fe0.jpg",
+            "church": "SDA Church - Happy Ministries"
+        },
+        {
+            "name": "Miriam Lelei",
+            "voice": "Chorale member",
+            "photo": "/images/members/IMG-20210508-WA0052 - miriam lelei.jpg",
+            "church": "Jabali Chorale"
+        },
+        {
+            "name": "Olivia Akinyi",
+            "voice": "Chorale member",
+            "photo": "/images/members/627FBD83-D251-482E-8F7D-0E9201927474 - olivia akinyi.jpeg",
+            "church": "Jabali Chorale"
+        },
+        {
+            "name": "Ruth Mayenga",
+            "voice": "Chorale member",
+            "photo": "/images/members/+254 719 636654 20230103_205558 - Ruth Mayenga.jpg",
+            "church": "Jabali Chorale"
+        },
+        {
+            "name": "Saigon Felix",
+            "voice": "Chorale member",
+            "photo": "/images/members/DSC07395 - SAIGON FELIX.jpg",
+            "church": "Jabali Chorale"
+        },
+        {
+            "name": "Sarah Peris",
+            "voice": "Chorale member",
+            "photo": "/uploads/members/20260722-32412f614d188a79.jpg",
+            "church": "Jabali Chorale"
+        },
+        {
+            "name": "Young Scout",
+            "voice": "Tenore",
+            "photo": "/images/members/IMG-2021090 - Young Scout.jpg",
+            "church": "Jabali Chorale"
+        },
+        {
+            "name": "Odiwuor Benjamin[Benji]",
+            "voice": "Bass",
+            "photo": "/uploads/members/20260722-1cf5b8c5bf03c436.jpg",
+            "church": ""
+        },
+        {
+            "name": "Christine James",
+            "voice": "Alto",
+            "photo": "/uploads/members/20260722-9467b094082d2a25.jpg",
+            "church": "Jkusda"
+        },
+        {
+            "name": "Azenath Ndege",
+            "voice": "Soprano",
+            "photo": "/uploads/members/20260722-ceea4037d07e7f67.jpg",
+            "church": "S.D.A Ngongroad"
+        },
+        {
+            "name": "Emaculate Chuchu",
+            "voice": "chorale member",
+            "photo": "/uploads/members/20260722-e583d4433a752192.jpg",
+            "church": "jabali chorale"
+        },
+        {
+            "name": "Jacquelyn Lucy",
+            "voice": "Soprano",
+            "photo": "/uploads/members/20260722-77960f7ffc08763f.jpg",
+            "church": "Gloryland SDA"
+        },
+        {
+            "name": "SHERYN ORWA",
+            "voice": "SOPRANO",
+            "photo": "/uploads/members/20260724-2d77c0520c27b6c0.jpg",
+            "church": "TOLL SDA CHURCH"
+        },
+        {
+            "name": "Nelly Nyanchama",
+            "voice": "Soprano",
+            "photo": "",
+            "church": "SDA Church Kileleshwa Community"
+        },
+        {
+            "name": "Aggrey",
+            "voice": "Bass",
+            "photo": "",
+            "church": "Nairobi east sda"
+        }
+    ]
 }

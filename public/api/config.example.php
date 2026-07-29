@@ -104,6 +104,13 @@ const MPESA = [
     'account_reference' => 'Jabali Chorale',
 ];
 
+// --------------------------------------------------- local payment testing
+// Optional and fail-closed. Both values must be present, the switch must be
+// true, the request must carry the matching key, and the client must connect
+// from loopback (127.0.0.1 or ::1). Never enable this live.
+const PAYMENT_BYPASS_ENABLED = false;
+const PAYMENT_BYPASS_KEY = '';
+
 // Site-wide promo codes, checked after an event's own codes.
 //   'JC10' => ['type' => 'percent', 'value' => 10]
 //   'VIP'  => ['type' => 'flat',    'value' => 200]

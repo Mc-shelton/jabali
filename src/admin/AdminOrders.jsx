@@ -4,40 +4,20 @@ import {
   CaretUpOutlined,
   CaretDownOutlined,
   SearchOutlined,
+  PlusOutlined,
 } from '@ant-design/icons';
 import { adminFetchOrders, reconcileOrders, resendConfirmation } from '../lib/api';
 import PageLoader from '../components/PageLoader';
-
-const money = (n) => `KES ${Number(n || 0).toLocaleString('en-KE')}`;
-const when = (iso) =>
-  iso ? new Date(iso).toLocaleString('en-GB', { dateStyle: 'medium', timeStyle: 'short' }) : '';
-
-const buyerName = (o) =>
-  `${o.customer?.preferredName ?? ''} ${o.customer?.otherNames ?? ''}`.trim();
-const reference = (o) => o.receipt || o.ticketCode || '';
-
-// Present every purchase as lines, including merchandise added while buying a
-// ticket. The API has always persisted these in `addOns`; keeping this shaping
-// here also lets older, single-item orders use the same rendering path.
-const orderLines = (o) => [
-  {
-    name: o.itemName,
-    type: o.itemType ?? 'ticket',
-    quantity: Number(o.quantity ?? 0),
-    amount: o.itemAmount ?? (o.addOns?.length ? null : o.amount),
-    options: o.options ?? [],
-  },
-  ...(o.addOns ?? []).map((line) => ({ ...line, type: 'merch' })),
-].filter((line) => line.name);
-
-const optionText = (options = []) =>
-  options.map((opt) => `${opt.name}: ${opt.choice}`).join(' · ');
-const itemText = (o) =>
-  orderLines(o)
-    .map((line) => [line.name, optionText(line.options)].filter(Boolean).join(' '))
-    .join(' ');
-const totalUnits = (o) =>
-  orderLines(o).reduce((sum, line) => sum + Number(line.quantity ?? 0), 0);
+import AdminOrderDetail from './AdminOrderDetail';
+import {
+  buyerName,
+  itemText,
+  money,
+  orderLines,
+  reference,
+  totalUnits,
+  when,
+} from './orderLines';
 
 // Each column declares how to sort itself, so the header row and the sort logic
 // can't drift apart.
@@ -71,6 +51,9 @@ const AdminOrders = () => {
   const [reconcileNote, setReconcileNote] = useState('');
   // Which order is mid-resend, so only that row's button shows a busy state.
   const [resendingId, setResendingId] = useState('');
+  // The order shown in the detail dialog, held by id so a reload after
+  // reconciling or re-sending refreshes what's on screen.
+  const [detailId, setDetailId] = useState('');
 
   const load = () =>
     adminFetchOrders()
@@ -211,6 +194,9 @@ const AdminOrders = () => {
   };
 
   const filtersActive = Object.values(filters).some(Boolean);
+  // Resolved from the current list, so the dialog closes by itself if the order
+  // it was showing disappears from a reload.
+  const detailOrder = orders.find((o) => o.id === detailId);
 
   if (loading) {
     return (
@@ -366,77 +352,89 @@ const AdminOrders = () => {
               </tr>
             </thead>
             <tbody>
-              {visible.map((o) => (
-                <tr key={o.id}>
-                  <td className="admin-nowrap">{when(o.createdAt)}</td>
-                  <td>
-                    <div className="admin-cell-strong">{buyerName(o)}</div>
-                    <div className="admin-cell-sub">{o.customer?.email}</div>
-                  </td>
-                  <td>{o.eventTitle}</td>
-                  <td>
-                    <div className="admin-order-lines">
-                      {orderLines(o).map((line, index) => (
-                        <div className="admin-order-line" key={`${line.name}-${index}`}>
-                          <div>
-                            <span className="admin-cell-strong">{line.name}</span>
-                            <span className={`admin-pill ${line.type === 'merch' ? 'is-merch' : 'is-ticket'}`}>
-                              {line.type}
-                            </span>
-                            <span className="admin-line-qty">× {line.quantity}</span>
-                          </div>
-                          {line.options?.length > 0 && (
-                            <div className="admin-cell-sub">{optionText(line.options)}</div>
-                          )}
-                          {line.amount != null && (
-                            <div className="admin-cell-sub">Line total: {money(line.amount)}</div>
-                          )}
+              {visible.map((o) => {
+                const lines = orderLines(o);
+                const lead = lines[0];
+                const hidden = lines.length - 1;
+
+                return (
+                  <tr key={o.id}>
+                    <td className="admin-nowrap">{when(o.createdAt)}</td>
+                    <td>
+                      <div className="admin-cell-strong">{buyerName(o)}</div>
+                      <div className="admin-cell-sub">{o.customer?.email}</div>
+                    </td>
+                    <td>{o.eventTitle}</td>
+                    <td>
+                      {/* Only the lead item, so a row stays one line high however
+                          much was bought. The button opens the full purchase. */}
+                      <div className="admin-order-lead">
+                        <div>
+                          <span className="admin-cell-strong">{lead?.name}</span>
+                          <span
+                            className={`admin-pill ${lead?.type === 'merch' ? 'is-merch' : 'is-ticket'}`}
+                          >
+                            {lead?.type}
+                          </span>
+                          <span className="admin-line-qty">× {lead?.quantity}</span>
                         </div>
-                      ))}
-                    </div>
-                  </td>
-                  <td>{totalUnits(o)}</td>
-                  <td className="admin-nowrap">{money(o.amount)}</td>
-                  <td>
-                    <span className={`admin-status is-${o.status}`}>{o.status}</span>
-                    {/* Flags an order that polling had wrongly marked failed. */}
-                    {o.correctedFrom === 'failed' && o.status === 'success' && (
-                      <div className="admin-cell-sub" title="This order was wrongly marked failed and has been corrected">
-                        recovered
+                        <button
+                          type="button"
+                          className="admin-line-more"
+                          onClick={() => setDetailId(o.id)}
+                          title={`View the full order — ${itemText(o)}`}
+                          aria-label={`View full details of ${buyerName(o) || 'this'} order`}
+                        >
+                          <PlusOutlined />
+                          {hidden > 0 && <span>{hidden}</span>}
+                        </button>
                       </div>
-                    )}
-                    {/* Paid, but the confirmation never went out — the customer
-                        has no ticket and needs contacting. */}
-                    {o.status === 'success' && o.emailed && o.emailOk === false && (
-                      <div
-                        className="admin-flag-warn"
-                        title={o.emailError || 'The confirmation email could not be sent. See Logs.'}
-                      >
-                        no email sent
-                      </div>
-                    )}
-                    {/* Makes the flag above actionable. Only offered when there
-                        is an address to send to — without one the button could
-                        only ever fail. */}
-                    {o.status === 'success' && o.emailOk === false && o.customer?.email && (
-                      <button
-                        type="button"
-                        className="admin-resend-btn"
-                        onClick={() => runResend(o)}
-                        disabled={resendingId === o.id}
-                        title={`Re-send the confirmation to ${o.customer.email}`}
-                      >
-                        {resendingId === o.id ? 'Sending…' : 'Re-send'}
-                      </button>
-                    )}
-                  </td>
-                  <td className="admin-cell-sub">{reference(o) || '—'}</td>
-                </tr>
-              ))}
+                    </td>
+                    <td>{totalUnits(o)}</td>
+                    <td className="admin-nowrap">{money(o.amount)}</td>
+                    <td>
+                      <span className={`admin-status is-${o.status}`}>{o.status}</span>
+                      {/* Flags an order that polling had wrongly marked failed. */}
+                      {o.correctedFrom === 'failed' && o.status === 'success' && (
+                        <div className="admin-cell-sub" title="This order was wrongly marked failed and has been corrected">
+                          recovered
+                        </div>
+                      )}
+                      {/* Paid, but the confirmation never went out — the customer
+                          has no ticket and needs contacting. */}
+                      {o.status === 'success' && o.emailed && o.emailOk === false && (
+                        <div
+                          className="admin-flag-warn"
+                          title={o.emailError || 'The confirmation email could not be sent. See Logs.'}
+                        >
+                          no email sent
+                        </div>
+                      )}
+                      {/* Makes the flag above actionable. Only offered when there
+                          is an address to send to — without one the button could
+                          only ever fail. */}
+                      {o.status === 'success' && o.emailOk === false && o.customer?.email && (
+                        <button
+                          type="button"
+                          className="admin-resend-btn"
+                          onClick={() => runResend(o)}
+                          disabled={resendingId === o.id}
+                          title={`Re-send the confirmation to ${o.customer.email}`}
+                        >
+                          {resendingId === o.id ? 'Sending…' : 'Re-send'}
+                        </button>
+                      )}
+                    </td>
+                    <td className="admin-cell-sub">{reference(o) || '—'}</td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
         </div>
       )}
+
+      {detailOrder && <AdminOrderDetail order={detailOrder} onClose={() => setDetailId('')} />}
     </div>
   );
 };

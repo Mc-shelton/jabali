@@ -1,8 +1,8 @@
 {
-  "enabled": false,
-  "eventSlug": "",
-  "headline": "",
-  "blurb": "",
-  "ctaLabel": "",
-  "image": ""
+    "enabled": true,
+    "eventSlug": "jabali-5",
+    "headline": "",
+    "blurb": "",
+    "ctaLabel": "",
+    "image": ""
 }
