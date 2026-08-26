@@ -43,6 +43,10 @@ function mpesa_http(string $method, string $url, array $headers, ?string $body =
         CURLOPT_HTTPHEADER     => $headers,
         CURLOPT_TIMEOUT        => 30,
         CURLOPT_CONNECTTIMEOUT => 15,
+        // Some shared hosts prefer a broken/unrouted IPv6 result for Daraja,
+        // then wait for the full connect timeout without trying its IPv4 A
+        // record. Safaricom publishes an IPv4 endpoint, so use it directly.
+        CURLOPT_IPRESOLVE      => CURL_IPRESOLVE_V4,
     ]);
     if ($body !== null) {
         curl_setopt($ch, CURLOPT_POSTFIELDS, $body);
@@ -50,6 +54,11 @@ function mpesa_http(string $method, string $url, array $headers, ?string $body =
     $raw = curl_exec($ch);
     $code = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $err = curl_error($ch);
+    $errno = curl_errno($ch);
+    $primaryIp = (string) curl_getinfo($ch, CURLINFO_PRIMARY_IP);
+    $lookupMs = (int) round((float) curl_getinfo($ch, CURLINFO_NAMELOOKUP_TIME) * 1000);
+    $connectMs = (int) round((float) curl_getinfo($ch, CURLINFO_CONNECT_TIME) * 1000);
+    $totalMs = (int) round((float) curl_getinfo($ch, CURLINFO_TOTAL_TIME) * 1000);
     // No curl_close(): deprecated since PHP 8.5 and a no-op since 8.0 — the
     // handle is freed when it goes out of scope. Calling it printed a
     // deprecation notice ahead of the JSON body, which made the M-Pesa status
@@ -57,7 +66,14 @@ function mpesa_http(string $method, string $url, array $headers, ?string $body =
     unset($ch);
 
     if ($raw === false) {
-        return [0, ['error' => $err ?: 'Network error reaching M-Pesa.']];
+        return [0, [
+            'error'       => $err ?: 'Network error reaching M-Pesa.',
+            'curl_errno'  => $errno,
+            'primary_ip'  => $primaryIp,
+            'lookup_ms'   => $lookupMs,
+            'connect_ms'  => $connectMs,
+            'total_ms'    => $totalMs,
+        ]];
     }
     return [$code, json_decode($raw, true) ?? []];
 }
@@ -66,8 +82,9 @@ function mpesa_http(string $method, string $url, array $headers, ?string $body =
 // requests, so a token from one environment (e.g. sandbox) can never be reused
 // against another (production), which Safaricom rejects as "Invalid Access
 // Token". Credentials are trimmed in case they were pasted with stray spaces.
-function mpesa_token(): ?string
+function mpesa_token(?string &$failure = null): ?string
 {
+    $failure = null;
     $key = trim((string) MPESA['consumer_key']);
     $secret = trim((string) MPESA['consumer_secret']);
 
@@ -76,6 +93,25 @@ function mpesa_token(): ?string
     [$code, $body] = mpesa_http('GET', $url, ["Authorization: $auth"]);
 
     if ($code !== 200 || empty($body['access_token'])) {
+        $networkFailure = $code === 0;
+        $failure = $networkFailure
+            ? 'M-Pesa is temporarily unreachable. Please try again shortly.'
+            : 'M-Pesa rejected the payment configuration. Please contact us.';
+
+        // Never log the Basic auth header, consumer key, or consumer secret.
+        // The network timings distinguish DNS, connection, and API failures
+        // without putting live credentials in a log or admin screen.
+        log_error('M-Pesa OAuth failed', [
+            'http'      => $code,
+            'errorCode' => $body['errorCode'] ?? null,
+            'message'   => $body['errorMessage'] ?? $body['error'] ?? 'M-Pesa rejected the request.',
+            'url'        => $url,
+            'curl_errno' => $body['curl_errno'] ?? null,
+            'primary_ip' => $body['primary_ip'] ?? null,
+            'lookup_ms'  => $body['lookup_ms'] ?? null,
+            'connect_ms' => $body['connect_ms'] ?? null,
+            'total_ms'   => $body['total_ms'] ?? null,
+        ]);
         return null;
     }
     return $body['access_token'];
@@ -96,9 +132,10 @@ function mpesa_password(string $timestamp): string
 // MerchantRequestID on success, or an error message.
 function mpesa_stk_push(int $amount, string $phone, string $reference, string $description): array
 {
-    $token = mpesa_token();
+    $authFailure = null;
+    $token = mpesa_token($authFailure);
     if (!$token) {
-        return [false, ['error' => 'Could not authenticate with M-Pesa.']];
+        return [false, ['error' => $authFailure ?? 'Could not authenticate with M-Pesa.']];
     }
 
     $timestamp = mpesa_timestamp();
@@ -165,9 +202,13 @@ function mpesa_stk_query(string $checkoutRequestId): array
 {
     $pending = ['status' => 'pending', 'code' => null, 'desc' => null];
 
-    $token = mpesa_token();
+    $authFailure = null;
+    $token = mpesa_token($authFailure);
     if (!$token) {
-        log_error('M-Pesa auth failed during status query', ['checkout' => $checkoutRequestId]);
+        log_error('M-Pesa auth failed during status query', [
+            'checkout' => $checkoutRequestId,
+            'message'  => $authFailure,
+        ]);
         return $pending;
     }
 
