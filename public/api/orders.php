@@ -28,16 +28,28 @@ route([
         if (!empty($replay['conflicts'])) {
             log_error('C2B inbox replay found conflicting receipt data', $replay);
         }
-        $unclaimed = c2b_unclaimed_stats(c2b_read_payments_resilient(), $orders);
+        $unclaimedPayments = c2b_unclaimed_payments(c2b_read_payments_resilient(), $orders);
+        $unclaimedRecords = array_map('c2b_admin_record', $unclaimedPayments);
+        $records = array_merge($orders, $unclaimedRecords);
+        usort($records, fn($a, $b) =>
+            (strtotime((string) ($b['createdAt'] ?? '')) ?: 0)
+            <=> (strtotime((string) ($a['createdAt'] ?? '')) ?: 0)
+        );
+        $unclaimedAmount = (float) array_sum(array_map(
+            fn($payment) => (float) ($payment['amount'] ?? 0),
+            $unclaimedPayments
+        ));
 
         json_out([
-            'orders' => array_values($orders),
+            // Direct PayBill payments are order-like records for the admin
+            // table, while stats.total remains the number of actual orders.
+            'orders' => array_values($records),
             'stats'  => [
                 'total'           => count($orders),
                 'paid'            => count($paid),
                 'revenue'         => $revenue,
-                'unclaimed'       => $unclaimed['count'],
-                'unclaimedAmount' => $unclaimed['amount'],
+                'unclaimed'       => count($unclaimedPayments),
+                'unclaimedAmount' => $unclaimedAmount,
                 'c2bNeedsReview'  => $replay['invalid']
                     + count($replay['errors'])
                     + count($replay['conflicts']),

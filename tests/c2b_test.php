@@ -43,7 +43,13 @@ check('valid payload accepted', is_array($payment), true);
 check('receipt normalised', $payment['receipt'], 'SJA2XK9ABC');
 check('amount parsed', $payment['amount'], 1250.0);
 check('payer name joined', $payment['payerName'], 'Amina N.');
+check('valid Kenyan phone retained', $payment['phone'], '254712345678');
 check('M-Pesa time uses Kenya offset', $payment['paidAt'], '2026-08-27T14:30:05+03:00');
+
+$redactedPhone = $payload;
+$redactedPhone['MSISDN'] = hash('sha256', '254712345678');
+check('redacted MSISDN is not presented as a false phone',
+    c2b_normalise_confirmation($redactedPhone)['phone'], '');
 
 $wrongShortcode = $payload;
 $wrongShortcode['BusinessShortCode'] = '999999';
@@ -82,6 +88,20 @@ check('unknown account reference remains unclaimed', c2b_unclaimed_stats([
     'count' => 1,
     'amount' => 700.0,
 ]);
+
+$unclaimedPayments = c2b_unclaimed_payments([
+    ['receipt' => 'SJA2XK9OLD', 'amount' => 100, 'paidAt' => '2026-08-26T10:00:00+03:00'],
+    $payment,
+], []);
+check('unclaimed payments are newest first', $unclaimedPayments[0]['receipt'], 'SJA2XK9ABC');
+
+$adminRecord = c2b_admin_record(array_replace($payment, ['requestRef' => 'ABC123']));
+check('unclaimed payment becomes a filterable admin record', $adminRecord['status'], 'unclaimed');
+check('admin record has a stable receipt id', $adminRecord['id'], 'c2b-sja2xk9abc');
+check('admin record exposes account reference', $adminRecord['accountReference'], 'JABALI');
+check('admin record exposes callback log reference', $adminRecord['requestRef'], 'ABC123');
+check('old malformed phone is hidden from admin record',
+    c2b_admin_record(array_replace($payment, ['phone' => '84512346486']))['customer']['phone'], '');
 
 echo "\n-- durable write-ahead capture --\n";
 $raw = json_encode($payload);

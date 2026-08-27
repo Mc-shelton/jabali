@@ -22,7 +22,12 @@ import {
 // Each column declares how to sort itself, so the header row and the sort logic
 // can't drift apart.
 const COLUMNS = [
-  { key: 'createdAt', label: 'Date', value: (o) => o.createdAt ?? '' },
+  {
+    key: 'createdAt',
+    label: 'Date',
+    value: (o) => Date.parse(o.createdAt ?? '') || 0,
+    numeric: true,
+  },
   { key: 'buyer', label: 'Buyer', value: (o) => buyerName(o).toLowerCase() },
   { key: 'event', label: 'Event', value: (o) => (o.eventTitle ?? '').toLowerCase() },
   { key: 'item', label: 'Items', value: (o) => itemText(o).toLowerCase() },
@@ -105,6 +110,9 @@ const AdminOrders = () => {
           o.customer?.phone,
           o.mpesaPhone,
           reference(o),
+          o.paymentReference,
+          o.accountReference,
+          o.transactionType,
         ]
           .filter(Boolean)
           .join(' ')
@@ -136,10 +144,13 @@ const AdminOrders = () => {
   // Stats follow the filter, so a filtered view reports on what's on screen.
   const shownStats = useMemo(() => {
     const paid = visible.filter((o) => o.status === 'success');
+    const unclaimed = visible.filter((o) => o.status === 'unclaimed');
     return {
       count: visible.length,
       paid: paid.length,
       revenue: paid.reduce((sum, o) => sum + Number(o.amount ?? 0), 0),
+      unclaimed: unclaimed.length,
+      unclaimedAmount: unclaimed.reduce((sum, o) => sum + Number(o.amount ?? 0), 0),
     };
   }, [visible]);
 
@@ -246,14 +257,6 @@ const AdminOrders = () => {
       )}
 
       <div className="admin-stats">
-        <div
-          className="admin-stat"
-          title="Completed PayBill payments not linked to a paid online order"
-        >
-          <span>Unclaimed</span>
-          <strong>{Number(data.stats?.unclaimed ?? 0)}</strong>
-          <em className="admin-stat-detail">{money(data.stats?.unclaimedAmount ?? 0)}</em>
-        </div>
         <div className="admin-stat">
           <span>{filtersActive ? 'Paid (filtered)' : 'Paid orders'}</span>
           <strong>{shownStats.paid}</strong>
@@ -262,10 +265,20 @@ const AdminOrders = () => {
           <span>{filtersActive ? 'Revenue (filtered)' : 'Revenue'}</span>
           <strong>{money(shownStats.revenue)}</strong>
         </div>
+        <div
+          className="admin-stat"
+          title="Completed PayBill payments not linked to an online order"
+        >
+          <span>{filtersActive ? 'Unclaimed (filtered)' : 'Unclaimed'}</span>
+          <strong>{money(shownStats.unclaimedAmount)}</strong>
+          <em className="admin-stat-detail">
+            {shownStats.unclaimed} payment{shownStats.unclaimed === 1 ? '' : 's'}
+          </em>
+        </div>
         <div className="admin-stat">
           <span>{filtersActive ? 'Showing' : 'All orders'}</span>
           <strong>
-            {shownStats.count}
+            {filtersActive ? shownStats.count : Number(data.stats?.total ?? 0)}
             {filtersActive && <em className="admin-stat-of"> of {orders.length}</em>}
           </strong>
         </div>
@@ -314,6 +327,7 @@ const AdminOrders = () => {
           <select value={filters.status} onChange={setFilter('status')}>
             <option value="">Any status</option>
             <option value="success">Paid</option>
+            <option value="unclaimed">Unclaimed</option>
             <option value="pending">Pending</option>
             <option value="failed">Failed</option>
           </select>
@@ -382,13 +396,16 @@ const AdminOrders = () => {
                 const lines = orderLines(o);
                 const lead = lines[0];
                 const hidden = lines.length - 1;
+                const isUnclaimed = o.recordType === 'unclaimed';
 
                 return (
                   <tr key={o.id}>
                     <td className="admin-nowrap">{when(o.createdAt)}</td>
                     <td>
                       <div className="admin-cell-strong">{buyerName(o)}</div>
-                      <div className="admin-cell-sub">{o.customer?.email}</div>
+                      <div className="admin-cell-sub">
+                        {isUnclaimed ? o.customer?.phone || 'Phone not provided' : o.customer?.email}
+                      </div>
                     </td>
                     <td>{o.eventTitle}</td>
                     <td>
@@ -398,11 +415,19 @@ const AdminOrders = () => {
                         <div>
                           <span className="admin-cell-strong">{lead?.name}</span>
                           <span
-                            className={`admin-pill ${lead?.type === 'merch' ? 'is-merch' : 'is-ticket'}`}
+                            className={`admin-pill ${
+                              lead?.type === 'merch'
+                                ? 'is-merch'
+                                : lead?.type === 'payment'
+                                  ? 'is-payment'
+                                  : 'is-ticket'
+                            }`}
                           >
                             {lead?.type}
                           </span>
-                          <span className="admin-line-qty">× {lead?.quantity}</span>
+                          {!isUnclaimed && (
+                            <span className="admin-line-qty">× {lead?.quantity}</span>
+                          )}
                         </div>
                         <button
                           type="button"
@@ -416,7 +441,7 @@ const AdminOrders = () => {
                         </button>
                       </div>
                     </td>
-                    <td>{totalUnits(o)}</td>
+                    <td>{isUnclaimed ? '—' : totalUnits(o)}</td>
                     <td className="admin-nowrap">{money(o.amount)}</td>
                     <td>
                       <span className={`admin-status is-${o.status}`}>{o.status}</span>

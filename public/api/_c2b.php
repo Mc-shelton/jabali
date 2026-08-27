@@ -51,6 +51,21 @@ function c2b_normalise_reference($value): string
     return strtoupper(preg_replace('/[^A-Z0-9]/i', '', c2b_value($value, 120)));
 }
 
+// Daraja may redact MSISDN as a 64-character hexadecimal digest. Treating the
+// digits inside that digest as a phone number creates convincing-looking but
+// false data, so only accept the normal Kenyan mobile forms.
+function c2b_normalise_phone($value): string
+{
+    $raw = c2b_value($value, 80);
+    if ($raw === '' || preg_match('/^[A-F0-9]{64}$/i', $raw)) return '';
+    if (!preg_match('/^\+?[0-9\s().-]{9,24}$/', $raw)) return '';
+
+    $digits = preg_replace('/\D+/', '', $raw);
+    return preg_match('/^(?:254[17]\d{8}|0[17]\d{8}|[17]\d{8})$/', $digits)
+        ? $digits
+        : '';
+}
+
 // Returns null when the payload cannot be a real confirmation for our
 // shortcode. The callback endpoint still acknowledges it so Safaricom does not
 // retry bad input indefinitely, but it is not allowed into the sales figures.
@@ -88,7 +103,7 @@ function c2b_normalise_confirmation(array $payload): ?array
         'receivedAt'       => date(DATE_ATOM),
         'shortcode'        => $shortcode,
         'accountReference' => c2b_normalise_reference($payload['BillRefNumber'] ?? ''),
-        'phone'            => preg_replace('/\D+/', '', c2b_value($payload['MSISDN'] ?? '', 20)),
+        'phone'            => c2b_normalise_phone($payload['MSISDN'] ?? ''),
         'payerName'        => implode(' ', $names),
         'transactionType'  => c2b_value($payload['TransactionType'] ?? '', 80),
     ];
@@ -383,9 +398,9 @@ function c2b_read_payments_resilient(): array
 }
 
 // A C2B feed can include a payment that the STK flow also knows about. Receipt
-// matching keeps that from becoming both an order and an "unclaimed" payment,
-// regardless of which of Safaricom's callbacks reaches us first.
-function c2b_unclaimed_stats(array $payments, array $orders): array
+// and account-reference matching keep it from becoming both an order and an
+// "unclaimed" payment, regardless of which callback reaches us first.
+function c2b_unclaimed_payments(array $payments, array $orders): array
 {
     $claimedReceipts = [];
     $claimedReferences = [];
@@ -396,17 +411,69 @@ function c2b_unclaimed_stats(array $payments, array $orders): array
         if ($reference !== '') $claimedReferences[$reference] = true;
     }
 
-    $count = 0;
-    $amount = 0.0;
+    $unclaimed = [];
     foreach ($payments as $payment) {
         $receipt = strtoupper(trim((string) ($payment['receipt'] ?? '')));
         $reference = c2b_normalise_reference($payment['accountReference'] ?? '');
         if ($receipt === '') continue;
         if (isset($claimedReceipts[$receipt])) continue;
         if ($reference !== '' && isset($claimedReferences[$reference])) continue;
-        $count++;
-        $amount += (float) ($payment['amount'] ?? 0);
+        $unclaimed[] = $payment;
     }
 
-    return ['count' => $count, 'amount' => $amount];
+    usort($unclaimed, fn($a, $b) => strcmp(
+        (string) ($b['paidAt'] ?? $b['receivedAt'] ?? ''),
+        (string) ($a['paidAt'] ?? $a['receivedAt'] ?? '')
+    ));
+    return $unclaimed;
+}
+
+function c2b_unclaimed_stats(array $payments, array $orders): array
+{
+    $unclaimed = c2b_unclaimed_payments($payments, $orders);
+    return [
+        'count' => count($unclaimed),
+        'amount' => (float) array_sum(array_map(
+            fn($payment) => (float) ($payment['amount'] ?? 0),
+            $unclaimed
+        )),
+    ];
+}
+
+// Project only the fields the admin orders screen needs. Internal capture
+// hashes and raw payloads remain in the durable inbox and logs, not in the UI.
+function c2b_admin_record(array $payment): array
+{
+    $receipt = strtoupper(trim((string) ($payment['receipt'] ?? '')));
+    $paidAt = (string) ($payment['paidAt'] ?? '');
+    $receivedAt = (string) ($payment['receivedAt'] ?? '');
+    $payerName = trim((string) ($payment['payerName'] ?? ''));
+    $phone = c2b_normalise_phone($payment['phone'] ?? '');
+    $accountReference = c2b_normalise_reference($payment['accountReference'] ?? '');
+
+    return [
+        'id'               => 'c2b-' . strtolower($receipt),
+        'recordType'       => 'unclaimed',
+        'createdAt'        => $paidAt !== '' ? $paidAt : $receivedAt,
+        'paidAt'           => $paidAt !== '' ? $paidAt : null,
+        'receivedAt'       => $receivedAt !== '' ? $receivedAt : null,
+        'amount'           => (float) ($payment['amount'] ?? 0),
+        'status'           => 'unclaimed',
+        'eventTitle'       => 'Direct PayBill',
+        'itemName'         => 'PayBill payment',
+        'itemType'         => 'payment',
+        'quantity'         => 0,
+        'customer'         => [
+            'preferredName' => $payerName !== '' ? $payerName : 'Unknown payer',
+            'otherNames'    => '',
+            'phone'         => $phone,
+        ],
+        'mpesaPhone'       => $phone,
+        'receipt'          => $receipt,
+        'paymentReference' => $accountReference,
+        'accountReference' => $accountReference,
+        'shortcode'        => (string) ($payment['shortcode'] ?? ''),
+        'transactionType'  => (string) ($payment['transactionType'] ?? ''),
+        'requestRef'       => (string) ($payment['requestRef'] ?? ''),
+    ];
 }

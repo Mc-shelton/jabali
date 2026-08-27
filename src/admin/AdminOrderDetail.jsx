@@ -26,23 +26,36 @@ const AdminOrderDetail = ({ order, onClose }) => {
   if (!order) return null;
 
   const lines = orderLines(order);
+  const isUnclaimed = order.recordType === 'unclaimed';
 
   // Only the facts this order actually carries — an empty row reads as missing
   // data rather than as "not applicable".
-  const meta = [
-    ['Placed', when(order.createdAt)],
-    ['Paid', when(order.paidAt)],
-    ['Event', order.eventTitle],
-    ['Venue', order.eventVenue],
-    ['Email', order.customer?.email],
-    ['Phone', order.customer?.phone],
-    ['Paid from', order.mpesaPhone],
-    ['M-Pesa receipt', order.receipt],
-    ['Payment reference', order.paymentReference],
-    ['Ticket code', order.ticketCode],
-    ['Promo code', order.promoCode],
-    ['Admitted', when(order.admittedAt)],
-  ].filter(([, value]) => value);
+  const meta = (isUnclaimed
+    ? [
+        ['Paid', when(order.paidAt || order.createdAt)],
+        ['Callback received', when(order.receivedAt)],
+        ['Payer', buyerName(order)],
+        ['Phone', order.customer?.phone],
+        ['M-Pesa receipt', order.receipt],
+        ['Account reference', order.accountReference],
+        ['Transaction type', order.transactionType],
+        ['Shortcode', order.shortcode],
+        ['Log reference', order.requestRef],
+      ]
+    : [
+        ['Placed', when(order.createdAt)],
+        ['Paid', when(order.paidAt)],
+        ['Event', order.eventTitle],
+        ['Venue', order.eventVenue],
+        ['Email', order.customer?.email],
+        ['Phone', order.customer?.phone],
+        ['Paid from', order.mpesaPhone],
+        ['M-Pesa receipt', order.receipt],
+        ['Payment reference', order.paymentReference],
+        ['Ticket code', order.ticketCode],
+        ['Promo code', order.promoCode],
+        ['Admitted', when(order.admittedAt)],
+      ]).filter(([, value]) => value);
 
   return (
     <div
@@ -53,7 +66,12 @@ const AdminOrderDetail = ({ order, onClose }) => {
         if (e.target === e.currentTarget) onClose();
       }}
     >
-      <div className="admin-modal" role="dialog" aria-modal="true" aria-label="Order details">
+      <div
+        className="admin-modal"
+        role="dialog"
+        aria-modal="true"
+        aria-label={isUnclaimed ? 'Unclaimed payment details' : 'Order details'}
+      >
         <header className="admin-modal-head">
           <div>
             <h2>{buyerName(order) || 'Order'}</h2>
@@ -76,45 +94,59 @@ const AdminOrderDetail = ({ order, onClose }) => {
         </header>
 
         <div className="admin-modal-body">
-          <section>
-            <h3 className="admin-modal-heading">
-              Items <span className="admin-cell-sub">({totalUnits(order)} in total)</span>
-            </h3>
-            <ul className="admin-detail-lines">
-              {lines.map((line, index) => (
-                <li className="admin-detail-line" key={`${line.name}-${index}`}>
-                  <div className="admin-detail-line-head">
-                    <span className="admin-cell-strong">{line.name}</span>
-                    <span
-                      className={`admin-pill ${line.type === 'merch' ? 'is-merch' : 'is-ticket'}`}
-                    >
-                      {line.type}
-                    </span>
-                    <span className="admin-line-qty">× {line.quantity}</span>
-                    {line.amount != null && (
-                      <span className="admin-detail-line-amount">{money(line.amount)}</span>
+          {isUnclaimed ? (
+            <section>
+              <h3 className="admin-modal-heading">Direct PayBill payment</h3>
+              <p className="admin-cell-sub">
+                This completed payment does not match an existing online order by receipt or
+                payment reference.
+              </p>
+              <p className="admin-detail-total">
+                <span>Amount received</span>
+                <strong>{money(order.amount)}</strong>
+              </p>
+            </section>
+          ) : (
+            <section>
+              <h3 className="admin-modal-heading">
+                Items <span className="admin-cell-sub">({totalUnits(order)} in total)</span>
+              </h3>
+              <ul className="admin-detail-lines">
+                {lines.map((line, index) => (
+                  <li className="admin-detail-line" key={`${line.name}-${index}`}>
+                    <div className="admin-detail-line-head">
+                      <span className="admin-cell-strong">{line.name}</span>
+                      <span
+                        className={`admin-pill ${line.type === 'merch' ? 'is-merch' : 'is-ticket'}`}
+                      >
+                        {line.type}
+                      </span>
+                      <span className="admin-line-qty">× {line.quantity}</span>
+                      {line.amount != null && (
+                        <span className="admin-detail-line-amount">{money(line.amount)}</span>
+                      )}
+                    </div>
+                    {/* One row per choice rather than a run-on line — this is what
+                        whoever hands over the merchandise reads off. */}
+                    {line.options?.length > 0 && (
+                      <dl className="admin-detail-options">
+                        {line.options.map((opt) => (
+                          <div key={opt.name}>
+                            <dt>{opt.name}</dt>
+                            <dd>{opt.choice}</dd>
+                          </div>
+                        ))}
+                      </dl>
                     )}
-                  </div>
-                  {/* One row per choice rather than a run-on line — this is what
-                      whoever hands over the merchandise reads off. */}
-                  {line.options?.length > 0 && (
-                    <dl className="admin-detail-options">
-                      {line.options.map((opt) => (
-                        <div key={opt.name}>
-                          <dt>{opt.name}</dt>
-                          <dd>{opt.choice}</dd>
-                        </div>
-                      ))}
-                    </dl>
-                  )}
-                </li>
-              ))}
-            </ul>
-            <p className="admin-detail-total">
-              <span>Order total</span>
-              <strong>{money(order.amount)}</strong>
-            </p>
-          </section>
+                  </li>
+                ))}
+              </ul>
+              <p className="admin-detail-total">
+                <span>Order total</span>
+                <strong>{money(order.amount)}</strong>
+              </p>
+            </section>
+          )}
 
           <section>
             <h3 className="admin-modal-heading">Record</h3>
