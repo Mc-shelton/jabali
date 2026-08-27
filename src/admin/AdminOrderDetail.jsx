@@ -26,11 +26,11 @@ const AdminOrderDetail = ({ order, onClose }) => {
   if (!order) return null;
 
   const lines = orderLines(order);
-  const isUnclaimed = order.recordType === 'unclaimed';
+  const isDirect = order.recordType === 'direct';
 
   // Only the facts this order actually carries — an empty row reads as missing
   // data rather than as "not applicable".
-  const meta = (isUnclaimed
+  const meta = (isDirect
     ? [
         ['Paid', when(order.paidAt || order.createdAt)],
         ['Callback received', when(order.receivedAt)],
@@ -70,7 +70,7 @@ const AdminOrderDetail = ({ order, onClose }) => {
         className="admin-modal"
         role="dialog"
         aria-modal="true"
-        aria-label={isUnclaimed ? 'Unclaimed payment details' : 'Order details'}
+        aria-label={isDirect ? 'Direct payment details' : 'Order details'}
       >
         <header className="admin-modal-head">
           <div>
@@ -94,7 +94,7 @@ const AdminOrderDetail = ({ order, onClose }) => {
         </header>
 
         <div className="admin-modal-body">
-          {isUnclaimed ? (
+          {isDirect ? (
             <section>
               <h3 className="admin-modal-heading">Direct PayBill payment</h3>
               <p className="admin-cell-sub">

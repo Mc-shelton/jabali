@@ -28,16 +28,16 @@ route([
         if (!empty($replay['conflicts'])) {
             log_error('C2B inbox replay found conflicting receipt data', $replay);
         }
-        $unclaimedPayments = c2b_unclaimed_payments(c2b_read_payments_resilient(), $orders);
-        $unclaimedRecords = array_map('c2b_admin_record', $unclaimedPayments);
-        $records = array_merge($orders, $unclaimedRecords);
+        $directPayments = c2b_direct_payments(c2b_read_payments_resilient(), $orders);
+        $directRecords = array_map('c2b_admin_record', $directPayments);
+        $records = array_merge($orders, $directRecords);
         usort($records, fn($a, $b) =>
             (strtotime((string) ($b['createdAt'] ?? '')) ?: 0)
             <=> (strtotime((string) ($a['createdAt'] ?? '')) ?: 0)
         );
-        $unclaimedAmount = (float) array_sum(array_map(
+        $directAmount = (float) array_sum(array_map(
             fn($payment) => (float) ($payment['amount'] ?? 0),
-            $unclaimedPayments
+            $directPayments
         ));
 
         json_out([
@@ -48,8 +48,8 @@ route([
                 'total'           => count($orders),
                 'paid'            => count($paid),
                 'revenue'         => $revenue,
-                'unclaimed'       => count($unclaimedPayments),
-                'unclaimedAmount' => $unclaimedAmount,
+                'direct'          => count($directPayments),
+                'directAmount'    => $directAmount,
                 'c2bNeedsReview'  => $replay['invalid']
                     + count($replay['errors'])
                     + count($replay['conflicts']),

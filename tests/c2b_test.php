@@ -1,5 +1,5 @@
 <?php
-// Direct PayBill callback shaping and unclaimed-payment regressions.
+// Direct PayBill callback shaping and direct-payment regressions.
 declare(strict_types=1);
 
 const MPESA = [
@@ -59,20 +59,20 @@ $noReceipt = $payload;
 $noReceipt['TransID'] = '';
 check('missing receipt rejected', c2b_normalise_confirmation($noReceipt), null);
 
-echo "\n-- unclaimed reconciliation --\n";
+echo "\n-- direct-payment reconciliation --\n";
 $payments = [$payment, ['receipt' => 'SJA2XK9DEF', 'amount' => 500]];
 $orders = [['status' => 'success', 'receipt' => 'sja2xk9abc']];
-check('paid order receipt excluded', c2b_unclaimed_stats($payments, $orders), [
+check('paid order receipt excluded', c2b_direct_stats($payments, $orders), [
     'count' => 1,
     'amount' => 500.0,
 ]);
-check('exact stored receipt claims payment regardless of order status', c2b_unclaimed_stats($payments, [
+check('exact stored receipt claims payment regardless of order status', c2b_direct_stats($payments, [
     ['status' => 'pending', 'receipt' => 'SJA2XK9ABC'],
 ]), [
     'count' => 1,
     'amount' => 500.0,
 ]);
-check('stored payment reference claims a receiptless order payment', c2b_unclaimed_stats([
+check('stored payment reference claims a receiptless order payment', c2b_direct_stats([
     ['receipt' => 'SJA2XK9XYZ', 'amount' => 700, 'accountReference' => 'jc-ab12cd34ef'],
 ], [
     ['status' => 'pending', 'receipt' => null, 'paymentReference' => 'JCAB12CD34EF'],
@@ -80,7 +80,7 @@ check('stored payment reference claims a receiptless order payment', c2b_unclaim
     'count' => 0,
     'amount' => 0.0,
 ]);
-check('unknown account reference remains unclaimed', c2b_unclaimed_stats([
+check('unknown account reference remains a direct payment', c2b_direct_stats([
     ['receipt' => 'SJA2XK9XYZ', 'amount' => 700, 'accountReference' => 'JC0000000000'],
 ], [
     ['status' => 'success', 'receipt' => null, 'paymentReference' => 'JCAB12CD34EF'],
@@ -89,14 +89,15 @@ check('unknown account reference remains unclaimed', c2b_unclaimed_stats([
     'amount' => 700.0,
 ]);
 
-$unclaimedPayments = c2b_unclaimed_payments([
+$directPayments = c2b_direct_payments([
     ['receipt' => 'SJA2XK9OLD', 'amount' => 100, 'paidAt' => '2026-08-26T10:00:00+03:00'],
     $payment,
 ], []);
-check('unclaimed payments are newest first', $unclaimedPayments[0]['receipt'], 'SJA2XK9ABC');
+check('direct payments are newest first', $directPayments[0]['receipt'], 'SJA2XK9ABC');
 
 $adminRecord = c2b_admin_record(array_replace($payment, ['requestRef' => 'ABC123']));
-check('unclaimed payment becomes a filterable admin record', $adminRecord['status'], 'unclaimed');
+check('direct payment becomes a filterable admin record', $adminRecord['status'], 'direct');
+check('account reference becomes the item name', $adminRecord['itemName'], 'JABALI');
 check('admin record has a stable receipt id', $adminRecord['id'], 'c2b-sja2xk9abc');
 check('admin record exposes account reference', $adminRecord['accountReference'], 'JABALI');
 check('admin record exposes callback log reference', $adminRecord['requestRef'], 'ABC123');

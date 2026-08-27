@@ -53,8 +53,8 @@ const AdminOrders = () => {
       total: 0,
       paid: 0,
       revenue: 0,
-      unclaimed: 0,
-      unclaimedAmount: 0,
+      direct: 0,
+      directAmount: 0,
       c2bNeedsReview: 0,
     },
   });
@@ -144,13 +144,13 @@ const AdminOrders = () => {
   // Stats follow the filter, so a filtered view reports on what's on screen.
   const shownStats = useMemo(() => {
     const paid = visible.filter((o) => o.status === 'success');
-    const unclaimed = visible.filter((o) => o.status === 'unclaimed');
+    const direct = visible.filter((o) => o.status === 'direct');
     return {
       count: visible.length,
       paid: paid.length,
       revenue: paid.reduce((sum, o) => sum + Number(o.amount ?? 0), 0),
-      unclaimed: unclaimed.length,
-      unclaimedAmount: unclaimed.reduce((sum, o) => sum + Number(o.amount ?? 0), 0),
+      direct: direct.length,
+      directAmount: direct.reduce((sum, o) => sum + Number(o.amount ?? 0), 0),
     };
   }, [visible]);
 
@@ -269,10 +269,10 @@ const AdminOrders = () => {
           className="admin-stat"
           title="Completed PayBill payments not linked to an online order"
         >
-          <span>{filtersActive ? 'Unclaimed (filtered)' : 'Unclaimed'}</span>
-          <strong>{money(shownStats.unclaimedAmount)}</strong>
+          <span>{filtersActive ? 'Direct (filtered)' : 'Direct payments'}</span>
+          <strong>{money(shownStats.directAmount)}</strong>
           <em className="admin-stat-detail">
-            {shownStats.unclaimed} payment{shownStats.unclaimed === 1 ? '' : 's'}
+            {shownStats.direct} payment{shownStats.direct === 1 ? '' : 's'}
           </em>
         </div>
         <div className="admin-stat">
@@ -327,7 +327,7 @@ const AdminOrders = () => {
           <select value={filters.status} onChange={setFilter('status')}>
             <option value="">Any status</option>
             <option value="success">Paid</option>
-            <option value="unclaimed">Unclaimed</option>
+            <option value="direct">Direct payments</option>
             <option value="pending">Pending</option>
             <option value="failed">Failed</option>
           </select>
@@ -396,7 +396,7 @@ const AdminOrders = () => {
                 const lines = orderLines(o);
                 const lead = lines[0];
                 const hidden = lines.length - 1;
-                const isUnclaimed = o.recordType === 'unclaimed';
+                const isDirect = o.recordType === 'direct';
 
                 return (
                   <tr key={o.id}>
@@ -404,7 +404,7 @@ const AdminOrders = () => {
                     <td>
                       <div className="admin-cell-strong">{buyerName(o)}</div>
                       <div className="admin-cell-sub">
-                        {isUnclaimed ? o.customer?.phone || 'Phone not provided' : o.customer?.email}
+                        {isDirect ? o.customer?.phone || 'Phone not provided' : o.customer?.email}
                       </div>
                     </td>
                     <td>{o.eventTitle}</td>
@@ -425,7 +425,7 @@ const AdminOrders = () => {
                           >
                             {lead?.type}
                           </span>
-                          {!isUnclaimed && (
+                          {!isDirect && (
                             <span className="admin-line-qty">× {lead?.quantity}</span>
                           )}
                         </div>
@@ -441,7 +441,7 @@ const AdminOrders = () => {
                         </button>
                       </div>
                     </td>
-                    <td>{isUnclaimed ? '—' : totalUnits(o)}</td>
+                    <td>{isDirect ? '—' : totalUnits(o)}</td>
                     <td className="admin-nowrap">{money(o.amount)}</td>
                     <td>
                       <span className={`admin-status is-${o.status}`}>{o.status}</span>

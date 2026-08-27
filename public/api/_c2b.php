@@ -399,8 +399,8 @@ function c2b_read_payments_resilient(): array
 
 // A C2B feed can include a payment that the STK flow also knows about. Receipt
 // and account-reference matching keep it from becoming both an order and an
-// "unclaimed" payment, regardless of which callback reaches us first.
-function c2b_unclaimed_payments(array $payments, array $orders): array
+// direct-payment record, regardless of which callback reaches us first.
+function c2b_direct_payments(array $payments, array $orders): array
 {
     $claimedReceipts = [];
     $claimedReferences = [];
@@ -411,31 +411,31 @@ function c2b_unclaimed_payments(array $payments, array $orders): array
         if ($reference !== '') $claimedReferences[$reference] = true;
     }
 
-    $unclaimed = [];
+    $direct = [];
     foreach ($payments as $payment) {
         $receipt = strtoupper(trim((string) ($payment['receipt'] ?? '')));
         $reference = c2b_normalise_reference($payment['accountReference'] ?? '');
         if ($receipt === '') continue;
         if (isset($claimedReceipts[$receipt])) continue;
         if ($reference !== '' && isset($claimedReferences[$reference])) continue;
-        $unclaimed[] = $payment;
+        $direct[] = $payment;
     }
 
-    usort($unclaimed, fn($a, $b) => strcmp(
+    usort($direct, fn($a, $b) => strcmp(
         (string) ($b['paidAt'] ?? $b['receivedAt'] ?? ''),
         (string) ($a['paidAt'] ?? $a['receivedAt'] ?? '')
     ));
-    return $unclaimed;
+    return $direct;
 }
 
-function c2b_unclaimed_stats(array $payments, array $orders): array
+function c2b_direct_stats(array $payments, array $orders): array
 {
-    $unclaimed = c2b_unclaimed_payments($payments, $orders);
+    $direct = c2b_direct_payments($payments, $orders);
     return [
-        'count' => count($unclaimed),
+        'count' => count($direct),
         'amount' => (float) array_sum(array_map(
             fn($payment) => (float) ($payment['amount'] ?? 0),
-            $unclaimed
+            $direct
         )),
     ];
 }
@@ -453,14 +453,14 @@ function c2b_admin_record(array $payment): array
 
     return [
         'id'               => 'c2b-' . strtolower($receipt),
-        'recordType'       => 'unclaimed',
+        'recordType'       => 'direct',
         'createdAt'        => $paidAt !== '' ? $paidAt : $receivedAt,
         'paidAt'           => $paidAt !== '' ? $paidAt : null,
         'receivedAt'       => $receivedAt !== '' ? $receivedAt : null,
         'amount'           => (float) ($payment['amount'] ?? 0),
-        'status'           => 'unclaimed',
+        'status'           => 'direct',
         'eventTitle'       => 'Direct PayBill',
-        'itemName'         => 'PayBill payment',
+        'itemName'         => $accountReference !== '' ? $accountReference : 'No account reference',
         'itemType'         => 'payment',
         'quantity'         => 0,
         'customer'         => [
