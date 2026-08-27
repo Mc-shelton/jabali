@@ -306,7 +306,12 @@ route([
         [$discounted] = apply_promo($subtotal, $promo, $codeList);
         $amount = $discounted + $addOnTotal;
 
-        $reference = mb_substr(preg_replace('/[^A-Za-z0-9]/', '', $event['title']) ?: 'JabaliChorale', 0, 12);
+        // A unique PayBill account reference is the second reconciliation key.
+        // The M-Pesa receipt remains primary; this links a C2B confirmation to
+        // its order when the separate STK callback containing that receipt is
+        // delayed or lost. JC + five random bytes is exactly Daraja's 12 chars.
+        $paymentReference = 'JC' . strtoupper(bin2hex(random_bytes(5)));
+        $orderId = bin2hex(random_bytes(12));
         if ($bypassPayment) {
             $ok = true;
             $res = [
@@ -314,7 +319,12 @@ route([
                 'MerchantRequestID' => 'DEV-BYPASS',
             ];
         } else {
-            [$ok, $res] = mpesa_stk_push($amount, $payPhone, $reference, ($itemType === 'merch' ? 'Merch ' : 'Tickets ') . $itemName);
+            [$ok, $res] = mpesa_stk_push(
+                $amount,
+                $payPhone,
+                $paymentReference,
+                ($itemType === 'merch' ? 'Merch ' : 'Tickets ') . $itemName
+            );
         }
 
         if (!$ok) {
@@ -326,7 +336,7 @@ route([
         $orders = store_read(STORE, []);
 
         $order = [
-            'id'                => bin2hex(random_bytes(12)),
+            'id'                => $orderId,
             'ticketCode'        => mint_ticket_code($orders),
             'createdAt'         => date('c'),
             'status'            => $bypassPayment ? 'success' : 'pending',
@@ -356,6 +366,7 @@ route([
             'mpesaPhone'        => $payPhone,
             'checkoutRequestId' => $res['CheckoutRequestID'] ?? '',
             'merchantRequestId' => $res['MerchantRequestID'] ?? '',
+            'paymentReference'  => $paymentReference,
             'receipt'           => $bypassPayment ? 'DEV-BYPASS-' . strtoupper(bin2hex(random_bytes(4))) : null,
             'resultDesc'        => $bypassPayment ? 'Payment bypassed for local development.' : null,
             // Synthetic purchases must not send messages to real addresses.

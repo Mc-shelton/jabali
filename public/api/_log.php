@@ -40,10 +40,12 @@ function log_ref(): string
 // One JSON object per line — greppable by hand, parseable by the admin viewer.
 function jc_log(string $level, string $message, array $context = []): void
 {
-    $dir = log_dir();
-    if (!is_dir($dir) && !@mkdir($dir, 0775, true) && !is_dir($dir)) {
-        return;                       // never let logging itself break a request
-    }
+    // A failed log write itself raises a warning. Without this guard the PHP
+    // error handler would try to log that warning, fail again, and recurse until
+    // the request dies precisely when diagnostics matter most.
+    static $writing = false;
+    if ($writing) return;
+    $writing = true;
 
     $entry = [
         'time'    => date('c'),
@@ -54,12 +56,19 @@ function jc_log(string $level, string $message, array $context = []): void
         'path'    => strtok($_SERVER['REQUEST_URI'] ?? '', '?') ?: '',
         'context' => $context,
     ];
+    $line = json_encode($entry, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n";
 
-    @file_put_contents(
-        log_path(),
-        json_encode($entry, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) . "\n",
-        FILE_APPEND | LOCK_EX
-    );
+    $dir = log_dir();
+    $ready = is_dir($dir) || @mkdir($dir, 0775, true) || is_dir($dir);
+    $written = $ready ? @file_put_contents(log_path(), $line, FILE_APPEND | LOCK_EX) : false;
+
+    // cPanel/PHP's server error log is an independent fallback when the app's
+    // data disk or log directory is unavailable. Never expose diagnostics in
+    // the HTTP body, and never let fallback logging break the request.
+    if ($written === false) {
+        @error_log('[jc-api-log-fallback] ' . rtrim($line));
+    }
+    $writing = false;
 }
 
 function log_info(string $m, array $c = []): void { jc_log('info', $m, $c); }

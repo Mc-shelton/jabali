@@ -29,6 +29,9 @@ dist.zip
 # jabali5.json ARE tracked so a fresh install has something to show — but
 # anything holding customer or runtime data is not.
 public/api/data/orders.json
+public/api/data/mpesa_c2b.json
+public/api/data/mpesa_c2b_inbox.ndjson
+public/api/data/mpesa_c2b.lock
 public/api/data/logs/api-*.log
 
 # Files uploaded through the admin. The folders are kept via .gitkeep.

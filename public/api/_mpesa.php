@@ -128,6 +128,22 @@ function mpesa_password(string $timestamp): string
     return base64_encode(trim((string) MPESA['shortcode']) . trim((string) MPESA['passkey']) . $timestamp);
 }
 
+// Daraja allows a short account reference. New orders supply a unique 12-char
+// value so the C2B feed can be reconciled even if the separate STK callback
+// carrying the receipt is delayed or never arrives.
+function mpesa_account_reference(string $reference): string
+{
+    $clean = strtoupper(preg_replace('/[^A-Z0-9]/i', '', trim($reference)));
+    if ($clean === '') {
+        $clean = strtoupper(preg_replace(
+            '/[^A-Z0-9]/i',
+            '',
+            trim((string) (MPESA['account_reference'] ?? 'JabaliChorale'))
+        ));
+    }
+    return mb_substr($clean !== '' ? $clean : 'JABALICHO', 0, 12);
+}
+
 // Trigger the STK prompt. Returns [ok, data] where data has CheckoutRequestID /
 // MerchantRequestID on success, or an error message.
 function mpesa_stk_push(int $amount, string $phone, string $reference, string $description): array
@@ -149,8 +165,7 @@ function mpesa_stk_push(int $amount, string $phone, string $reference, string $d
         'PartyB'            => (int) MPESA['shortcode'],
         'PhoneNumber'       => $phone,
         'CallBackURL'       => MPESA['callback_url'],
-        // 'AccountReference'  => mb_substr($reference, 0, 12),
-        'AccountReference'  => MPESA['account_reference'],
+        'AccountReference'  => mpesa_account_reference($reference),
         'TransactionDesc'   => mb_substr($description, 0, 20) ?: 'Tickets',
     ];
 
@@ -166,6 +181,7 @@ function mpesa_stk_push(int $amount, string $phone, string $reference, string $d
             'phone'    => substr($phone, 0, 6) . '***',   // never log a full number
             'amount'   => $amount,
             'checkout' => $body['CheckoutRequestID'] ?? null,
+            'reference' => mpesa_account_reference($reference),
         ]);
         return [true, $body];
     }

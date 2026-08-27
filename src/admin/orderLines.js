@@ -10,7 +10,7 @@ export const when = (iso) =>
 export const buyerName = (o) =>
   `${o.customer?.preferredName ?? ''} ${o.customer?.otherNames ?? ''}`.trim();
 
-export const reference = (o) => o.receipt || o.ticketCode || '';
+export const reference = (o) => o.receipt || o.paymentReference || o.ticketCode || '';
 
 // Present every purchase as lines, including merchandise added while buying a
 // ticket. The API has always persisted these in `addOns`; keeping this shaping

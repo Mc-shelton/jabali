@@ -4,6 +4,7 @@
 //   POST orders.php?reconcile=1  → re-query every unsettled order against Daraja
 require __DIR__ . '/_bootstrap.php';
 require __DIR__ . '/_orders.php';
+require __DIR__ . '/_c2b.php';
 
 route([
     'GET' => function () {
@@ -15,13 +16,31 @@ route([
 
         $paid = array_filter($orders, fn($o) => ($o['status'] ?? '') === 'success');
         $revenue = array_sum(array_map(fn($o) => (int) ($o['amount'] ?? 0), $paid));
+        // Replay is idempotent and repairs any callback that reached the durable
+        // inbox while the materialised payment store was temporarily broken.
+        $replay = c2b_replay_inbox();
+        if ($replay['added'] > 0) {
+            log_warn('C2B inbox replay recovered deferred payments', $replay);
+        }
+        if (!empty($replay['errors'])) {
+            log_error('C2B inbox replay still has persistence errors', $replay);
+        }
+        if (!empty($replay['conflicts'])) {
+            log_error('C2B inbox replay found conflicting receipt data', $replay);
+        }
+        $unclaimed = c2b_unclaimed_stats(c2b_read_payments_resilient(), $orders);
 
         json_out([
             'orders' => array_values($orders),
             'stats'  => [
-                'total'   => count($orders),
-                'paid'    => count($paid),
-                'revenue' => $revenue,
+                'total'           => count($orders),
+                'paid'            => count($paid),
+                'revenue'         => $revenue,
+                'unclaimed'       => $unclaimed['count'],
+                'unclaimedAmount' => $unclaimed['amount'],
+                'c2bNeedsReview'  => $replay['invalid']
+                    + count($replay['errors'])
+                    + count($replay['conflicts']),
             ],
         ]);
     },

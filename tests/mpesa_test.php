@@ -33,6 +33,11 @@ check('international Safaricom number', mpesa_format_phone('+254 712 345 678'), 
 check('new 01 prefix', mpesa_format_phone('0112-345-678'), '254112345678');
 check('invalid number', mpesa_format_phone('12345'), '');
 
+echo "\n-- account references --\n";
+check('unique order reference preserved', mpesa_account_reference('JC12ab34cd56'), 'JC12AB34CD56');
+check('reference punctuation removed', mpesa_account_reference('JC-12 ab'), 'JC12AB');
+check('blank reference falls back to config', mpesa_account_reference(''), 'TEST');
+
 echo "\n-- credential logging guard --\n";
 $source = file_get_contents(__DIR__ . '/../public/api/_mpesa.php') ?: '';
 check('consumer key is not added to log context', str_contains($source, "'key_used'"), false);

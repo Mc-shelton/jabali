@@ -42,7 +42,17 @@ const EMPTY_FILTERS = {
 };
 
 const AdminOrders = () => {
-  const [data, setData] = useState({ orders: [], stats: { total: 0, paid: 0, revenue: 0 } });
+  const [data, setData] = useState({
+    orders: [],
+    stats: {
+      total: 0,
+      paid: 0,
+      revenue: 0,
+      unclaimed: 0,
+      unclaimedAmount: 0,
+      c2bNeedsReview: 0,
+    },
+  });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [filters, setFilters] = useState(EMPTY_FILTERS);
@@ -226,8 +236,24 @@ const AdminOrders = () => {
 
       {error && <p className="admin-error">{error}</p>}
       {reconcileNote && <p className="admin-success">{reconcileNote}</p>}
+      {Number(data.stats?.c2bNeedsReview ?? 0) > 0 && (
+        <p className="admin-error">
+          {data.stats.c2bNeedsReview} M-Pesa callback
+          {data.stats.c2bNeedsReview === 1 ? '' : 's'} need review. The original notification
+          {data.stats.c2bNeedsReview === 1 ? ' is' : 's are'} safely retained; see Logs for the
+          recovery reference.
+        </p>
+      )}
 
       <div className="admin-stats">
+        <div
+          className="admin-stat"
+          title="Completed PayBill payments not linked to a paid online order"
+        >
+          <span>Unclaimed</span>
+          <strong>{Number(data.stats?.unclaimed ?? 0)}</strong>
+          <em className="admin-stat-detail">{money(data.stats?.unclaimedAmount ?? 0)}</em>
+        </div>
         <div className="admin-stat">
           <span>{filtersActive ? 'Paid (filtered)' : 'Paid orders'}</span>
           <strong>{shownStats.paid}</strong>

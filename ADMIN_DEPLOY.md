@@ -50,6 +50,45 @@ In cPanel → File Manager, go to `public_html/api/` and copy
 public.** If credentials ever reach a commit, rotate them in Daraja immediately —
 scrapers watch public repos for exactly these keys.
 
+To receive payments made directly from the M-Pesa Pay Bill menu, also set
+`MPESA['c2b_callback_key']` to a long random value:
+
+```
+php -r "echo bin2hex(random_bytes(24)), PHP_EOL;"
+```
+
+Then register these two public HTTPS URLs for the live shortcode under Daraja's
+C2B Confirmation and Validation URL settings (replace `SECRET` with that value):
+
+```
+Confirmation: https://jabalichorale.com/api/c2b-confirm.php?key=SECRET
+Validation:   https://jabalichorale.com/api/c2b-validate.php
+```
+
+The neutral filenames are intentional: Daraja URL Management rejects URLs
+containing reserved terms such as `mpesa`, `M-PESA`, `Safaricom`, `query`, and
+`sql` even when the endpoint itself is valid.
+
+This registration is separate from the Lipa na M-Pesa Online/STK callback.
+After Safaricom confirms the URLs, a direct PayBill payment appears in
+Admin → Orders as **Unclaimed**. Duplicate notifications are ignored, and a
+receipt already attached to a paid online order is not counted twice.
+
+New STK orders also send a unique 12-character `AccountReference` to M-Pesa and
+store it as `paymentReference`. C2B reconciliation first checks the exact
+receipt (`TransID`), then the exact account reference (`BillRefNumber`). This
+second key prevents a known online order becoming Unclaimed when its STK result
+was recovered by status query before the receipt-bearing callback arrived.
+
+The confirmation receiver does not acknowledge a callback until its exact body
+has been flushed to the append-only `api/data/mpesa_c2b_inbox.ndjson` ledger.
+The normal payment store is then written by atomic replacement. If parsing or
+that second write fails, Orders continues reading the durable ledger and retries
+materialisation whenever an administrator opens the page. A red warning appears
+when a captured callback still needs attention, with a matching reference in
+Admin → Logs. Do not delete or overwrite the inbox ledger; include it in server
+backups alongside `orders.json`.
+
 ### b. Server: seed the data directory (first deploy only)
 
 Because `api/data/` is never deployed, upload it by hand **once**:
@@ -196,6 +235,14 @@ site stays up by design. Re-do step 2b.
 **M-Pesa callbacks never arrive** — `callback_url` in `config.php` must be a
 public HTTPS URL ending `/api/mpesa-callback.php`. Safaricom cannot reach
 localhost, and will not accept a plain-HTTP callback.
+
+**Direct PayBill payments do not appear as Unclaimed** — the shortcode's C2B
+Confirmation and Validation URLs are registered separately from the STK
+callback. Check the two URLs and `c2b_callback_key` from step 2a, then look in
+Admin → Logs for `C2B confirmation not captured`, `captured; materialisation
+deferred`, or `Direct PayBill payment durably received`. If Orders reports that
+a callback needs review, preserve both `mpesa_c2b_inbox.ndjson` and
+`mpesa_c2b.json` before repairing anything—the inbox is the recovery source.
 
 ---
 

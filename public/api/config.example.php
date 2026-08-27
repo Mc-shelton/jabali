@@ -90,6 +90,8 @@ const SESSION_NAME = 'jc_admin';
 //                     'CustomerBuyGoodsOnline' (Till).
 //   callback_url      MUST be a public HTTPS URL to mpesa-callback.php on this
 //                     domain. M-Pesa cannot reach localhost.
+//   c2b_callback_key  a long random secret added to the C2B Confirmation URL;
+//                     generate with: php -r "echo bin2hex(random_bytes(24));"
 //
 // If these ever appear in a commit, treat them as compromised and rotate them
 // in the Daraja portal — scrapers watch public repositories for exactly this.
@@ -101,6 +103,7 @@ const MPESA = [
     'passkey'           => '',
     'transaction_type'  => 'CustomerPayBillOnline',
     'callback_url'      => 'https://example.com/api/mpesa-callback.php',
+    'c2b_callback_key'  => 'f0f748c7e22856317ef79dd3a97e4e7b80abdf0b85c27db9',
     'account_reference' => 'Jabali Chorale',
 ];
 

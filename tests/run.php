@@ -63,8 +63,25 @@ if ($tracked) {
     echo "  ok   config.php and dist.zip are untracked\n";
 }
 
+// Callback URL keys authenticate unauthenticated internet traffic and are
+// secrets too. Documentation may use the literal SECRET placeholder; an actual
+// value must live only in ignored config.php and in Daraja.
+$callbackUrls = [];
+exec('cd ' . escapeshellarg($root)
+    . " && git grep -n 'c2b-confirm.php?key=' -- ':!tests/run.php' 2>/dev/null", $callbackUrls);
+foreach ($callbackUrls as $match) {
+    if (str_contains($match, 'c2b-confirm.php?key=SECRET')) continue;
+    $failed[] = 'tracked C2B callback key';
+    echo "  FAIL a real C2B callback key appears in a tracked file\n";
+}
+if (!$callbackUrls || !array_filter($callbackUrls, fn($line) =>
+    !str_contains($line, 'c2b-confirm.php?key=SECRET')
+)) {
+    echo "  ok   no C2B callback key is tracked\n";
+}
+
 echo "\n=== suites ===\n";
-foreach (['schema_test', 'merch_test', 'payment_bypass_test', 'mpesa_test', 'log_test', 'fulfil_test', 'mailer_test', 'enquiry_test', 'catalogue_test', 'addons_test', 'access_test', 'access_unset_test', 'qr_test', 'admit_test'] as $suite) {
+foreach (['schema_test', 'merch_test', 'payment_bypass_test', 'mpesa_test', 'c2b_test', 'log_test', 'fulfil_test', 'mailer_test', 'enquiry_test', 'catalogue_test', 'addons_test', 'access_test', 'access_unset_test', 'qr_test', 'admit_test'] as $suite) {
     $out = [];
     exec('php ' . escapeshellarg(__DIR__ . "/$suite.php") . ' 2>&1', $out, $code);
     $summary = trim((string) end($out));

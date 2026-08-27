@@ -38,6 +38,7 @@ const AdminOrderDetail = ({ order, onClose }) => {
     ['Phone', order.customer?.phone],
     ['Paid from', order.mpesaPhone],
     ['M-Pesa receipt', order.receipt],
+    ['Payment reference', order.paymentReference],
     ['Ticket code', order.ticketCode],
     ['Promo code', order.promoCode],
     ['Admitted', when(order.admittedAt)],

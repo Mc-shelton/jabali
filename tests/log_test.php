@@ -74,6 +74,16 @@ jc_log('info', 'should not explode', []);
 $printed3 = ob_get_clean();
 check('no output even when logging succeeds', $printed3, '');
 
+echo "\n-- logging failure cannot recurse --\n";
+foreach (glob("$tmp/logs/*") ?: [] as $file) @unlink($file);
+@rmdir("$tmp/logs");
+file_put_contents("$tmp/logs", 'this file deliberately blocks the log directory');
+ob_start();
+jc_log('error', 'must fall back without recursion', ['phase' => 'test']);
+$printed4 = ob_get_clean();
+check('fallback prints nothing into response', $printed4, '');
+@unlink("$tmp/logs");
+
 // Cleanup
 array_map('unlink', glob("$tmp/logs/*") ?: []);
 @rmdir("$tmp/logs"); @rmdir($ro); @rmdir($tmp);

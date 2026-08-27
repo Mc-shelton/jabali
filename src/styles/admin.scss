@@ -186,10 +186,10 @@
 // ---------------------------------------------------------------- stats + table
 .admin-stats {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 12px;
   margin-bottom: 22px;
-  max-width: 640px;
+  max-width: 860px;
 }
 
 .admin-stat {
@@ -214,6 +214,13 @@
     letter-spacing: -0.02em;
     color: tokens.$ink;
   }
+}
+
+.admin-stat-detail {
+  font-size: 0.74rem;
+  font-weight: 600;
+  font-style: normal;
+  color: tokens.$ink-muted;
 }
 
 .admin-table-wrap {
@@ -1148,6 +1155,10 @@
 }
 
 @media (max-width: 720px) {
+  .admin-stats {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .admin-filter-search {
     grid-column: span 1;
   }
