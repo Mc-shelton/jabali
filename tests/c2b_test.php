@@ -96,8 +96,9 @@ $directPayments = c2b_direct_payments([
 check('direct payments are newest first', $directPayments[0]['receipt'], 'SJA2XK9ABC');
 
 $adminRecord = c2b_admin_record(array_replace($payment, ['requestRef' => 'ABC123']));
-check('direct payment becomes a filterable admin record', $adminRecord['status'], 'direct');
+check('confirmed direct payment has successful status', $adminRecord['status'], 'success');
 check('account reference becomes the item name', $adminRecord['itemName'], 'JABALI');
+check('payment method becomes the item tag', $adminRecord['itemType'], 'direct');
 check('admin record has a stable receipt id', $adminRecord['id'], 'c2b-sja2xk9abc');
 check('admin record exposes account reference', $adminRecord['accountReference'], 'JABALI');
 check('admin record exposes callback log reference', $adminRecord['requestRef'], 'ABC123');

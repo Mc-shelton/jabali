@@ -290,7 +290,7 @@
     color: tokens.$brass;
   }
 
-  &.is-payment {
+  &.is-direct {
     background: rgba(83, 65, 145, 0.12);
     color: #534191;
   }
@@ -319,10 +319,6 @@
     color: #a12727;
   }
 
-  &.is-direct {
-    background: #eeeaf9;
-    color: #534191;
-  }
 }
 
 .admin-page-head {

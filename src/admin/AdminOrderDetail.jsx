@@ -98,8 +98,7 @@ const AdminOrderDetail = ({ order, onClose }) => {
             <section>
               <h3 className="admin-modal-heading">Direct PayBill payment</h3>
               <p className="admin-cell-sub">
-                This completed payment does not match an existing online order by receipt or
-                payment reference.
+                A completed payment made directly to the Jabali Chorale PayBill.
               </p>
               <p className="admin-detail-total">
                 <span>Amount received</span>

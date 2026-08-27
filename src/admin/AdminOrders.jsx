@@ -121,7 +121,8 @@ const AdminOrders = () => {
       }
       if (filters.event && o.eventTitle !== filters.event) return false;
       if (filters.item && !orderLines(o).some((line) => line.name === filters.item)) return false;
-      if (filters.status && o.status !== filters.status) return false;
+      if (filters.status === 'direct' && o.recordType !== 'direct') return false;
+      if (filters.status && filters.status !== 'direct' && o.status !== filters.status) return false;
 
       // Date bounds are inclusive of the whole `to` day.
       if (filters.from && (o.createdAt ?? '') < filters.from) return false;
@@ -143,8 +144,10 @@ const AdminOrders = () => {
 
   // Stats follow the filter, so a filtered view reports on what's on screen.
   const shownStats = useMemo(() => {
-    const paid = visible.filter((o) => o.status === 'success');
-    const direct = visible.filter((o) => o.status === 'direct');
+    // A direct C2B payment is successful, but is not an online order and has
+    // its own amount/count card rather than inflating paid-order revenue.
+    const paid = visible.filter((o) => o.status === 'success' && o.recordType !== 'direct');
+    const direct = visible.filter((o) => o.recordType === 'direct');
     return {
       count: visible.length,
       paid: paid.length,
@@ -418,8 +421,8 @@ const AdminOrders = () => {
                             className={`admin-pill ${
                               lead?.type === 'merch'
                                 ? 'is-merch'
-                                : lead?.type === 'payment'
-                                  ? 'is-payment'
+                                : lead?.type === 'direct'
+                                  ? 'is-direct'
                                   : 'is-ticket'
                             }`}
                           >

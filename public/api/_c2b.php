@@ -458,10 +458,11 @@ function c2b_admin_record(array $payment): array
         'paidAt'           => $paidAt !== '' ? $paidAt : null,
         'receivedAt'       => $receivedAt !== '' ? $receivedAt : null,
         'amount'           => (float) ($payment['amount'] ?? 0),
-        'status'           => 'direct',
+        // Confirmation callbacks represent completed C2B transactions.
+        'status'           => 'success',
         'eventTitle'       => 'Direct PayBill',
         'itemName'         => $accountReference !== '' ? $accountReference : 'No account reference',
-        'itemType'         => 'payment',
+        'itemType'         => 'direct',
         'quantity'         => 0,
         'customer'         => [
             'preferredName' => $payerName !== '' ? $payerName : 'Unknown payer',
