@@ -6,6 +6,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/_ticket.php';
 require_once __DIR__ . '/_mailer.php';
+require_once __DIR__ . '/_ticket_records.php';
 
 function fulfil_order(array &$order): void
 {
@@ -24,8 +25,25 @@ function fulfil_order(array &$order): void
     //
     // So everything here is contained, recorded, and reported as a flag.
     try {
-        $pdf = (($order['itemType'] ?? 'ticket') === 'merch') ? null : pdf_ticket($order);
-        $order['emailOk'] = send_order_email($order, $pdf);
+        $attachments = [];
+        if (($order['itemType'] ?? 'ticket') !== 'merch') {
+            foreach (order_ticket_records($order) as $ticket) {
+                // Each PDF represents exactly the admission carried by its own
+                // QR. New tickets admit one person; a legacy group QR retains
+                // its original party quantity.
+                $ticketOrder = $order;
+                $ticketOrder['ticketCode'] = $ticket['code'];
+                $ticketOrder['quantity'] = $ticket['quantity'];
+                $ticketOrder['ticketNumber'] = $ticket['number'];
+                $ticketOrder['ticketTotal'] = $ticket['total'];
+
+                $attachments[] = [
+                    'name'    => 'jabali-ticket-' . $ticket['code'] . '.pdf',
+                    'content' => pdf_ticket($ticketOrder),
+                ];
+            }
+        }
+        $order['emailOk'] = send_order_email($order, $attachments);
 
         if (!$order['emailOk']) {
             log_warn('Confirmation email not sent', [

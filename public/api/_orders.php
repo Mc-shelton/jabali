@@ -12,6 +12,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/_mpesa.php';
 require_once __DIR__ . '/_fulfil.php';
+require_once __DIR__ . '/_ticket_records.php';
 
 // Re-ask Daraja about an unsettled order and apply the answer.
 // Mints a ticket code that no existing order already holds.
@@ -25,19 +26,38 @@ require_once __DIR__ . '/_fulfil.php';
 // set — a code outside it would not fit the compact symbol on the ticket.
 function mint_ticket_code(array $orders): string
 {
+    return mint_ticket_codes($orders, 1)[0];
+}
+
+function mint_ticket_codes(array $orders, int $quantity): array
+{
     $taken = [];
     foreach ($orders as $o) {
-        if (!empty($o['ticketCode'])) $taken[strtoupper((string) $o['ticketCode'])] = true;
+        foreach (order_ticket_records((array) $o) as $ticket) {
+            $taken[strtoupper((string) $ticket['code'])] = true;
+        }
     }
 
-    // Bounded rather than while(true): an unforeseen bug here must fail the
-    // checkout loudly, not spin inside a payment request.
-    for ($try = 0; $try < 20; $try++) {
-        $code = 'JC-' . strtoupper(bin2hex(random_bytes(5)));
-        if (!isset($taken[$code])) return $code;
+    $codes = [];
+    for ($n = 0; $n < max(1, $quantity); $n++) {
+        // Bounded rather than while(true): an unforeseen bug here must fail the
+        // checkout loudly, not spin inside a payment request.
+        $code = null;
+        for ($try = 0; $try < 20; $try++) {
+            $candidate = 'JC-' . strtoupper(bin2hex(random_bytes(5)));
+            if (!isset($taken[$candidate])) {
+                $code = $candidate;
+                break;
+            }
+        }
+        if ($code === null) {
+            throw new RuntimeException('could not mint a unique ticket code after 20 attempts');
+        }
+        $taken[$code] = true;
+        $codes[] = $code;
     }
 
-    throw new RuntimeException('could not mint a unique ticket code after 20 attempts');
+    return $codes;
 }
 
 // `$force` skips the rate limit and the initial grace period — used by the

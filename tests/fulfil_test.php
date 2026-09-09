@@ -12,6 +12,7 @@ $tmp = sys_get_temp_dir() . '/jc-fulfil-' . bin2hex(random_bytes(4));
 mkdir($tmp . '/logs', 0775, true);
 define('DATA_DIR', $tmp);
 require __DIR__ . '/../public/api/_log.php';
+require __DIR__ . '/../public/api/_ticket_records.php';
 
 $pass = 0; $fail = 0;
 function check(string $name, $got, $want) {
@@ -23,15 +24,19 @@ function check(string $name, $got, $want) {
 
 // Stub the two things fulfil_order depends on, so we can make them misbehave.
 $GLOBALS['mail_behaviour'] = 'ok';
+$GLOBALS['pdf_calls'] = [];
+$GLOBALS['sent_attachments'] = null;
 
 function pdf_ticket(array $order): string {
     if ($GLOBALS['mail_behaviour'] === 'pdf_throws') {
         throw new RuntimeException('PDF generation exploded');
     }
-    return '%PDF-1.4 fake';
+    $GLOBALS['pdf_calls'][] = $order['ticketCode'] ?? '';
+    return '%PDF-1.4 fake ' . ($order['ticketCode'] ?? '');
 }
 
-function send_order_email(array $order, ?string $pdf = null): bool {
+function send_order_email(array $order, $attachments = null): bool {
+    $GLOBALS['sent_attachments'] = $attachments;
     switch ($GLOBALS['mail_behaviour']) {
         case 'throws':      throw new Error('Call to undefined function mail()');
         case 'returns_false': return false;
@@ -68,6 +73,20 @@ fulfil_order($o);
 check('order stays paid', $o['status'], 'success');
 check('email marked sent', $o['emailOk'], true);
 check('marked as attempted', $o['emailed'], true);
+
+echo "\n-- each new ticket becomes a separate attachment --\n";
+$GLOBALS['pdf_calls'] = [];
+$o = paid_order();
+$o['quantity'] = 3;
+$o['tickets'] = [
+    ['code' => 'JC-ONE', 'admittedAt' => null],
+    ['code' => 'JC-TWO', 'admittedAt' => null],
+    ['code' => 'JC-THREE', 'admittedAt' => null],
+];
+fulfil_order($o);
+check('one PDF generated per ticket', $GLOBALS['pdf_calls'], ['JC-ONE', 'JC-TWO', 'JC-THREE']);
+check('all PDFs handed to one email', count($GLOBALS['sent_attachments']), 3);
+check('each PDF admits one', str_contains($GLOBALS['sent_attachments'][1]['content'], 'JC-TWO'), true);
 
 echo "\n-- a THROWING mailer must not undo the payment --\n";
 $GLOBALS['mail_behaviour'] = 'throws';

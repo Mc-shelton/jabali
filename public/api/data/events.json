@@ -36,21 +36,31 @@
             {
                 "name": "Early Bird",
                 "price": "1000",
+                "ticketCount": 3,
                 "note": "",
                 "url": null
             },
             {
                 "name": "Regular",
                 "price": "1200",
+                "ticketCount": 1,
                 "note": "",
                 "url": null
             },
             {
                 "name": "Premium",
                 "price": "4500",
+                "ticketCount": 1,
                 "note": "",
                 "url": null
             }
+        ],
+        "merchIds": [
+            "polo-shirt",
+            "round-neck",
+            "classic-hoodie",
+            "support",
+            "classic-cape"
         ],
         "merch": [],
         "promoCodes": [
@@ -74,13 +84,6 @@
             "/uploads/events/20260722-ecd0cddac52a6a32.jpg"
         ],
         "createdAt": "2026-07-18T18:40:32+00:00",
-        "updatedAt": "2026-07-22T11:13:48+00:00",
-        "merchIds": [
-            "polo-shirt",
-            "round-neck",
-            "classic-hoodie",
-            "support",
-            "classic-cape"
-        ]
+        "updatedAt": "2026-09-09T06:41:34+00:00"
     }
 ]

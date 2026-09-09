@@ -8,6 +8,7 @@
 require __DIR__ . '/_bootstrap.php';
 
 require __DIR__ . '/_merch.php';
+require __DIR__ . '/_ticket_packages.php';
 
 const STORE = 'events';
 
@@ -82,7 +83,7 @@ function normalise_event(array $in, array $events, ?array $existing = null): arr
         if ($m !== '') $media[] = $m;
     }
 
-    // packages: [{ name, price, note, url }]
+    // packages: [{ name, price, ticketCount, note, url }]
     $packages = [];
     foreach ((array) ($in['packages'] ?? []) as $p) {
         if (!is_array($p)) continue;
@@ -91,10 +92,13 @@ function normalise_event(array $in, array $events, ?array $existing = null): arr
         if ($name === '' && $price === '') continue;
         $url = clean_string($p['url'] ?? '', 500);
         $packages[] = [
-            'name'  => $name,
-            'price' => $price,
-            'note'  => clean_string($p['note'] ?? '', 160),
-            'url'   => $url !== '' ? $url : null,
+            'name'        => $name,
+            'price'       => $price,
+            // One keeps every package saved before bundles existed working
+            // exactly as before.
+            'ticketCount' => normalise_ticket_count($p['ticketCount'] ?? 1),
+            'note'        => clean_string($p['note'] ?? '', 160),
+            'url'         => $url !== '' ? $url : null,
         ];
     }
 

@@ -86,6 +86,22 @@ check('html part is base64', str_contains($mime['body'], 'Content-Transfer-Encod
 check('html part is not 8bit', str_contains($mime['body'], 'Content-Transfer-Encoding: 8bit'), false);
 check('pdf attached', str_contains($mime['body'], 'application/pdf'), true);
 
+$multi = $order;
+$multi['tickets'] = [
+    ['code' => 'JC-FIRST', 'admittedAt' => null],
+    ['code' => 'JC-SECOND', 'admittedAt' => null],
+];
+$multiMime = order_mime($multi, [
+    ['name' => 'ticket-one.pdf', 'content' => '%PDF first'],
+    ['name' => 'ticket-two.pdf', 'content' => '%PDF second'],
+]);
+check(
+    'multiple PDFs share one email',
+    substr_count($multiMime['body'], 'Content-Disposition: attachment;'),
+    2
+);
+check('email explains independent tickets', str_contains(order_email_html($multi), 'used independently'), true);
+
 // The SMTP line-length limit is 1000 octets including CRLF. base64 + chunk_split
 // keeps every line at 76; an 8bit HTML part blew past it on the styled markup.
 $longest = 0;

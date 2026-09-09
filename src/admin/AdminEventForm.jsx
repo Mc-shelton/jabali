@@ -97,7 +97,10 @@ const AdminEventForm = () => {
 
   // ---- packages
   const addPackage = () =>
-    setForm((f) => ({ ...f, packages: [...f.packages, { name: '', price: '', note: '', url: '' }] }));
+    setForm((f) => ({
+      ...f,
+      packages: [...f.packages, { name: '', price: '', ticketCount: 1, note: '', url: '' }],
+    }));
   const setPackage = (i, key, val) =>
     setForm((f) => ({
       ...f,
@@ -230,12 +233,26 @@ const AdminEventForm = () => {
         {/* Packages */}
         <fieldset className="admin-fieldset">
           <legend>Ticket packages</legend>
-          <p className="admin-hint">Leave empty for a free event. Each package can carry its own ticket URL.</p>
+          <p className="admin-hint">
+            Leave empty for a free event. Price is per package; “Tickets included” controls how many people one package admits.
+          </p>
 
           {form.packages.map((p, i) => (
             <div className="admin-package" key={i}>
               <input placeholder="Name (e.g. Regular)" value={p.name} onChange={(e) => setPackage(i, 'name', e.target.value)} />
               <input placeholder="Price (e.g. KES 500)" value={p.price} onChange={(e) => setPackage(i, 'price', e.target.value)} />
+              <label className="admin-package-count">
+                <span>Tickets included</span>
+                <input
+                  type="number"
+                  min="1"
+                  max="50"
+                  step="1"
+                  value={p.ticketCount ?? 1}
+                  onChange={(e) => setPackage(i, 'ticketCount', e.target.value)}
+                  required
+                />
+              </label>
               <input placeholder="Note (optional)" value={p.note} onChange={(e) => setPackage(i, 'note', e.target.value)} />
               <input placeholder="Ticket URL (optional)" value={p.url || ''} onChange={(e) => setPackage(i, 'url', e.target.value)} />
               <button type="button" className="admin-icon-btn is-danger" onClick={() => removePackage(i)} aria-label="Remove package">

@@ -1,5 +1,5 @@
 <?php
-// Sends the buyer's confirmation email, optionally with a PDF ticket attached.
+// Sends the buyer's confirmation email, optionally with PDF tickets attached.
 // Uses PHP mail() with a hand-built MIME message (no external mail library).
 
 declare(strict_types=1);
@@ -10,9 +10,19 @@ function order_email_html(array $order): string
     $name = htmlspecialchars($order['customer']['preferredName'] ?? 'there');
     $event = htmlspecialchars($order['eventTitle'] ?? '');
     // An open-amount order (a donation) has no meaningful quantity.
-    $item = !empty($order['openAmount'])
-        ? htmlspecialchars((string) ($order['itemName'] ?? ''))
-        : htmlspecialchars(($order['quantity'] ?? 1) . ' × ' . ($order['itemName'] ?? ''));
+    if (!empty($order['openAmount'])) {
+        $item = htmlspecialchars((string) ($order['itemName'] ?? ''));
+    } elseif ($isTicket && ($order['ticketsPerPackage'] ?? 1) > 1) {
+        $packages = max(1, (int) ($order['packageQuantity'] ?? 1));
+        $tickets = max(1, (int) ($order['quantity'] ?? 1));
+        $item = htmlspecialchars(
+            $packages . ' × ' . ($order['itemName'] ?? '')
+            . ($packages === 1 ? ' package' : ' packages')
+            . " ($tickets tickets)"
+        );
+    } else {
+        $item = htmlspecialchars(($order['quantity'] ?? 1) . ' × ' . ($order['itemName'] ?? ''));
+    }
     $amount = 'KES ' . number_format((int) ($order['amount'] ?? 0));
 
     // Chosen variant (Size: XL · Colour: Gold), so the buyer has a record of
@@ -44,16 +54,31 @@ function order_email_html(array $order): string
             . "</td></tr>";
     }
     $receipt = htmlspecialchars($order['receipt'] ?? '');
-    $code = htmlspecialchars($order['ticketCode'] ?? '');
+    $codes = [];
+    foreach ((array) ($order['tickets'] ?? []) as $ticket) {
+        if (is_array($ticket) && !empty($ticket['code'])) {
+            $codes[] = (string) $ticket['code'];
+        }
+    }
+    if (!$codes && !empty($order['ticketCode'])) $codes[] = (string) $order['ticketCode'];
+    $ticketCount = count($codes) ?: max(1, (int) ($order['quantity'] ?? 1));
 
     $lead = $isTicket
-        ? "Your tickets for <strong>$event</strong> are confirmed. Your e-ticket is attached as a PDF — present the code below at entry."
+        ? ($ticketCount > 1
+            ? "Your tickets for <strong>$event</strong> are confirmed. The $ticketCount attached PDF tickets each have a unique QR code and can be used independently."
+            : "Your ticket for <strong>$event</strong> is confirmed. Your PDF ticket is attached — present its QR code at entry.")
         : "Thanks for your order from <strong>$event</strong>. We'll be in touch about collection/delivery.";
 
-    $codeBlock = $isTicket
-        ? "<p style=\"margin:24px 0 4px;font:600 12px/1 Arial,sans-serif;letter-spacing:1px;color:#5a6875;text-transform:uppercase\">Ticket code</p>
-           <p style=\"margin:0;font:700 26px/1 Arial,sans-serif;color:#cc7b00\">$code</p>"
-        : '';
+    $codeBlock = '';
+    if ($isTicket && $codes) {
+        $label = count($codes) === 1 ? 'Ticket code' : 'Ticket codes';
+        $codeLines = implode('<br>', array_map(
+            fn($code) => htmlspecialchars($code, ENT_QUOTES, 'UTF-8'),
+            $codes
+        ));
+        $codeBlock = "<p style=\"margin:24px 0 4px;font:600 12px/1 Arial,sans-serif;letter-spacing:1px;color:#5a6875;text-transform:uppercase\">$label</p>
+           <p style=\"margin:0;font:700 20px/1.5 Arial,sans-serif;color:#cc7b00\">$codeLines</p>";
+    }
 
     return "<div style=\"max-width:520px;margin:0 auto;font-family:Arial,sans-serif;color:#2a3a4d\">
       <p style=\"font:700 20px/1 Arial;color:#17497a;margin:0 0 4px\">Jabali Chorale</p>
@@ -179,7 +204,14 @@ function smtp_cmd($fh, ?string $cmd, string $expect, string $stage): string
 // who filled the form, so the chorale can answer by pressing Reply; From stays
 // on our own domain either way, because a From carrying someone else's address
 // fails SPF and lands the whole message in spam.
-function build_mime(string $subject, string $html, ?string $pdf = null, ?string $pdfName = null, ?string $replyTo = null): array
+function build_mime(
+    string $subject,
+    string $html,
+    ?string $pdf = null,
+    ?string $pdfName = null,
+    ?string $replyTo = null,
+    array $attachments = []
+): array
 {
     $boundary = 'jc_' . bin2hex(random_bytes(10));
 
@@ -201,12 +233,21 @@ function build_mime(string $subject, string $html, ?string $pdf = null, ?string 
     $body .= chunk_split(base64_encode($html)) . "\r\n";
 
     if ($pdf !== null) {
-        $filename = $pdfName ?? 'attachment.pdf';
+        array_unshift($attachments, [
+            'name'    => $pdfName ?? 'attachment.pdf',
+            'content' => $pdf,
+        ]);
+    }
+
+    foreach ($attachments as $attachment) {
+        if (!is_array($attachment) || !is_string($attachment['content'] ?? null)) continue;
+        $filename = basename((string) ($attachment['name'] ?? 'attachment.pdf'));
+        $filename = str_replace(["\r", "\n", '"'], '', $filename) ?: 'attachment.pdf';
         $body .= "--$boundary\r\n";
         $body .= "Content-Type: application/pdf; name=\"$filename\"\r\n";
         $body .= "Content-Transfer-Encoding: base64\r\n";
         $body .= "Content-Disposition: attachment; filename=\"$filename\"\r\n\r\n";
-        $body .= chunk_split(base64_encode($pdf)) . "\r\n";
+        $body .= chunk_split(base64_encode($attachment['content'])) . "\r\n";
     }
     $body .= "--$boundary--";
 
@@ -214,16 +255,21 @@ function build_mime(string $subject, string $html, ?string $pdf = null, ?string 
 }
 
 // The buyer's confirmation, in the shape build_mime wants.
-function order_mime(array $order, ?string $pdf = null): array
+function order_mime(array $order, $pdfs = null): array
 {
     $isTicket = ($order['itemType'] ?? 'ticket') !== 'merch';
     $subject = ($isTicket ? 'Your tickets — ' : 'Your order — ') . ($order['eventTitle'] ?? 'Jabali Chorale');
 
+    $legacyPdf = is_string($pdfs) ? $pdfs : null;
+    $attachments = is_array($pdfs) ? $pdfs : [];
+
     return build_mime(
         $subject,
         order_email_html($order),
-        $pdf,
-        'jabali-ticket-' . ($order['ticketCode'] ?? 'ticket') . '.pdf'
+        $legacyPdf,
+        'jabali-ticket-' . ($order['ticketCode'] ?? 'ticket') . '.pdf',
+        null,
+        $attachments
     );
 }
 
@@ -354,7 +400,7 @@ function deliver_mime(string $to, array $mime, array $context = [], bool $bcc = 
 }
 
 // Returns true if the message was accepted for delivery by the server.
-function send_order_email(array $order, ?string $pdf = null): bool
+function send_order_email(array $order, $pdfs = null): bool
 {
     $to = $order['customer']['email'] ?? '';
     if (!filter_var($to, FILTER_VALIDATE_EMAIL)) {
@@ -364,7 +410,7 @@ function send_order_email(array $order, ?string $pdf = null): bool
         return false;
     }
 
-    return deliver_mime($to, order_mime($order, $pdf), ['orderId' => $order['id'] ?? null]);
+    return deliver_mime($to, order_mime($order, $pdfs), ['orderId' => $order['id'] ?? null]);
 }
 
 // ---------------------------------------------------------------- enquiries

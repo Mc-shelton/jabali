@@ -30,7 +30,12 @@ const money = (n) => `KES ${Number(n).toLocaleString('en-KE')}`;
 // ticket package or a merch product.
 const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
   const isMerch = kind === 'merch';
-  const qtyLabel = isMerch ? 'Quantity' : 'Number of tickets';
+  const ticketsPerPackage = isMerch
+    ? 1
+    : Math.min(50, Math.max(1, Math.trunc(Number(item.ticketCount) || 1)));
+  const isTicketBundle = !isMerch && ticketsPerPackage > 1;
+  const qtyLabel = isMerch ? 'Quantity' : isTicketBundle ? 'Number of packages' : 'Number of tickets';
+  const maxPurchaseQuantity = isMerch ? 20 : isTicketBundle ? 1 : 50;
   // details | extras | payment | processing | waiting | success | failed
   // `waiting` is not a failure — it's "we stopped auto-checking, press Refresh".
   const [stage, setStage] = useState('details');
@@ -132,7 +137,10 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
   // have no discount — working unchanged.
   const basePrice = item.priceFinal ?? priceToNumber(item.price);
   const unit = openAmount ? Number(customAmount) || 0 : basePrice + optionDelta;
-  const qty = openAmount ? 1 : Math.max(1, Number(form.quantity) || 1);
+  const qty = openAmount
+    ? 1
+    : Math.min(maxPurchaseQuantity, Math.max(1, Math.trunc(Number(form.quantity) || 1)));
+  const admissionQuantity = isMerch ? qty : qty * ticketsPerPackage;
   const itemTotal = unit * qty;
   const estTotal = itemTotal + addOnTotal;
 
@@ -165,7 +173,9 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
         orderId: status.orderId ?? order?.orderId,
         value: status.amount ?? amount,
         item,
-        quantity: status.quantity ?? qty,
+        // Analytics quantity is purchasable package units; using admissions
+        // here would make a two-ticket bundle look like twice the revenue.
+        quantity: status.packageQuantity ?? qty,
         kind,
         receipt: status.receipt,
       });
@@ -379,7 +389,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
               </div>
             )}
 
-            <div className="co-grid-2">
+            <div className={`co-grid-2 ${isTicketBundle ? 'is-single' : ''}`}>
               {openAmount ? (
                 <label className="co-field">
                   <span>Amount (KES) *</span>
@@ -394,17 +404,31 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
                   />
                   <small>Minimum {money(openAmount.min ?? 1)}.</small>
                 </label>
-              ) : (
+              ) : !isTicketBundle ? (
                 <label className="co-field">
                   <span>{qtyLabel} *</span>
-                  <input type="number" min="1" max="20" value={form.quantity} onChange={setField('quantity')} required />
+                  <input
+                    type="number"
+                    min="1"
+                    max={maxPurchaseQuantity}
+                    step="1"
+                    value={form.quantity}
+                    onChange={setField('quantity')}
+                    required
+                  />
                 </label>
-              )}
+              ) : null}
               <label className="co-field">
                 <span>Promo code</span>
                 <input value={form.promoCode} onChange={setField('promoCode')} placeholder="Optional" />
               </label>
             </div>
+
+            {isTicketBundle && (
+              <p className="co-note">
+                This package includes {ticketsPerPackage} individually scannable tickets.
+              </p>
+            )}
 
             <div className="co-total">
               <span>{openAmount ? 'Your amount' : 'Estimated total'}</span>
@@ -503,6 +527,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
                 <span>
                   {item.name}
                   {!openAmount && ` × ${qty}`}
+                  {isTicketBundle && ` (${admissionQuantity} tickets)`}
                 </span>
                 <strong>{money(itemTotal)}</strong>
               </div>
@@ -540,6 +565,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
                 <span>
                   {item.name}
                   {!openAmount && ` × ${qty}`}
+                  {isTicketBundle && ` (${admissionQuantity} tickets)`}
                 </span>
                 <strong>{money(itemTotal)}</strong>
               </div>
@@ -654,7 +680,8 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
             <CheckCircleFilled className="co-icon is-ok" />
             <h3>Payment received</h3>
             <p className="co-centre-text">
-              Thank you! We’ve got your {result?.quantity ?? form.quantity}× {item.name} for {event.title}.
+              Thank you! Your purchase for {result?.quantity ?? admissionQuantity}{' '}
+              {(result?.quantity ?? admissionQuantity) === 1 ? 'ticket' : 'tickets'} to {event.title} is confirmed.
               {result?.receipt && (
                 <>
                   {' '}

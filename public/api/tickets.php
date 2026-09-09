@@ -11,6 +11,7 @@ require __DIR__ . '/_fulfil.php';
 require __DIR__ . '/_orders.php';
 require __DIR__ . '/_merch.php';
 require __DIR__ . '/_payment_bypass.php';
+require __DIR__ . '/_ticket_packages.php';
 
 const STORE = 'orders';
 
@@ -210,6 +211,8 @@ function public_order(array $order): array
         'status'     => $order['status'],
         'amount'     => $order['amount'],
         'quantity'   => $order['quantity'],
+        'packageQuantity'   => $order['packageQuantity'] ?? $order['quantity'],
+        'ticketsPerPackage' => $order['ticketsPerPackage'] ?? 1,
         'itemType'   => $order['itemType'] ?? 'ticket',
         'itemName'   => $order['itemName'] ?? '',
         'eventTitle' => $order['eventTitle'] ?? '',
@@ -238,7 +241,10 @@ route([
         $slug = clean_string($in['eventSlug'] ?? '', 120);
         $itemType = ($in['itemType'] ?? 'ticket') === 'merch' ? 'merch' : 'ticket';
         $itemName = clean_string($in['itemName'] ?? ($in['packageName'] ?? ''), 80);
-        $quantity = max(1, min(50, (int) ($in['quantity'] ?? 1)));
+        // For tickets this is the number of PACKAGE units selected. The final
+        // admission quantity is derived from the stored package below, never
+        // from a ticket count supplied by the browser.
+        $purchaseQuantity = max(1, min(50, (int) ($in['quantity'] ?? 1)));
 
         $c = is_array($in['customer'] ?? null) ? $in['customer'] : [];
         $preferredName = clean_string($c['preferredName'] ?? '', 80);
@@ -255,6 +261,16 @@ route([
         [$event, $item, $err] = find_event_and_item($slug, $itemType, $itemName);
         if ($err) error_out($err, 404);
 
+        $ticketsPerPackage = $itemType === 'ticket'
+            ? normalise_ticket_count($item['ticketCount'] ?? 1)
+            : 1;
+        if (
+            $itemType === 'ticket'
+            && $purchaseQuantity > max_ticket_package_purchase_quantity($ticketsPerPackage)
+        ) {
+            error_out('Bundled ticket packages can only be purchased one at a time.', 422);
+        }
+
         [$chosenOptions, $optionDelta, $optErr] = resolve_options($item, $in['options'] ?? []);
         if ($optErr) error_out($optErr, 422);
 
@@ -269,7 +285,7 @@ route([
             if ($unit < $min) {
                 error_out('Please enter an amount of at least KES ' . number_format($min) . '.', 422);
             }
-            $quantity = 1;
+            $purchaseQuantity = 1;
             $subtotal = $unit;
         } else {
             // A product's own discount is applied here, from the STORED
@@ -284,7 +300,18 @@ route([
 
             $unit = $base + $optionDelta;
             if ($unit < 1) error_out('This item has no price set. Please contact us.', 422);
-            $subtotal = $unit * $quantity;
+            $subtotal = $unit * $purchaseQuantity;
+        }
+
+        $quantity = $itemType === 'ticket'
+            ? ticket_admission_quantity($purchaseQuantity, $ticketsPerPackage)
+            : $purchaseQuantity;
+        if ($itemType === 'ticket' && $quantity > MAX_TICKETS_PER_ORDER) {
+            error_out(
+                'One order can contain at most ' . MAX_TICKETS_PER_ORDER
+                . ' tickets. Please reduce the number of packages.',
+                422
+            );
         }
 
         // Merchandise the buyer added on the way to payment, so one prompt
@@ -334,10 +361,19 @@ route([
         // Read before minting: the code must be checked against every code
         // already issued, and this same array is what gets written back below.
         $orders = store_read(STORE, []);
+        $ticketCodes = $itemType === 'ticket'
+            ? mint_ticket_codes($orders, $quantity)
+            : [mint_ticket_code($orders)];
 
         $order = [
             'id'                => $orderId,
-            'ticketCode'        => mint_ticket_code($orders),
+            // ticketCode remains as the primary reference for older admin
+            // screens and integrations. `tickets` is the source of truth for
+            // independent entry verification on newly issued orders.
+            'ticketCode'        => $ticketCodes[0],
+            'tickets'           => $itemType === 'ticket'
+                ? array_map(fn($code) => ['code' => $code, 'admittedAt' => null], $ticketCodes)
+                : [],
             'createdAt'         => date('c'),
             'status'            => $bypassPayment ? 'success' : 'pending',
             'eventSlug'         => $slug,
@@ -349,6 +385,11 @@ route([
             'unitPrice'         => $unit,
             'options'           => $chosenOptions,   // shown in admin + on the e-ticket
             'openAmount'        => $isOpenAmount,
+            // `quantity` is the total number of independently issued ticket
+            // admissions. These fields retain how that number was calculated
+            // and keep pricing auditable for bundled packages.
+            'packageQuantity'   => $purchaseQuantity,
+            'ticketsPerPackage' => $ticketsPerPackage,
             'quantity'          => $quantity,
             // The main item's share, so the add-on lines and the total can
             // always be reconciled against each other after the fact.

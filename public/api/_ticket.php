@@ -99,6 +99,12 @@ function pdf_ticket(array $order): string
     // two columns stay legible when a value runs long.
     $rows = [];
     $rows[] = ['ADMITS', ($order['quantity'] ?? 1) . ' x ' . ($order['itemName'] ?? '')];
+    if (($order['ticketTotal'] ?? 1) > 1) {
+        $rows[] = [
+            'TICKET',
+            (int) ($order['ticketNumber'] ?? 1) . ' of ' . (int) $order['ticketTotal'],
+        ];
+    }
 
     $optionBits = [];
     foreach ((array) ($order['options'] ?? []) as $opt) {

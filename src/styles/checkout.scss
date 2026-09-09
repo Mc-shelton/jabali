@@ -124,6 +124,10 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 12px;
+
+  &.is-single {
+    grid-template-columns: 1fr;
+  }
 }
 
 .co-field {

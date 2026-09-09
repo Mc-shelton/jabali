@@ -6,7 +6,8 @@ import { assetPath } from '../utils/assetPath';
 // real events, posters, and (where ticketed) real ticket URLs.
 //   • To move an event from Upcoming to Past, cut it from `upcomingEvents` and
 //     paste it into `pastEvents`.
-//   • `packages` are the ticket tiers. Each has a name, price, an optional note,
+//   • `packages` are the ticket tiers. Each has a name, price, ticketCount
+//     (the number of admissions included, default 1), an optional note,
 //     and an optional `url` (its own checkout/RSVP page). Leave `url` null and
 //     that tier falls back to an email reservation rather than a dead button.
 //     An event with no packages is treated as free entry.
@@ -26,7 +27,7 @@ const event = ({
   summary,
   about = [],
   poster,
-  packages = [], // [{ name, price, note?, url? }]
+  packages = [], // [{ name, price, ticketCount?, note?, url? }]
   merch = [], // [{ name, price, description?, image? }]
   media = [],
 }) => ({
@@ -63,8 +64,8 @@ export const upcomingEvents = [
     poster: img('jc_1.jpeg'),
     packages: [
       { name: 'Regular', price: 'KES 500', note: 'General seating' },
-      { name: 'Couple', price: 'KES 900', note: 'Two seats together' },
-      { name: 'Group of 5', price: 'KES 2,000', note: 'Best value for a team' },
+      { name: 'Couple', price: 'KES 900', ticketCount: 2, note: 'Two seats together' },
+      { name: 'Group of 5', price: 'KES 2,000', ticketCount: 5, note: 'Best value for a team' },
     ],
     merch: [
       { name: 'Jabali @5 T-Shirt', price: 'KES 1,200', description: 'Anniversary tee in chorale navy.', image: img('jc_2.jpeg') },

@@ -147,6 +147,11 @@ const EventDetail = () => {
                           <span className="evd-package-name">{pkg.name}</span>
                           <span className="evd-package-price">{pkg.price}</span>
                         </span>
+                        {(Number(pkg.ticketCount) || 1) > 1 && (
+                          <span className="evd-package-note">
+                            Includes {Number(pkg.ticketCount)} tickets
+                          </span>
+                        )}
                         {pkg.note && <span className="evd-package-note">{pkg.note}</span>}
                         <span className="evd-package-action">
                           Get tickets

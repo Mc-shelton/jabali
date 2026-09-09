@@ -200,6 +200,9 @@ const AdminScan = () => {
                 <dl className="admin-verdict-facts">
                   <div><dt>Code</dt><dd>{result.code}</dd></div>
                   {result.event && <div><dt>Event</dt><dd>{result.event}</dd></div>}
+                  {result.ticketTotal > 1 && (
+                    <div><dt>Ticket</dt><dd>{result.ticketNumber} of {result.ticketTotal}</dd></div>
+                  )}
                   {result.item && (
                     <div><dt>Admits</dt><dd>{result.quantity} × {result.item}</dd></div>
                   )}

@@ -27,6 +27,7 @@ const AdminOrderDetail = ({ order, onClose }) => {
 
   const lines = orderLines(order);
   const isDirect = order.recordType === 'direct';
+  const individualTickets = Array.isArray(order.tickets) ? order.tickets : [];
 
   // Only the facts this order actually carries — an empty row reads as missing
   // data rather than as "not applicable".
@@ -52,7 +53,9 @@ const AdminOrderDetail = ({ order, onClose }) => {
         ['Paid from', order.mpesaPhone],
         ['M-Pesa receipt', order.receipt],
         ['Payment reference', order.paymentReference],
-        ['Ticket code', order.ticketCode],
+        ['Primary ticket code', order.ticketCode],
+        ['Packages bought', order.ticketsPerPackage > 1 ? order.packageQuantity : null],
+        ['Tickets per package', order.ticketsPerPackage > 1 ? order.ticketsPerPackage : null],
         ['Promo code', order.promoCode],
         ['Admitted', when(order.admittedAt)],
       ]).filter(([, value]) => value);
@@ -166,6 +169,30 @@ const AdminOrderDetail = ({ order, onClose }) => {
               <p className="admin-cell-sub">{order.resultDesc}</p>
             )}
           </section>
+
+          {individualTickets.length > 0 && (
+            <section>
+              <h3 className="admin-modal-heading">
+                Individual tickets <span className="admin-cell-sub">({individualTickets.length})</span>
+              </h3>
+              <ul className="admin-detail-lines">
+                {individualTickets.map((ticket, index) => (
+                  <li className="admin-detail-line" key={ticket.code}>
+                    <div className="admin-detail-line-head">
+                      <span className="admin-cell-strong">Ticket {index + 1}</span>
+                      <span>{ticket.code}</span>
+                      <span className={`admin-status is-${ticket.admittedAt ? 'success' : 'pending'}`}>
+                        {ticket.admittedAt ? 'admitted' : 'unused'}
+                      </span>
+                    </div>
+                    {ticket.admittedAt && (
+                      <p className="admin-cell-sub">Admitted {when(ticket.admittedAt)}</p>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </section>
+          )}
         </div>
       </div>
     </div>
