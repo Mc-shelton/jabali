@@ -243,6 +243,15 @@
   color: tokens.$ink-muted;
 }
 
+.co-summary > .co-summary-discount {
+  background: rgba(31, 157, 85, 0.09);
+
+  span,
+  strong {
+    color: #197544;
+  }
+}
+
 .co-submit {
   width: 100%;
   justify-content: center;

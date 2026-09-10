@@ -11,7 +11,7 @@ import {
   ReloadOutlined,
 } from '@ant-design/icons';
 import '../styles/checkout.scss';
-import { getPaymentStatus, initiateTicketPayment } from '../lib/api';
+import { getPaymentStatus, initiateTicketPayment, quoteTicketPayment } from '../lib/api';
 import { beginCheckout, purchase } from '../lib/analytics';
 
 // Poll every 5s for the first 30s. After that we stop polling automatically but
@@ -121,6 +121,8 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
   const [error, setError] = useState('');
   const [note, setNote] = useState('');
   const [checking, setChecking] = useState(false);
+  const [quoting, setQuoting] = useState(false);
+  const [quote, setQuote] = useState(null);
   const [order, setOrder] = useState(null);
   const [result, setResult] = useState(null);
   const pollRef = useRef({ timer: null });
@@ -143,6 +145,10 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
   const admissionQuantity = isMerch ? qty : qty * ticketsPerPackage;
   const itemTotal = unit * qty;
   const estTotal = itemTotal + addOnTotal;
+  const promoApplied = Boolean(quote?.promoApplied);
+  const promoDiscount = promoApplied ? Number(quote.discountAmount) || 0 : 0;
+  const quotedItemTotal = promoApplied ? Number(quote.itemAmount) : itemTotal;
+  const displayedTotal = quotedItemTotal + addOnTotal;
 
   const amountTooLow = Boolean(openAmount) && unit < (openAmount.min ?? 1);
 
@@ -241,43 +247,69 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
     }
   };
 
-  const setField = (key) => (e) => setForm((f) => ({ ...f, [key]: e.target.value }));
+  const setField = (key) => (e) => {
+    const value = e.target.value;
+    setForm((f) => ({ ...f, [key]: value }));
+    if (key === 'promoCode' || key === 'quantity') setQuote(null);
+  };
+
+  const pricingPayload = {
+    eventSlug: event.slug,
+    itemType: kind,
+    itemName: item.name,
+    quantity: qty,
+    options: itemOptions
+      .filter((opt) => choices[opt.name])
+      .map((opt) => ({ name: opt.name, choice: choices[opt.name] })),
+    ...(openAmount ? { amount: unit } : {}),
+    addOns: addOnLines.map((l) => ({
+      name: l.name,
+      quantity: l.quantity,
+      options: Object.entries(l.choices ?? {})
+        .filter(([, choice]) => choice)
+        .map(([name, choice]) => ({ name, choice })),
+    })),
+    promoCode: form.promoCode.trim(),
+    ...(promoApplied ? { expectedAmount: displayedTotal } : {}),
+  };
 
   // Details → extras → payment. The extras step is skipped entirely when there
   // is nothing to offer, rather than showing an empty screen to click past.
-  const goToExtras = (e) => {
+  const goToExtras = async (e) => {
     e.preventDefault();
     setError('');
     setMpesaPhone((p) => p || form.phone);
-    setStage(addOnCatalogue.length > 0 ? 'extras' : 'payment');
+
+    if (!pricingPayload.promoCode) {
+      setQuote(null);
+      setStage(addOnCatalogue.length > 0 ? 'extras' : 'payment');
+      return;
+    }
+
+    setQuoting(true);
+    try {
+      const verified = await quoteTicketPayment(pricingPayload);
+      if (!verified.promoApplied) {
+        setError('That promo code wasn’t recognised. Check it and try again.');
+        return;
+      }
+      setQuote(verified);
+      setStage(addOnCatalogue.length > 0 ? 'extras' : 'payment');
+    } catch (err) {
+      setError(err.message || 'Could not verify the promo code. Please try again.');
+    } finally {
+      setQuoting(false);
+    }
   };
 
   const pay = async (e) => {
     e.preventDefault();
     setError('');
     setStage('processing');
-    beginCheckout({ item, quantity: qty, value: estTotal, kind });
+    beginCheckout({ item, quantity: qty, value: displayedTotal, kind });
     try {
       const res = await initiateTicketPayment({
-        eventSlug: event.slug,
-        itemType: kind,
-        itemName: item.name,
-        quantity: qty,
-        // Only which option and which label — the server prices it.
-        options: itemOptions
-          .filter((opt) => choices[opt.name])
-          .map((opt) => ({ name: opt.name, choice: choices[opt.name] })),
-        ...(openAmount ? { amount: unit } : {}),
-        // Which product, how many, which variant. Never a price — the server
-        // reads that from the stored product.
-        addOns: addOnLines.map((l) => ({
-          name: l.name,
-          quantity: l.quantity,
-          options: Object.entries(l.choices ?? {})
-            .filter(([, choice]) => choice)
-            .map(([name, choice]) => ({ name, choice })),
-        })),
-        promoCode: form.promoCode,
+        ...pricingPayload,
         mpesaPhone,
         customer: {
           preferredName: form.preferredName,
@@ -296,7 +328,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
     }
   };
 
-  const amount = order?.amount ?? estTotal;
+  const amount = order?.amount ?? displayedTotal;
 
   return (
     <div className="co-overlay" role="presentation" onClick={() => stage !== 'processing' && onClose()}>
@@ -308,6 +340,8 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
               {item.name}
               {openAmount ? (
                 ' · you choose the amount'
+              ) : promoApplied ? (
+                ' · promo applied'
               ) : (
                 <>
                   {' · '}
@@ -372,9 +406,10 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
                     <select
                       value={choices[opt.name] ?? ''}
                       required={opt.required}
-                      onChange={(e) =>
-                        setChoices((c) => ({ ...c, [opt.name]: e.target.value }))
-                      }
+                      onChange={(e) => {
+                        setChoices((c) => ({ ...c, [opt.name]: e.target.value }));
+                        setQuote(null);
+                      }}
                     >
                       {!opt.required && <option value="">No preference</option>}
                       {opt.choices?.map((c) => (
@@ -398,7 +433,10 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
                     min={openAmount.min ?? 1}
                     step="1"
                     value={customAmount}
-                    onChange={(e) => setCustomAmount(e.target.value)}
+                    onChange={(e) => {
+                      setCustomAmount(e.target.value);
+                      setQuote(null);
+                    }}
                     placeholder={String(openAmount.min ?? 1)}
                     required
                   />
@@ -431,17 +469,36 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
             )}
 
             <div className="co-total">
-              <span>{openAmount ? 'Your amount' : 'Estimated total'}</span>
+              <span>
+                {form.promoCode.trim()
+                  ? 'Subtotal before promo'
+                  : openAmount
+                    ? 'Your amount'
+                    : 'Estimated total'}
+              </span>
               <strong>{money(estTotal)}</strong>
             </div>
+
+            {form.promoCode.trim() && (
+              <p className="co-summary-note">We’ll verify the promo code before showing the payment amount.</p>
+            )}
 
             {amountTooLow && customAmount !== '' && (
               <p className="co-error">Please enter at least {money(openAmount.min ?? 1)}.</p>
             )}
 
-            <button type="submit" className="btn btn-primary co-submit" disabled={amountTooLow}>
-              Continue to payment
-              <ArrowRightOutlined />
+            <button type="submit" className="btn btn-primary co-submit" disabled={amountTooLow || quoting}>
+              {quoting ? (
+                <>
+                  <LoadingOutlined />
+                  Verifying promo…
+                </>
+              ) : (
+                <>
+                  Continue to payment
+                  <ArrowRightOutlined />
+                </>
+              )}
             </button>
           </form>
         )}
@@ -531,6 +588,12 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
                 </span>
                 <strong>{money(itemTotal)}</strong>
               </div>
+              {promoApplied && (
+                <div className="co-summary-discount">
+                  <span>Promo {quote.promoCode}</span>
+                  <strong>−{money(promoDiscount)}</strong>
+                </div>
+              )}
               {addOnTotal > 0 && (
                 <div>
                   <span>Merchandise</span>
@@ -541,7 +604,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
 
             <div className="co-total">
               <span>Total</span>
-              <strong>{money(estTotal)}</strong>
+              <strong>{money(displayedTotal)}</strong>
             </div>
 
             <div className="co-actions">
@@ -569,6 +632,12 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
                 </span>
                 <strong>{money(itemTotal)}</strong>
               </div>
+              {promoApplied && (
+                <div className="co-summary-discount">
+                  <span>Promo {quote.promoCode}</span>
+                  <strong>−{money(promoDiscount)}</strong>
+                </div>
+              )}
               {/* Repeat the chosen variant so it's confirmed before paying. */}
               {itemOptions.some((opt) => choices[opt.name]) && (
                 <p className="co-summary-note">
@@ -593,14 +662,18 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
                 </div>
               ))}
 
-              {addOnTotal > 0 && (
+              {(promoApplied || addOnTotal > 0) && (
                 <div className="co-summary-total">
                   <span>Total</span>
-                  <strong>{money(estTotal)}</strong>
+                  <strong>{money(displayedTotal)}</strong>
                 </div>
               )}
 
-              <p className="co-summary-note">You’ll approve the exact amount on your phone.</p>
+              <p className="co-summary-note">
+                {promoApplied
+                  ? `Promo applied. You’ll approve ${money(displayedTotal)} on your phone.`
+                  : 'You’ll approve the exact amount on your phone.'}
+              </p>
             </div>
 
             <label className="co-field">
@@ -629,7 +702,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
                 Back
               </button>
               <button type="submit" className="btn btn-primary">
-                Pay {money(estTotal)}
+                Pay {money(displayedTotal)}
               </button>
             </div>
           </form>

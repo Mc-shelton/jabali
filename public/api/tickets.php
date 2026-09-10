@@ -1,5 +1,6 @@
 <?php
 // Public checkout — M-Pesa STK Push for ticket packages and event merchandise.
+//   POST tickets.php?quote=1        → verify pricing/promo without paying
 //   POST tickets.php                → initiate a payment, returns { orderId }
 //   GET  tickets.php?orderId=...    → poll payment status
 //
@@ -231,11 +232,7 @@ function public_order(array $order): array
 route([
     // ----------------------------------------------------------- initiate
     'POST' => function () {
-        $bypassPayment = payment_bypass_authorized();
-        if (!$bypassPayment && !mpesa_configured()) {
-            error_out('Online payment is not set up yet. Please contact us to book.', 503);
-        }
-
+        $quoteOnly = ($_GET['quote'] ?? '') === '1';
         $in = read_json_body();
 
         $slug = clean_string($in['eventSlug'] ?? '', 120);
@@ -254,9 +251,13 @@ route([
         $promo = clean_string($in['promoCode'] ?? '', 40);
         $payPhone = mpesa_format_phone(clean_string($in['mpesaPhone'] ?? '', 20));
 
-        if ($preferredName === '') error_out('Please enter your preferred name.', 422);
-        if (!filter_var($email, FILTER_VALIDATE_EMAIL)) error_out('Please enter a valid email.', 422);
-        if ($payPhone === '') error_out('Please enter a valid M-Pesa phone number (e.g. 07XX XXX XXX).', 422);
+        // A quote needs only the pricing choices. Personal and M-Pesa details
+        // are required only when the buyer actually starts a payment.
+        if (!$quoteOnly) {
+            if ($preferredName === '') error_out('Please enter your preferred name.', 422);
+            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) error_out('Please enter a valid email.', 422);
+            if ($payPhone === '') error_out('Please enter a valid M-Pesa phone number (e.g. 07XX XXX XXX).', 422);
+        }
 
         [$event, $item, $err] = find_event_and_item($slug, $itemType, $itemName);
         if ($err) error_out($err, 404);
@@ -330,8 +331,42 @@ route([
         // The code discounts the item it belongs to, not the whole basket: a
         // ticket promo shouldn't quietly take money off the shirts added
         // alongside it. Add-ons already carry their own product discounts.
-        [$discounted] = apply_promo($subtotal, $promo, $codeList);
+        [$discounted, $promoApplied] = apply_promo($subtotal, $promo, $codeList);
         $amount = $discounted + $addOnTotal;
+
+        // Return a server-authoritative preview before M-Pesa is contacted.
+        // This lets the confirmation screen state the actual discounted amount
+        // and lets an unrecognised code fail visibly instead of being ignored.
+        if ($quoteOnly) {
+            json_out([
+                'subtotal'      => $subtotal,
+                'itemAmount'    => $discounted,
+                'discountAmount'=> max(0, $subtotal - $discounted),
+                'addOnAmount'   => $addOnTotal,
+                'amount'        => $amount,
+                'promoApplied'  => $promoApplied,
+                'promoCode'     => $promo,
+            ]);
+        }
+
+        // Do not fall back to the full price if a code expired or was removed
+        // between the preview and the Pay click.
+        if ($promo !== '' && !$promoApplied) {
+            error_out('That promo code was not recognised. Please check it and try again.', 422);
+        }
+
+        // A rule or catalogue price can also change between those two clicks.
+        // The client-provided figure never sets the price; it is only an
+        // optimistic lock that makes us stop instead of prompting for a total
+        // different from the one the buyer just reviewed.
+        if (isset($in['expectedAmount']) && (int) $in['expectedAmount'] !== $amount) {
+            error_out('The price changed before payment. Please go back and review the updated total.', 409);
+        }
+
+        $bypassPayment = payment_bypass_authorized();
+        if (!$bypassPayment && !mpesa_configured()) {
+            error_out('Online payment is not set up yet. Please contact us to book.', 503);
+        }
 
         // A unique PayBill account reference is the second reconciliation key.
         // The M-Pesa receipt remains primary; this links a C2B confirmation to

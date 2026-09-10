@@ -92,6 +92,12 @@ export const initiateTicketPayment = (payload) =>
       : {}),
   });
 
+// Ask the server to resolve the item, options, quantity, add-ons and promo code
+// without creating an order or contacting M-Pesa. Promo rules remain private;
+// the checkout receives only the verified totals it needs to show the buyer.
+export const quoteTicketPayment = (payload) =>
+  request('tickets.php?quote=1', { method: 'POST', body: payload });
+
 // `force` is the customer pressing Refresh: it skips the server-side rate limit
 // and asks Daraja right now.
 export const getPaymentStatus = (orderId, { force = false } = {}) =>
