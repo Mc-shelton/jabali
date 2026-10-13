@@ -16,6 +16,9 @@ function order_ticket_records(array $order): array
             $records[] = [
                 'code'       => (string) $ticket['code'],
                 'admittedAt' => $ticket['admittedAt'] ?? null,
+                'memberType' => $ticket['memberType'] ?? null,
+                'memberLabel'=> $ticket['memberLabel'] ?? null,
+                'ageLabel'   => $ticket['ageLabel'] ?? null,
                 'quantity'   => 1,
                 'number'     => $index + 1,
                 'total'      => $total,
@@ -48,6 +51,9 @@ function order_ticket_record_at(array $order, ?int $ticketIndex): ?array
     return [
         'code'       => (string) $ticket['code'],
         'admittedAt' => $ticket['admittedAt'] ?? null,
+        'memberType' => $ticket['memberType'] ?? null,
+        'memberLabel'=> $ticket['memberLabel'] ?? null,
+        'ageLabel'   => $ticket['ageLabel'] ?? null,
         'quantity'   => 1,
         'number'     => $ticketIndex + 1,
         'total'      => count((array) ($order['tickets'] ?? [])),

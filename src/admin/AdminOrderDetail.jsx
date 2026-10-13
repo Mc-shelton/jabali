@@ -147,6 +147,16 @@ const AdminOrderDetail = ({ order, onClose }) => {
                 <span>Order total</span>
                 <strong>{money(order.amount)}</strong>
               </p>
+              {order.familyComposition?.length > 0 && (
+                <dl className="admin-detail-options">
+                  {order.familyComposition.map((group) => (
+                    <div key={group.id}>
+                      <dt>{group.label}{group.ageLabel ? ` (${group.ageLabel})` : ''}</dt>
+                      <dd>{group.quantity} × {money(group.unitPrice)} = {money(group.amount)}</dd>
+                    </div>
+                  ))}
+                </dl>
+              )}
             </section>
           )}
 
@@ -180,6 +190,11 @@ const AdminOrderDetail = ({ order, onClose }) => {
                   <li className="admin-detail-line" key={ticket.code}>
                     <div className="admin-detail-line-head">
                       <span className="admin-cell-strong">Ticket {index + 1}</span>
+                      {ticket.memberLabel && (
+                        <span className="admin-pill is-ticket">
+                          {ticket.memberLabel}{ticket.ageLabel ? ` · ${ticket.ageLabel}` : ''}
+                        </span>
+                      )}
                       <span>{ticket.code}</span>
                       <span className={`admin-status is-${ticket.admittedAt ? 'success' : 'pending'}`}>
                         {ticket.admittedAt ? 'admitted' : 'unused'}

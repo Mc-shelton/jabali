@@ -203,6 +203,12 @@ const AdminScan = () => {
                   {result.ticketTotal > 1 && (
                     <div><dt>Ticket</dt><dd>{result.ticketNumber} of {result.ticketTotal}</dd></div>
                   )}
+                  {result.memberLabel && (
+                    <div>
+                      <dt>Category</dt>
+                      <dd>{result.memberLabel}{result.ageLabel ? ` · ${result.ageLabel}` : ''}</dd>
+                    </div>
+                  )}
                   {result.item && (
                     <div><dt>Admits</dt><dd>{result.quantity} × {result.item}</dd></div>
                   )}

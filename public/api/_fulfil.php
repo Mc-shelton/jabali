@@ -36,6 +36,9 @@ function fulfil_order(array &$order): void
                 $ticketOrder['quantity'] = $ticket['quantity'];
                 $ticketOrder['ticketNumber'] = $ticket['number'];
                 $ticketOrder['ticketTotal'] = $ticket['total'];
+                $ticketOrder['memberType'] = $ticket['memberType'] ?? null;
+                $ticketOrder['memberLabel'] = $ticket['memberLabel'] ?? null;
+                $ticketOrder['ageLabel'] = $ticket['ageLabel'] ?? null;
 
                 $attachments[] = [
                     'name'    => 'jabali-ticket-' . $ticket['code'] . '.pdf',

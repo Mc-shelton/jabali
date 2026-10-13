@@ -640,19 +640,36 @@
   color: tokens.$ink-muted;
 }
 
+.admin-package-card {
+  display: grid;
+  gap: 16px;
+  padding: 14px;
+  border: 1px solid tokens.$line;
+  border-radius: tokens.$r-sm;
+  background: tokens.$paper-sunk;
+}
+
 .admin-package {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr 0.8fr 1.2fr 1.2fr auto;
+  grid-template-columns: 0.8fr 1.1fr 0.9fr 0.8fr 1.2fr 1.2fr auto;
   gap: 8px;
   align-items: center;
 
-  input {
+  input,
+  select {
+    width: 100%;
+    min-width: 0;
     padding: 9px 10px;
     border: 1px solid tokens.$line-strong;
     border-radius: tokens.$r-sm;
+    background: #fff;
     font: inherit;
     font-size: 0.88rem;
   }
+}
+
+.admin-package-card.is-family .admin-package {
+  grid-template-columns: 0.8fr 1.1fr 1.2fr 1.2fr auto;
 }
 
 .admin-package-count {
@@ -664,6 +681,72 @@
     font-size: 0.72rem;
     line-height: 1;
   }
+}
+
+.admin-family-config,
+.admin-family-groups {
+  display: grid;
+  gap: 10px;
+}
+
+.admin-family-config {
+  padding-top: 14px;
+  border-top: 1px solid tokens.$line;
+}
+
+.admin-family-head {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 16px;
+
+  p {
+    margin-top: 4px;
+  }
+}
+
+.admin-family-group {
+  display: grid;
+  grid-template-columns: 1.2fr 0.8fr 0.45fr 0.45fr 0.55fr 1fr 0.7fr auto;
+  gap: 8px;
+  align-items: end;
+  padding: 12px;
+  border: 1px solid tokens.$line;
+  border-radius: tokens.$r-sm;
+  background: #fff;
+
+  label {
+    display: grid;
+    gap: 4px;
+    min-width: 0;
+  }
+
+  label > span {
+    color: tokens.$ink-muted;
+    font-size: 0.7rem;
+    font-weight: 600;
+  }
+
+  input,
+  select {
+    width: 100%;
+    min-width: 0;
+    padding: 9px 8px;
+    border: 1px solid tokens.$line-strong;
+    border-radius: tokens.$r-sm;
+    background: #fff;
+    font: inherit;
+    font-size: 0.82rem;
+  }
+}
+
+.admin-family-preview {
+  margin: 0;
+  padding: 10px 12px;
+  border-radius: tokens.$r-sm;
+  background: rgba(23, 73, 122, 0.07);
+  color: tokens.$ink-body;
+  font-size: 0.84rem;
 }
 
 .admin-promo {
@@ -929,6 +1012,11 @@
   }
 
   .admin-package {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .admin-package-card.is-family .admin-package,
+  .admin-family-group {
     grid-template-columns: 1fr 1fr;
   }
 }

@@ -213,6 +213,114 @@
   }
 }
 
+// Family composition stays inside Details so it does not add another step to
+// the purchase. Rows are intentionally compact but keep 36px tap targets.
+.co-family {
+  display: grid;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid tokens.$line-strong;
+  border-radius: tokens.$r-sm;
+  background: tokens.$paper-sunk;
+}
+
+.co-family-head {
+  display: flex;
+  align-items: start;
+  justify-content: space-between;
+  gap: 12px;
+
+  h3,
+  p {
+    margin: 0;
+  }
+
+  h3 {
+    color: tokens.$ink;
+    font-size: 1rem;
+  }
+
+  p {
+    margin-top: 4px;
+    color: tokens.$ink-muted;
+    font-size: 0.78rem;
+    line-height: 1.45;
+  }
+
+  > strong {
+    flex: 0 0 auto;
+    color: tokens.$brass;
+    font-size: 0.8rem;
+  }
+}
+
+.co-family-groups {
+  display: grid;
+  gap: 7px;
+}
+
+.co-family-group {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 9px 10px;
+  border: 1px solid tokens.$line;
+  border-radius: tokens.$r-sm;
+  background: tokens.$paper;
+}
+
+.co-family-label {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+
+  strong {
+    color: tokens.$ink;
+    font-size: 0.88rem;
+  }
+
+  span {
+    color: tokens.$ink-muted;
+    font-size: 0.74rem;
+  }
+}
+
+.co-family-qty {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+
+  button {
+    width: 36px;
+    height: 36px;
+    border: 1px solid tokens.$line-strong;
+    border-radius: tokens.$r-sm;
+    background: #fff;
+    color: tokens.$ink;
+    font-size: 1.1rem;
+    cursor: pointer;
+
+    &:disabled {
+      opacity: 0.35;
+      cursor: default;
+    }
+  }
+
+  span {
+    min-width: 26px;
+    text-align: center;
+    color: tokens.$ink;
+    font-weight: 700;
+  }
+}
+
+.co-family-warning {
+  margin: 0;
+  color: #a12727;
+  font-size: 0.78rem;
+}
+
 // ---------------------------------------------------------------- totals
 .co-total,
 .co-summary > div {

@@ -34,5 +34,45 @@ else { $fail++; echo "  FAIL bundle purchase limit\n"; }
 if (max_ticket_package_purchase_quantity(1) === 50) echo "  ok   single tickets retain multi-buy\n";
 else { $fail++; echo "  FAIL single-ticket purchase limit\n"; }
 
-echo (count($cases) + 4 - $fail) . " passed, $fail failed\n";
+echo "\n-- family package composition --\n";
+$family = [
+    'type' => 'family',
+    'family' => [
+        'basePrice' => 1000,
+        'minMembers' => 3,
+        'maxMembers' => 6,
+        'groups' => [
+            ['id' => 'parent', 'label' => 'Parent', 'ageLabel' => '18+', 'min' => 1, 'max' => 2,
+             'pricing' => ['type' => 'full', 'value' => 0]],
+            ['id' => 'child', 'label' => 'Child', 'ageLabel' => '3-12', 'min' => 0, 'max' => 4,
+             'pricing' => ['type' => 'percent', 'value' => 50]],
+            ['id' => 'baby', 'label' => 'Baby', 'ageLabel' => '0-2', 'min' => 0, 'max' => 1,
+             'pricing' => ['type' => 'fixed', 'value' => 100]],
+        ],
+    ],
+];
+
+[$composition, $ticketMeta, $amount, $error] = resolve_family_composition($family, [
+    ['id' => 'parent', 'quantity' => 2],
+    ['id' => 'child', 'quantity' => 1],
+]);
+if ($error === null && $amount === 2500) echo "  ok   category discounts set the family total\n";
+else { $fail++; echo "  FAIL family total: " . ($error ?? $amount) . "\n"; }
+if (count($ticketMeta) === 3 && $ticketMeta[2]['memberLabel'] === 'Child') echo "  ok   each admission retains its category\n";
+else { $fail++; echo "  FAIL family ticket metadata\n"; }
+if (family_package_minimum_amount($family) === 1600) echo "  ok   package card finds cheapest valid composition\n";
+else { $fail++; echo "  FAIL family minimum display price\n"; }
+
+[, , , $tooSmall] = resolve_family_composition($family, [['id' => 'parent', 'quantity' => 1]]);
+if ($tooSmall === 'This family package is for 3 to 6 people.') echo "  ok   minimum family size is enforced\n";
+else { $fail++; echo "  FAIL family minimum validation\n"; }
+
+[, , , $unknown] = resolve_family_composition($family, [
+    ['id' => 'parent', 'quantity' => 2],
+    ['id' => 'invented', 'quantity' => 1],
+]);
+if ($unknown === 'That family member category is no longer available.') echo "  ok   unknown categories are rejected\n";
+else { $fail++; echo "  FAIL unknown family category\n"; }
+
+echo (count($cases) + 9 - $fail) . " passed, $fail failed\n";
 exit($fail === 0 ? 0 : 1);

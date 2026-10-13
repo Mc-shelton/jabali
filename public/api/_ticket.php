@@ -105,6 +105,11 @@ function pdf_ticket(array $order): string
             (int) ($order['ticketNumber'] ?? 1) . ' of ' . (int) $order['ticketTotal'],
         ];
     }
+    if (!empty($order['memberLabel'])) {
+        $category = (string) $order['memberLabel'];
+        if (!empty($order['ageLabel'])) $category .= ' (' . $order['ageLabel'] . ')';
+        $rows[] = ['FAMILY CATEGORY', $category];
+    }
 
     $optionBits = [];
     foreach ((array) ($order['options'] ?? []) as $opt) {

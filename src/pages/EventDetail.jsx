@@ -141,13 +141,18 @@ const EventDetail = () => {
                     // A package with its own checkout URL links out; otherwise the
                     // card opens the in-page M-Pesa checkout.
                     const external = Boolean(pkg.url);
+                    const isFamily = pkg.type === 'family';
                     const inner = (
                       <>
                         <span className="evd-package-head">
                           <span className="evd-package-name">{pkg.name}</span>
                           <span className="evd-package-price">{pkg.price}</span>
                         </span>
-                        {(Number(pkg.ticketCount) || 1) > 1 && (
+                        {isFamily ? (
+                          <span className="evd-package-note">
+                            Build your family package · {pkg.family?.minMembers}–{pkg.family?.maxMembers} tickets
+                          </span>
+                        ) : (Number(pkg.ticketCount) || 1) > 1 && (
                           <span className="evd-package-note">
                             Includes {Number(pkg.ticketCount)} tickets
                           </span>

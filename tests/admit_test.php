@@ -73,7 +73,7 @@ check('empty input, no prefix guess', find_by_code($orders, '   '), null);
 echo "\n-- individual ticket codes are independent --\n";
 $individual = ticket(['tickets' => [
     ['code' => 'JC-FIRST0001', 'admittedAt' => null],
-    ['code' => 'JC-SECOND002', 'admittedAt' => null],
+    ['code' => 'JC-SECOND002', 'admittedAt' => null, 'memberType' => 'child', 'memberLabel' => 'Child', 'ageLabel' => '3-12'],
 ]]);
 $orders = [$individual];
 $match = find_ticket_by_code($orders, 'second002');
@@ -83,6 +83,7 @@ check('nested code finds its ticket', $match['ticketIndex'], 1);
 $second = order_ticket_record_at($individual, 1);
 check('one new QR admits one person', $second['quantity'], 1);
 check('ticket position is shown', [$second['number'], $second['total']], [2, 2]);
+check('family category follows the ticket', [$second['memberType'], $second['memberLabel']], ['child', 'Child']);
 check('unused nested ticket admits', admit_status($individual, $second), 'ok');
 
 $at = '2026-11-08T19:02:00+03:00';
@@ -101,6 +102,8 @@ check('quantity is shown',   $view['quantity'], 3);
 check('buyer is shown',      $view['buyer'], 'Shellton Omondi');
 check('code is echoed back', $view['code'], 'JC-A1B2C3D4E5');
 check('not yet admitted',    $view['admittedAt'], null);
+$familyView = admit_view($individual, 'ok', order_ticket_record_at($individual, 1));
+check('door sees family category', [$familyView['memberLabel'], $familyView['ageLabel']], ['Child', '3-12']);
 
 // On a duplicate the original timestamp must come back, so staff can say when
 // the ticket was already used rather than merely that it was.

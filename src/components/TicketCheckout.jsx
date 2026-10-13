@@ -26,14 +26,46 @@ const AUTO_POLL_MS = 30000;
 const priceToNumber = (price) => Number(String(price ?? '').replace(/[^0-9]/g, '')) || 0;
 const money = (n) => `KES ${Number(n).toLocaleString('en-KE')}`;
 
+const familyUnitPrice = (basePrice, group) => {
+  const type = group.pricing?.type || 'full';
+  const value = Math.max(0, Number(group.pricing?.value) || 0);
+  if (type === 'fixed') return value;
+  if (type === 'percent') return Math.max(0, Math.round(basePrice * (1 - Math.min(100, value) / 100)));
+  return basePrice;
+};
+
+const initialFamilyCounts = (family) => {
+  const groups = family?.groups ?? [];
+  const counts = Object.fromEntries(groups.map((group) => {
+    const min = Math.max(0, Number(group.min) || 0);
+    const max = Math.max(min, Number(group.max) || min);
+    return [group.id, Math.max(min, Math.min(max, Number(group.default) || 0))];
+  }));
+
+  let total = Object.values(counts).reduce((sum, count) => sum + count, 0);
+  let needed = Math.max(0, (Number(family?.minMembers) || 1) - total);
+  for (const group of groups) {
+    if (needed === 0) break;
+    const room = Math.max(0, (Number(group.max) || 0) - (counts[group.id] || 0));
+    const add = Math.min(room, needed);
+    counts[group.id] = (counts[group.id] || 0) + add;
+    needed -= add;
+    total += add;
+  }
+  return counts;
+};
+
 // `kind` is 'ticket' or 'merch'. `item` is a { name, price, note } object — a
 // ticket package or a merch product.
 const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
   const isMerch = kind === 'merch';
+  const isFamily = !isMerch && item.type === 'family';
+  const family = isFamily ? item.family ?? {} : null;
+  const familyGroups = family?.groups ?? [];
   const ticketsPerPackage = isMerch
     ? 1
     : Math.min(50, Math.max(1, Math.trunc(Number(item.ticketCount) || 1)));
-  const isTicketBundle = !isMerch && ticketsPerPackage > 1;
+  const isTicketBundle = !isMerch && !isFamily && ticketsPerPackage > 1;
   const qtyLabel = isMerch ? 'Quantity' : isTicketBundle ? 'Number of packages' : 'Number of tickets';
   const maxPurchaseQuantity = isMerch ? 20 : isTicketBundle ? 1 : 50;
   // details | extras | payment | processing | waiting | success | failed
@@ -47,6 +79,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
     quantity: 1,
     promoCode: '',
   });
+  const [familyCounts, setFamilyCounts] = useState(() => initialFamilyCounts(family));
   // Variant choices, keyed by option name. Required options default to their
   // first choice so the buyer can't submit an incomplete selection by accident.
   const itemOptions = item.options ?? [];
@@ -137,20 +170,44 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
   // `priceFinal` is the server's own figure with any product discount already
   // applied. Falling back to parsing the label keeps ticket packages — which
   // have no discount — working unchanged.
-  const basePrice = item.priceFinal ?? priceToNumber(item.price);
-  const unit = openAmount ? Number(customAmount) || 0 : basePrice + optionDelta;
-  const qty = openAmount
+  const basePrice = isFamily
+    ? Number(family.basePrice) || 0
+    : item.priceFinal ?? priceToNumber(item.price);
+  const familyLines = familyGroups.map((group) => {
+    const quantity = familyCounts[group.id] || 0;
+    const unitPrice = familyUnitPrice(basePrice, group);
+    return { ...group, quantity, unitPrice, amount: quantity * unitPrice };
+  });
+  const familyMemberCount = familyLines.reduce((sum, line) => sum + line.quantity, 0);
+  const familySubtotal = familyLines.reduce((sum, line) => sum + line.amount, 0);
+  const familyMin = Number(family?.minMembers) || 1;
+  const familyMax = Number(family?.maxMembers) || 50;
+  const familyInvalid = isFamily && (familyMemberCount < familyMin || familyMemberCount > familyMax);
+
+  const unit = isFamily
+    ? familySubtotal
+    : openAmount ? Number(customAmount) || 0 : basePrice + optionDelta;
+  const qty = isFamily
+    ? 1
+    : openAmount
     ? 1
     : Math.min(maxPurchaseQuantity, Math.max(1, Math.trunc(Number(form.quantity) || 1)));
-  const admissionQuantity = isMerch ? qty : qty * ticketsPerPackage;
-  const itemTotal = unit * qty;
+  const admissionQuantity = isFamily ? familyMemberCount : isMerch ? qty : qty * ticketsPerPackage;
+  const itemTotal = isFamily ? familySubtotal : unit * qty;
   const estTotal = itemTotal + addOnTotal;
   const promoApplied = Boolean(quote?.promoApplied);
   const promoDiscount = promoApplied ? Number(quote.discountAmount) || 0 : 0;
-  const quotedItemTotal = promoApplied ? Number(quote.itemAmount) : itemTotal;
+  const quotedItemTotal = quote ? Number(quote.itemAmount) : itemTotal;
   const displayedTotal = quotedItemTotal + addOnTotal;
 
   const amountTooLow = Boolean(openAmount) && unit < (openAmount.min ?? 1);
+
+  const setFamilyCount = (group, next) => {
+    const min = Math.max(0, Number(group.min) || 0);
+    const max = Math.max(min, Number(group.max) || min);
+    setFamilyCounts((counts) => ({ ...counts, [group.id]: Math.max(min, Math.min(max, next)) }));
+    setQuote(null);
+  };
 
   // Lock scroll + close on Escape (except mid-payment, where closing would be
   // confusing while the phone prompt is live).
@@ -258,6 +315,9 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
     itemType: kind,
     itemName: item.name,
     quantity: qty,
+    ...(isFamily ? {
+      family: familyLines.map((line) => ({ id: line.id, quantity: line.quantity })),
+    } : {}),
     options: itemOptions
       .filter((opt) => choices[opt.name])
       .map((opt) => ({ name: opt.name, choice: choices[opt.name] })),
@@ -270,7 +330,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
         .map(([name, choice]) => ({ name, choice })),
     })),
     promoCode: form.promoCode.trim(),
-    ...(promoApplied ? { expectedAmount: displayedTotal } : {}),
+    ...(quote ? { expectedAmount: displayedTotal } : {}),
   };
 
   // Details → extras → payment. The extras step is skipped entirely when there
@@ -280,7 +340,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
     setError('');
     setMpesaPhone((p) => p || form.phone);
 
-    if (!pricingPayload.promoCode) {
+    if (!isFamily && !pricingPayload.promoCode) {
       setQuote(null);
       setStage(addOnCatalogue.length > 0 ? 'extras' : 'payment');
       return;
@@ -289,7 +349,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
     setQuoting(true);
     try {
       const verified = await quoteTicketPayment(pricingPayload);
-      if (!verified.promoApplied) {
+      if (pricingPayload.promoCode && !verified.promoApplied) {
         setError('That promo code wasn’t recognised. Check it and try again.');
         return;
       }
@@ -342,6 +402,8 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
                 ' · you choose the amount'
               ) : promoApplied ? (
                 ' · promo applied'
+              ) : isFamily ? (
+                ` · ${item.price || 'build your package'}`
               ) : (
                 <>
                   {' · '}
@@ -373,10 +435,56 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
         {/* ---------------------------------------------------------- details */}
         {stage === 'details' && (
           <form className="co-body" onSubmit={goToExtras}>
+            {isFamily && (
+              <section className="co-family" aria-labelledby="co-family-title">
+                <div className="co-family-head">
+                  <div>
+                    <h3 id="co-family-title">Who’s coming?</h3>
+                    <p>Choose {familyMin}–{familyMax} family members. Each person receives a separate ticket.</p>
+                  </div>
+                  <strong>{familyMemberCount} {familyMemberCount === 1 ? 'ticket' : 'tickets'}</strong>
+                </div>
+                <div className="co-family-groups">
+                  {familyLines.map((group) => (
+                    <div className="co-family-group" key={group.id}>
+                      <div className="co-family-label">
+                        <strong>{group.label}</strong>
+                        <span>
+                          {[group.ageLabel, `${money(group.unitPrice)} each`].filter(Boolean).join(' · ')}
+                        </span>
+                      </div>
+                      <div className="co-family-qty">
+                        <button
+                          type="button"
+                          onClick={() => setFamilyCount(group, group.quantity - 1)}
+                          disabled={group.quantity <= Number(group.min || 0)}
+                          aria-label={`Remove one ${group.label}`}
+                        >
+                          −
+                        </button>
+                        <span aria-live="polite">{group.quantity}</span>
+                        <button
+                          type="button"
+                          onClick={() => setFamilyCount(group, group.quantity + 1)}
+                          disabled={group.quantity >= Number(group.max || 0) || familyMemberCount >= familyMax}
+                          aria-label={`Add one ${group.label}`}
+                        >
+                          +
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                {familyInvalid && (
+                  <p className="co-family-warning">Choose between {familyMin} and {familyMax} people to continue.</p>
+                )}
+              </section>
+            )}
+
             <div className="co-grid-2">
               <label className="co-field">
                 <span>Preferred name *</span>
-                <input value={form.preferredName} onChange={setField('preferredName')} required autoFocus />
+                <input value={form.preferredName} onChange={setField('preferredName')} required autoFocus={!isFamily} />
               </label>
               <label className="co-field">
                 <span>Other names</span>
@@ -424,7 +532,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
               </div>
             )}
 
-            <div className={`co-grid-2 ${isTicketBundle ? 'is-single' : ''}`}>
+            <div className={`co-grid-2 ${isTicketBundle || isFamily ? 'is-single' : ''}`}>
               {openAmount ? (
                 <label className="co-field">
                   <span>Amount (KES) *</span>
@@ -442,7 +550,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
                   />
                   <small>Minimum {money(openAmount.min ?? 1)}.</small>
                 </label>
-              ) : !isTicketBundle ? (
+              ) : !isTicketBundle && !isFamily ? (
                 <label className="co-field">
                   <span>{qtyLabel} *</span>
                   <input
@@ -462,9 +570,11 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
               </label>
             </div>
 
-            {isTicketBundle && (
+            {(isTicketBundle || isFamily) && (
               <p className="co-note">
-                This package includes {ticketsPerPackage} individually scannable tickets.
+                {isFamily
+                  ? `Your current family mix includes ${familyMemberCount} individually scannable tickets.`
+                  : `This package includes ${ticketsPerPackage} individually scannable tickets.`}
               </p>
             )}
 
@@ -487,11 +597,11 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
               <p className="co-error">Please enter at least {money(openAmount.min ?? 1)}.</p>
             )}
 
-            <button type="submit" className="btn btn-primary co-submit" disabled={amountTooLow || quoting}>
+            <button type="submit" className="btn btn-primary co-submit" disabled={amountTooLow || familyInvalid || quoting}>
               {quoting ? (
                 <>
                   <LoadingOutlined />
-                  Verifying promo…
+                  {isFamily ? 'Checking total…' : 'Verifying promo…'}
                 </>
               ) : (
                 <>
@@ -580,14 +690,21 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
             </div>
 
             <div className="co-summary">
-              <div>
-                <span>
-                  {item.name}
-                  {!openAmount && ` × ${qty}`}
-                  {isTicketBundle && ` (${admissionQuantity} tickets)`}
-                </span>
-                <strong>{money(itemTotal)}</strong>
-              </div>
+              {isFamily ? familyLines.filter((line) => line.quantity > 0).map((line) => (
+                <div key={line.id}>
+                  <span>{line.label} × {line.quantity}</span>
+                  <strong>{money(line.amount)}</strong>
+                </div>
+              )) : (
+                <div>
+                  <span>
+                    {item.name}
+                    {!openAmount && ` × ${qty}`}
+                    {isTicketBundle && ` (${admissionQuantity} tickets)`}
+                  </span>
+                  <strong>{money(itemTotal)}</strong>
+                </div>
+              )}
               {promoApplied && (
                 <div className="co-summary-discount">
                   <span>Promo {quote.promoCode}</span>
@@ -624,14 +741,21 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
         {stage === 'payment' && (
           <form className="co-body" onSubmit={pay}>
             <div className="co-summary">
-              <div>
-                <span>
-                  {item.name}
-                  {!openAmount && ` × ${qty}`}
-                  {isTicketBundle && ` (${admissionQuantity} tickets)`}
-                </span>
-                <strong>{money(itemTotal)}</strong>
-              </div>
+              {isFamily ? familyLines.filter((line) => line.quantity > 0).map((line) => (
+                <div key={line.id}>
+                  <span>{line.label} × {line.quantity}</span>
+                  <strong>{money(line.amount)}</strong>
+                </div>
+              )) : (
+                <div>
+                  <span>
+                    {item.name}
+                    {!openAmount && ` × ${qty}`}
+                    {isTicketBundle && ` (${admissionQuantity} tickets)`}
+                  </span>
+                  <strong>{money(itemTotal)}</strong>
+                </div>
+              )}
               {promoApplied && (
                 <div className="co-summary-discount">
                   <span>Promo {quote.promoCode}</span>
@@ -662,7 +786,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
                 </div>
               ))}
 
-              {(promoApplied || addOnTotal > 0) && (
+              {(isFamily || promoApplied || addOnTotal > 0) && (
                 <div className="co-summary-total">
                   <span>Total</span>
                   <strong>{money(displayedTotal)}</strong>

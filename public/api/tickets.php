@@ -214,6 +214,8 @@ function public_order(array $order): array
         'quantity'   => $order['quantity'],
         'packageQuantity'   => $order['packageQuantity'] ?? $order['quantity'],
         'ticketsPerPackage' => $order['ticketsPerPackage'] ?? 1,
+        'packageType'       => $order['packageType'] ?? 'standard',
+        'familyComposition' => $order['familyComposition'] ?? [],
         'itemType'   => $order['itemType'] ?? 'ticket',
         'itemName'   => $order['itemName'] ?? '',
         'eventTitle' => $order['eventTitle'] ?? '',
@@ -262,6 +264,9 @@ route([
         [$event, $item, $err] = find_event_and_item($slug, $itemType, $itemName);
         if ($err) error_out($err, 404);
 
+        $isFamily = $itemType === 'ticket' && ($item['type'] ?? 'standard') === 'family';
+        if ($isFamily) $purchaseQuantity = 1;
+
         $ticketsPerPackage = $itemType === 'ticket'
             ? normalise_ticket_count($item['ticketCount'] ?? 1)
             : 1;
@@ -277,8 +282,18 @@ route([
 
         $open = (array) ($item['openAmount'] ?? []);
         $isOpenAmount = !empty($open['enabled']);
+        $familyComposition = [];
+        $familyTicketMeta = [];
 
-        if ($isOpenAmount) {
+        if ($isFamily) {
+            [$familyComposition, $familyTicketMeta, $subtotal, $familyErr] =
+                resolve_family_composition($item, $in['family'] ?? []);
+            if ($familyErr) error_out($familyErr, 422);
+
+            $purchaseQuantity = 1;
+            $ticketsPerPackage = count($familyTicketMeta);
+            $unit = $subtotal;
+        } elseif ($isOpenAmount) {
             // The buyer names the figure (a donation). Quantity is meaningless
             // here, so it's pinned to 1 and the amount is used as-is.
             $min = max(1, (int) ($open['min'] ?? 1));
@@ -304,9 +319,11 @@ route([
             $subtotal = $unit * $purchaseQuantity;
         }
 
-        $quantity = $itemType === 'ticket'
+        $quantity = $isFamily
+            ? count($familyTicketMeta)
+            : ($itemType === 'ticket'
             ? ticket_admission_quantity($purchaseQuantity, $ticketsPerPackage)
-            : $purchaseQuantity;
+            : $purchaseQuantity);
         if ($itemType === 'ticket' && $quantity > MAX_TICKETS_PER_ORDER) {
             error_out(
                 'One order can contain at most ' . MAX_TICKETS_PER_ORDER
@@ -346,6 +363,8 @@ route([
                 'amount'        => $amount,
                 'promoApplied'  => $promoApplied,
                 'promoCode'     => $promo,
+                'quantity'      => $quantity,
+                'familyComposition' => $familyComposition,
             ]);
         }
 
@@ -399,6 +418,15 @@ route([
         $ticketCodes = $itemType === 'ticket'
             ? mint_ticket_codes($orders, $quantity)
             : [mint_ticket_code($orders)];
+        $ticketRows = [];
+        if ($itemType === 'ticket') {
+            foreach ($ticketCodes as $index => $code) {
+                $ticketRows[] = array_merge(
+                    ['code' => $code, 'admittedAt' => null],
+                    $familyTicketMeta[$index] ?? []
+                );
+            }
+        }
 
         $order = [
             'id'                => $orderId,
@@ -407,7 +435,7 @@ route([
             // independent entry verification on newly issued orders.
             'ticketCode'        => $ticketCodes[0],
             'tickets'           => $itemType === 'ticket'
-                ? array_map(fn($code) => ['code' => $code, 'admittedAt' => null], $ticketCodes)
+                ? $ticketRows
                 : [],
             'createdAt'         => date('c'),
             'status'            => $bypassPayment ? 'success' : 'pending',
@@ -417,6 +445,7 @@ route([
             'eventVenue'        => $event['venue'] ?? '',
             'itemType'          => $itemType,
             'itemName'          => $itemName,
+            'packageType'       => $isFamily ? 'family' : 'standard',
             'unitPrice'         => $unit,
             'options'           => $chosenOptions,   // shown in admin + on the e-ticket
             'openAmount'        => $isOpenAmount,
@@ -426,6 +455,7 @@ route([
             'packageQuantity'   => $purchaseQuantity,
             'ticketsPerPackage' => $ticketsPerPackage,
             'quantity'          => $quantity,
+            'familyComposition' => $familyComposition,
             // The main item's share, so the add-on lines and the total can
             // always be reconciled against each other after the fact.
             'itemAmount'        => $discounted,

@@ -16,6 +16,18 @@ function enrich(array $event): array
 {
     $event['ticketed'] = !empty($event['packages']);
 
+    // A family package has a variable total, so its card shows the cheapest
+    // valid composition instead of pretending the base adult rate is the
+    // whole-package price.
+    $event['packages'] = array_map(function ($package) {
+        if (($package['type'] ?? 'standard') !== 'family') return $package;
+        $minimum = family_package_minimum_amount($package);
+        $package['price'] = $minimum > 0
+            ? 'From KES ' . number_format($minimum)
+            : 'Choose family members';
+        return $package;
+    }, (array) ($event['packages'] ?? []));
+
     // Products live in the catalogue now, and the event holds their ids. They
     // are resolved back into a full `merch` array here so everything
     // downstream — the event page, the checkout, and the pricing in
@@ -83,15 +95,19 @@ function normalise_event(array $in, array $events, ?array $existing = null): arr
         if ($m !== '') $media[] = $m;
     }
 
-    // packages: [{ name, price, ticketCount, note, url }]
+    // Standard packages keep the original fixed-price shape. Family packages
+    // add a base member price and configurable member groups.
     $packages = [];
     foreach ((array) ($in['packages'] ?? []) as $p) {
         if (!is_array($p)) continue;
         $name = clean_string($p['name'] ?? '', 80);
         $price = clean_string($p['price'] ?? '', 40);
-        if ($name === '' && $price === '') continue;
+        $packageType = ($p['type'] ?? 'standard') === 'family' ? 'family' : 'standard';
+        if ($name === '' && $price === '' && $packageType !== 'family') continue;
+        if ($name === '') error_out('Every ticket package needs a name.', 422);
         $url = clean_string($p['url'] ?? '', 500);
-        $packages[] = [
+        $package = [
+            'type'        => $packageType,
             'name'        => $name,
             'price'       => $price,
             // One keeps every package saved before bundles existed working
@@ -100,6 +116,68 @@ function normalise_event(array $in, array $events, ?array $existing = null): arr
             'note'        => clean_string($p['note'] ?? '', 160),
             'url'         => $url !== '' ? $url : null,
         ];
+
+        if ($packageType === 'family') {
+            $sentFamily = (array) ($p['family'] ?? []);
+            $basePrice = ticket_price_to_int($sentFamily['basePrice'] ?? 0);
+            $minMembers = max(1, min(MAX_TICKETS_PER_PACKAGE, (int) ($sentFamily['minMembers'] ?? 2)));
+            $maxMembers = max($minMembers, min(MAX_TICKETS_PER_PACKAGE, (int) ($sentFamily['maxMembers'] ?? 8)));
+            if ($basePrice < 1) error_out("$name needs a valid base member price.", 422);
+
+            $groups = [];
+            $ids = [];
+            foreach ((array) ($sentFamily['groups'] ?? []) as $index => $group) {
+                if (!is_array($group)) continue;
+                $label = clean_string($group['label'] ?? '', 60);
+                if ($label === '') continue;
+
+                $rawId = clean_string($group['id'] ?? '', 60);
+                $id = slugify($rawId !== '' ? $rawId : $label);
+                if ($id === '') $id = 'member-' . ($index + 1);
+                $baseId = $id;
+                $suffix = 2;
+                while (isset($ids[$id])) $id = $baseId . '-' . $suffix++;
+                $ids[$id] = true;
+
+                $min = max(0, min(MAX_TICKETS_PER_PACKAGE, (int) ($group['min'] ?? 0)));
+                $max = max($min, min(MAX_TICKETS_PER_PACKAGE, (int) ($group['max'] ?? $min)));
+                $default = max($min, min($max, (int) ($group['default'] ?? $min)));
+                $sentPricing = (array) ($group['pricing'] ?? []);
+                $pricingType = in_array($sentPricing['type'] ?? '', ['percent', 'fixed'], true)
+                    ? $sentPricing['type']
+                    : 'full';
+                $pricingValue = max(0, (int) ($sentPricing['value'] ?? 0));
+                if ($pricingType === 'percent') $pricingValue = min(100, $pricingValue);
+
+                $groups[] = [
+                    'id'       => $id,
+                    'label'    => $label,
+                    'ageLabel' => clean_string($group['ageLabel'] ?? '', 40),
+                    'min'      => $min,
+                    'max'      => $max,
+                    'default'  => $default,
+                    'pricing'  => ['type' => $pricingType, 'value' => $pricingValue],
+                ];
+            }
+
+            if (!$groups) error_out("$name needs at least one member category.", 422);
+            $minimumSlots = array_sum(array_column($groups, 'min'));
+            $maximumSlots = array_sum(array_column($groups, 'max'));
+            if ($minimumSlots > $maxMembers || $maximumSlots < $minMembers) {
+                error_out("$name member-category limits cannot satisfy the package size.", 422);
+            }
+
+            $package['price'] = '';
+            $package['ticketCount'] = $minMembers;
+            $package['family'] = [
+                'basePrice'  => $basePrice,
+                'minMembers' => $minMembers,
+                'maxMembers' => $maxMembers,
+                'groups'     => $groups,
+            ];
+        }
+
+        $packages[] = $package;
     }
 
     // Products come from the catalogue now; the event stores only their ids.

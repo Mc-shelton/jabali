@@ -12,6 +12,9 @@ function order_email_html(array $order): string
     // An open-amount order (a donation) has no meaningful quantity.
     if (!empty($order['openAmount'])) {
         $item = htmlspecialchars((string) ($order['itemName'] ?? ''));
+    } elseif ($isTicket && ($order['packageType'] ?? '') === 'family') {
+        $tickets = max(1, (int) ($order['quantity'] ?? 1));
+        $item = htmlspecialchars(($order['itemName'] ?? 'Family') . " package ($tickets tickets)");
     } elseif ($isTicket && ($order['ticketsPerPackage'] ?? 1) > 1) {
         $packages = max(1, (int) ($order['packageQuantity'] ?? 1));
         $tickets = max(1, (int) ($order['quantity'] ?? 1));
@@ -35,6 +38,16 @@ function order_email_html(array $order): string
         ? "<tr><td style=\"padding:8px 0;color:#5a6875\">Options</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">"
           . htmlspecialchars(implode(' · ', $optionBits)) . "</td></tr>"
         : '';
+
+    $familyRows = '';
+    foreach ((array) ($order['familyComposition'] ?? []) as $group) {
+        $label = (string) ($group['label'] ?? 'Family member');
+        if (!empty($group['ageLabel'])) $label .= ' (' . $group['ageLabel'] . ')';
+        $familyRows .= "<tr><td style=\"padding:8px 0;color:#5a6875\">Family</td>"
+            . "<td style=\"padding:8px 0;text-align:right;font-weight:600\">"
+            . htmlspecialchars((string) ($group['quantity'] ?? 0) . ' × ' . $label)
+            . "</td></tr>";
+    }
 
     // Merchandise added to the same order at checkout. Itemised rather than
     // folded into the total: the buyer approved one figure on their phone and
@@ -87,6 +100,7 @@ function order_email_html(array $order): string
       <table style=\"width:100%;border-collapse:collapse;margin:20px 0;font-size:14px\">
         <tr><td style=\"padding:8px 0;color:#5a6875\">Event</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">$event</td></tr>
         <tr><td style=\"padding:8px 0;color:#5a6875\">Order</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">$item</td></tr>
+        $familyRows
         $optionsRow
         $addOnRows
         <tr><td style=\"padding:8px 0;color:#5a6875\">Amount paid</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">$amount</td></tr>

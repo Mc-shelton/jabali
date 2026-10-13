@@ -22,13 +22,46 @@ const blank = {
   media: [],
 };
 
+const defaultFamily = () => ({
+  basePrice: '',
+  minMembers: 3,
+  maxMembers: 8,
+  groups: [
+    { id: 'parent-guardian', label: 'Parent / guardian', ageLabel: '18+', min: 1, max: 2, default: 2, pricing: { type: 'full', value: 0 } },
+    { id: 'child', label: 'Child', ageLabel: '3–12', min: 0, max: 4, default: 1, pricing: { type: 'percent', value: 50 } },
+    { id: 'teen', label: 'Teen', ageLabel: '13–17', min: 0, max: 4, default: 0, pricing: { type: 'percent', value: 30 } },
+    { id: 'youth-adult', label: 'Youth / adult', ageLabel: '18+', min: 0, max: 4, default: 0, pricing: { type: 'percent', value: 10 } },
+  ],
+});
+
+const packageToForm = (pkg) => ({
+  ...pkg,
+  type: pkg.type === 'family' ? 'family' : 'standard',
+  family: pkg.type === 'family' ? { ...defaultFamily(), ...pkg.family } : pkg.family,
+});
+
+const familyPreview = (family) => {
+  const base = Number(family?.basePrice) || 0;
+  return (family?.groups || []).reduce((preview, group) => {
+    const quantity = Math.max(0, Number(group.default) || 0);
+    const type = group.pricing?.type || 'full';
+    const value = Math.max(0, Number(group.pricing?.value) || 0);
+    const unit = type === 'fixed'
+      ? value
+      : type === 'percent'
+        ? Math.max(0, Math.round(base * (1 - Math.min(100, value) / 100)))
+        : base;
+    return { members: preview.members + quantity, amount: preview.amount + quantity * unit };
+  }, { members: 0, amount: 0 });
+};
+
 // The API stores `about` as an array of paragraphs; the form edits it as one
 // textarea (blank line between paragraphs) and converts on load/save.
 const toForm = (event) => ({
   ...blank,
   ...event,
   aboutText: (event.about || []).join('\n\n'),
-  packages: event.packages || [],
+  packages: (event.packages || []).map(packageToForm),
   merchIds: event.merchIds || [],
   promoCodes: event.promoCodes || [],
   media: event.media || [],
@@ -99,7 +132,7 @@ const AdminEventForm = () => {
   const addPackage = () =>
     setForm((f) => ({
       ...f,
-      packages: [...f.packages, { name: '', price: '', ticketCount: 1, note: '', url: '' }],
+      packages: [...f.packages, { type: 'standard', name: '', price: '', ticketCount: 1, note: '', url: '' }],
     }));
   const setPackage = (i, key, val) =>
     setForm((f) => ({
@@ -108,6 +141,65 @@ const AdminEventForm = () => {
     }));
   const removePackage = (i) =>
     setForm((f) => ({ ...f, packages: f.packages.filter((_, idx) => idx !== i) }));
+  const setPackageType = (i, type) =>
+    setForm((f) => ({
+      ...f,
+      packages: f.packages.map((p, idx) => {
+        if (idx !== i) return p;
+        if (type === 'family') {
+          return { ...p, type, family: p.family || { ...defaultFamily(), basePrice: String(p.price ?? '').replace(/[^0-9]/g, '') } };
+        }
+        return { ...p, type: 'standard' };
+      }),
+    }));
+  const setFamily = (i, key, value) =>
+    setForm((f) => ({
+      ...f,
+      packages: f.packages.map((p, idx) => (
+        idx === i ? { ...p, family: { ...p.family, [key]: value } } : p
+      )),
+    }));
+  const setFamilyGroup = (packageIndex, groupIndex, key, value) =>
+    setForm((f) => ({
+      ...f,
+      packages: f.packages.map((p, idx) => {
+        if (idx !== packageIndex) return p;
+        const groups = p.family.groups.map((group, gIdx) => {
+          if (gIdx !== groupIndex) return group;
+          if (key === 'pricingType') {
+            return { ...group, pricing: { ...group.pricing, type: value } };
+          }
+          if (key === 'pricingValue') {
+            return { ...group, pricing: { ...group.pricing, value } };
+          }
+          return { ...group, [key]: value };
+        });
+        return { ...p, family: { ...p.family, groups } };
+      }),
+    }));
+  const addFamilyGroup = (i) =>
+    setForm((f) => ({
+      ...f,
+      packages: f.packages.map((p, idx) => idx === i
+        ? {
+            ...p,
+            family: {
+              ...p.family,
+              groups: [
+                ...p.family.groups,
+                { id: `member-${Date.now()}`, label: '', ageLabel: '', min: 0, max: 4, default: 0, pricing: { type: 'full', value: 0 } },
+              ],
+            },
+          }
+        : p),
+    }));
+  const removeFamilyGroup = (packageIndex, groupIndex) =>
+    setForm((f) => ({
+      ...f,
+      packages: f.packages.map((p, idx) => idx === packageIndex
+        ? { ...p, family: { ...p.family, groups: p.family.groups.filter((_, gIdx) => gIdx !== groupIndex) } }
+        : p),
+    }));
 
   // ---- merchandise
   // Products live in the catalogue now, so the event only records which ones it
@@ -234,32 +326,134 @@ const AdminEventForm = () => {
         <fieldset className="admin-fieldset">
           <legend>Ticket packages</legend>
           <p className="admin-hint">
-            Leave empty for a free event. Price is per package; “Tickets included” controls how many people one package admits.
+            Leave empty for a free event. Standard packages have one fixed price; family packages calculate from the member mix.
           </p>
 
-          {form.packages.map((p, i) => (
-            <div className="admin-package" key={i}>
-              <input placeholder="Name (e.g. Regular)" value={p.name} onChange={(e) => setPackage(i, 'name', e.target.value)} />
-              <input placeholder="Price (e.g. KES 500)" value={p.price} onChange={(e) => setPackage(i, 'price', e.target.value)} />
-              <label className="admin-package-count">
-                <span>Tickets included</span>
-                <input
-                  type="number"
-                  min="1"
-                  max="50"
-                  step="1"
-                  value={p.ticketCount ?? 1}
-                  onChange={(e) => setPackage(i, 'ticketCount', e.target.value)}
-                  required
-                />
-              </label>
-              <input placeholder="Note (optional)" value={p.note} onChange={(e) => setPackage(i, 'note', e.target.value)} />
-              <input placeholder="Ticket URL (optional)" value={p.url || ''} onChange={(e) => setPackage(i, 'url', e.target.value)} />
-              <button type="button" className="admin-icon-btn is-danger" onClick={() => removePackage(i)} aria-label="Remove package">
-                <DeleteOutlined />
-              </button>
-            </div>
-          ))}
+          {form.packages.map((p, i) => {
+            const isFamily = p.type === 'family';
+            const preview = familyPreview(p.family);
+            return (
+              <div className={`admin-package-card ${isFamily ? 'is-family' : ''}`} key={i}>
+                <div className="admin-package">
+                  <label className="admin-package-count">
+                    <span>Package type</span>
+                    <select value={p.type || 'standard'} onChange={(e) => setPackageType(i, e.target.value)}>
+                      <option value="standard">Standard</option>
+                      <option value="family">Family</option>
+                    </select>
+                  </label>
+                  <input required placeholder="Name (e.g. Regular)" value={p.name} onChange={(e) => setPackage(i, 'name', e.target.value)} />
+                  {!isFamily && (
+                    <>
+                      <input required placeholder="Price (e.g. KES 500)" value={p.price} onChange={(e) => setPackage(i, 'price', e.target.value)} />
+                      <label className="admin-package-count">
+                        <span>Tickets included</span>
+                        <input
+                          type="number"
+                          min="1"
+                          max="50"
+                          step="1"
+                          value={p.ticketCount ?? 1}
+                          onChange={(e) => setPackage(i, 'ticketCount', e.target.value)}
+                          required
+                        />
+                      </label>
+                    </>
+                  )}
+                  <input placeholder="Note (optional)" value={p.note} onChange={(e) => setPackage(i, 'note', e.target.value)} />
+                  <input placeholder="Ticket URL (optional)" value={p.url || ''} onChange={(e) => setPackage(i, 'url', e.target.value)} />
+                  <button type="button" className="admin-icon-btn is-danger" onClick={() => removePackage(i)} aria-label="Remove package">
+                    <DeleteOutlined />
+                  </button>
+                </div>
+
+                {isFamily && (
+                  <div className="admin-family-config">
+                    <div className="admin-grid-3">
+                      <label className="admin-field">
+                        <span>Base member price (KES)</span>
+                        <input type="number" min="1" step="1" required value={p.family?.basePrice ?? ''} onChange={(e) => setFamily(i, 'basePrice', e.target.value)} />
+                      </label>
+                      <label className="admin-field">
+                        <span>Minimum family size</span>
+                        <input type="number" min="1" max="50" step="1" required value={p.family?.minMembers ?? 3} onChange={(e) => setFamily(i, 'minMembers', e.target.value)} />
+                      </label>
+                      <label className="admin-field">
+                        <span>Maximum family size</span>
+                        <input type="number" min="1" max="50" step="1" required value={p.family?.maxMembers ?? 8} onChange={(e) => setFamily(i, 'maxMembers', e.target.value)} />
+                      </label>
+                    </div>
+
+                    <div className="admin-family-head">
+                      <div>
+                        <strong>Member categories</strong>
+                        <p className="admin-hint">Set the allowed count and price for each kind of family member.</p>
+                      </div>
+                      <button type="button" className="admin-btn admin-btn-ghost" onClick={() => addFamilyGroup(i)}>
+                        <PlusOutlined /> Add category
+                      </button>
+                    </div>
+
+                    <div className="admin-family-groups">
+                      {(p.family?.groups || []).map((group, groupIndex) => (
+                        <div className="admin-family-group" key={group.id || groupIndex}>
+                          <label>
+                            <span>Category</span>
+                            <input required placeholder="Child" value={group.label} onChange={(e) => setFamilyGroup(i, groupIndex, 'label', e.target.value)} />
+                          </label>
+                          <label>
+                            <span>Age guidance</span>
+                            <input placeholder="3–12" value={group.ageLabel || ''} onChange={(e) => setFamilyGroup(i, groupIndex, 'ageLabel', e.target.value)} />
+                          </label>
+                          <label>
+                            <span>Min</span>
+                            <input type="number" min="0" max="50" step="1" required value={group.min ?? 0} onChange={(e) => setFamilyGroup(i, groupIndex, 'min', e.target.value)} />
+                          </label>
+                          <label>
+                            <span>Max</span>
+                            <input type="number" min="0" max="50" step="1" required value={group.max ?? 0} onChange={(e) => setFamilyGroup(i, groupIndex, 'max', e.target.value)} />
+                          </label>
+                          <label>
+                            <span>Default</span>
+                            <input type="number" min="0" max="50" step="1" required value={group.default ?? 0} onChange={(e) => setFamilyGroup(i, groupIndex, 'default', e.target.value)} />
+                          </label>
+                          <label>
+                            <span>Pricing</span>
+                            <select value={group.pricing?.type || 'full'} onChange={(e) => setFamilyGroup(i, groupIndex, 'pricingType', e.target.value)}>
+                              <option value="full">Full base price</option>
+                              <option value="percent">Percentage off</option>
+                              <option value="fixed">Exact KES price</option>
+                            </select>
+                          </label>
+                          <label>
+                            <span>{group.pricing?.type === 'percent' ? 'Discount %' : group.pricing?.type === 'fixed' ? 'Price (KES)' : 'Value'}</span>
+                            <input
+                              type="number"
+                              min="0"
+                              max={group.pricing?.type === 'percent' ? 100 : undefined}
+                              step="1"
+                              required={group.pricing?.type !== 'full'}
+                              disabled={group.pricing?.type === 'full'}
+                              value={group.pricing?.value ?? 0}
+                              onChange={(e) => setFamilyGroup(i, groupIndex, 'pricingValue', e.target.value)}
+                            />
+                          </label>
+                          <button type="button" className="admin-icon-btn is-danger" onClick={() => removeFamilyGroup(i, groupIndex)} aria-label={`Remove ${group.label || 'category'}`}>
+                            <DeleteOutlined />
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                    <p className="admin-family-preview">
+                      Default buyer selection: <strong>{preview.members} tickets</strong>
+                      {' · '}
+                      <strong>KES {preview.amount.toLocaleString('en-KE')}</strong>
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
 
           <button type="button" className="admin-btn admin-btn-ghost" onClick={addPackage}>
             <PlusOutlined /> Add package
