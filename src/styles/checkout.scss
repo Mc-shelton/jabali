@@ -351,6 +351,62 @@
   }
 }
 
+.co-open-groups {
+  display: grid;
+  gap: 9px;
+
+  > div {
+    strong {
+      color: tokens.$ink;
+      font-size: 0.9rem;
+    }
+
+    p {
+      margin: 3px 0 0;
+      color: tokens.$ink-muted;
+      font-size: 0.78rem;
+    }
+  }
+
+  > button {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    width: 100%;
+    padding: 11px 12px;
+    border: 1px solid tokens.$line-strong;
+    border-radius: tokens.$r-sm;
+    background: tokens.$paper;
+    color: tokens.$ink;
+    font: inherit;
+    text-align: left;
+    cursor: pointer;
+
+    &:hover {
+      border-color: tokens.$ink;
+      background: rgba(23, 73, 122, 0.04);
+    }
+
+    > span:first-child {
+      display: grid;
+      gap: 2px;
+    }
+
+    small {
+      color: tokens.$ink-muted;
+      font-size: 0.72rem;
+    }
+
+    > span:last-child {
+      flex: 0 0 auto;
+      color: tokens.$brass;
+      font-size: 0.76rem;
+      font-weight: 700;
+    }
+  }
+}
+
 // ---------------------------------------------------------------- totals
 .co-total,
 .co-summary > div {

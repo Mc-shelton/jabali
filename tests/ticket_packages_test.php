@@ -42,6 +42,10 @@ if (shared_group_member_price(['price' => 'KES 1,001', 'ticketCount' => 5]) === 
     echo "  ok   uneven shared group split is rejected\n";
 } else { $fail++; echo "  FAIL uneven shared group split\n"; }
 
+if (ticket_package_allows_promo([]) && !ticket_package_allows_promo(['allowPromo' => false])) {
+    echo "  ok   promo exemption defaults safely for legacy packages\n";
+} else { $fail++; echo "  FAIL promo exemption default\n"; }
+
 echo "\n-- family package composition --\n";
 $family = [
     'type' => 'family',
@@ -82,5 +86,5 @@ else { $fail++; echo "  FAIL family minimum validation\n"; }
 if ($unknown === 'That family member category is no longer available.') echo "  ok   unknown categories are rejected\n";
 else { $fail++; echo "  FAIL unknown family category\n"; }
 
-echo (count($cases) + 11 - $fail) . " passed, $fail failed\n";
+echo (count($cases) + 12 - $fail) . " passed, $fail failed\n";
 exit($fail === 0 ? 0 : 1);

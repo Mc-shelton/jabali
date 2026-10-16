@@ -7,6 +7,7 @@ declare(strict_types=1);
 
 const TICKET_GROUP_STORE = 'ticket_groups';
 const TICKET_GROUP_UNATTACHED_TTL = 600;
+const MAX_OPEN_TICKET_GROUPS = 5;
 
 function ticket_group_orders_by_id(): array
 {
@@ -44,13 +45,14 @@ function ticket_group_counts(array $group, ?array $orders = null): array
     return ['paid' => $paid, 'pending' => $pending, 'occupied' => $paid + $pending];
 }
 
-function ticket_group_public(array $group): array
+function ticket_group_public(array $group, ?array $orders = null): array
 {
-    $counts = ticket_group_counts($group);
+    $counts = ticket_group_counts($group, $orders);
     $capacity = (int) ($group['capacity'] ?? 1);
     return [
         'token'       => (string) ($group['token'] ?? ''),
         'name'        => (string) ($group['name'] ?? ''),
+        'createdBy'   => (string) ($group['createdBy'] ?? ($group['slots'][0]['memberName'] ?? '')),
         'eventSlug'   => (string) ($group['eventSlug'] ?? ''),
         'packageName' => (string) ($group['packageName'] ?? ''),
         'capacity'    => $capacity,
@@ -61,6 +63,68 @@ function ticket_group_public(array $group): array
         'remaining'   => max(0, $capacity - $counts['occupied']),
         'full'        => $counts['occupied'] >= $capacity,
     ];
+}
+
+function ticket_groups_available(string $eventSlug, string $packageName): array
+{
+    $orders = ticket_group_orders_by_id();
+    $available = [];
+    foreach ((array) store_read(TICKET_GROUP_STORE, []) as $group) {
+        if (($group['eventSlug'] ?? '') !== $eventSlug || ($group['packageName'] ?? '') !== $packageName) continue;
+        $public = ticket_group_public((array) $group, $orders);
+        // A group whose creator's attempt failed has nobody in it and no shared
+        // link in circulation, so it should neither be advertised nor consume
+        // one of the five useful open-group positions.
+        if ($public['occupied'] < 1 || $public['full']) continue;
+        $available[] = $public;
+    }
+    usort($available, fn($a, $b) => $b['occupied'] <=> $a['occupied']);
+    return $available;
+}
+
+function ticket_group_limit_reached(string $eventSlug, string $packageName): bool
+{
+    return count(ticket_groups_available($eventSlug, $packageName)) >= MAX_OPEN_TICKET_GROUPS;
+}
+
+function ticket_groups_admin(array $orderRows): array
+{
+    $orders = [];
+    foreach ($orderRows as $order) {
+        if (!empty($order['id'])) $orders[(string) $order['id']] = $order;
+    }
+
+    $result = [];
+    foreach ((array) store_read(TICKET_GROUP_STORE, []) as $group) {
+        $public = ticket_group_public((array) $group, $orders);
+        $members = [];
+        foreach ((array) ($group['slots'] ?? []) as $slot) {
+            $orderId = (string) ($slot['orderId'] ?? '');
+            $order = $orders[$orderId] ?? [];
+            $members[] = [
+                'name'       => (string) ($slot['memberName'] ?? ''),
+                'status'     => ticket_group_slot_status((array) $slot, $orders),
+                'orderId'    => $orderId,
+                'email'      => (string) ($order['customer']['email'] ?? ''),
+                'phone'      => (string) ($order['customer']['phone'] ?? ($order['mpesaPhone'] ?? '')),
+                'amount'     => (int) ($order['amount'] ?? 0),
+                'receipt'    => (string) ($order['receipt'] ?? ''),
+                'ticketCode' => (string) ($order['ticketCode'] ?? ''),
+                'createdAt'  => (string) ($slot['createdAt'] ?? ''),
+                'paidAt'     => (string) ($order['paidAt'] ?? ''),
+            ];
+        }
+        $site = defined('SITE_URL') && SITE_URL !== '' ? rtrim((string) SITE_URL, '/') : '';
+        $public['id'] = (string) ($group['id'] ?? '');
+        $public['createdAt'] = (string) ($group['createdAt'] ?? '');
+        $public['state'] = $public['occupied'] === 0 ? 'inactive' : ($public['full'] ? 'full' : 'open');
+        $public['inviteUrl'] = $site . '/events/' . rawurlencode($public['eventSlug'])
+            . '?group=' . rawurlencode($public['token']);
+        $public['members'] = $members;
+        $result[] = $public;
+    }
+    usort($result, fn($a, $b) => strcmp($b['createdAt'], $a['createdAt']));
+    return $result;
 }
 
 function ticket_group_find(string $token): ?array
@@ -130,11 +194,31 @@ function ticket_group_reserve(
             if ($index === null) error_out('This group link is invalid or no longer available.', 404);
         } else {
             if ($groupName === '') error_out('Please give your group a name.', 422);
+
+            $orders = ticket_group_orders_by_id();
+            $openCount = 0;
+            foreach ($groups as $candidate) {
+                if (
+                    ($candidate['eventSlug'] ?? '') !== $eventSlug
+                    || ($candidate['packageName'] ?? '') !== $packageName
+                ) continue;
+                $candidateCounts = ticket_group_counts((array) $candidate, $orders);
+                $candidateCapacity = (int) ($candidate['capacity'] ?? 0);
+                if ($candidateCounts['occupied'] > 0 && $candidateCounts['occupied'] < $candidateCapacity) $openCount++;
+            }
+            if ($openCount >= MAX_OPEN_TICKET_GROUPS) {
+                error_out(
+                    'There are already 5 open groups for this ticket. Please join one of them instead.',
+                    409
+                );
+            }
+
             $token = bin2hex(random_bytes(16));
             $groups[] = [
                 'id'          => bin2hex(random_bytes(12)),
                 'token'       => $token,
                 'name'        => $groupName,
+                'createdBy'   => $memberName,
                 'eventSlug'   => $eventSlug,
                 'packageName' => $packageName,
                 'capacity'    => $capacity,

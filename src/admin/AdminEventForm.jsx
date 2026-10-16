@@ -36,6 +36,7 @@ const defaultFamily = () => ({
 
 const packageToForm = (pkg) => ({
   ...pkg,
+  allowPromo: pkg.allowPromo !== false,
   type: ['family', 'group'].includes(pkg.type) ? pkg.type : 'standard',
   family: pkg.type === 'family' ? { ...defaultFamily(), ...pkg.family } : pkg.family,
 });
@@ -132,7 +133,7 @@ const AdminEventForm = () => {
   const addPackage = () =>
     setForm((f) => ({
       ...f,
-      packages: [...f.packages, { type: 'standard', name: '', price: '', ticketCount: 1, note: '', url: '' }],
+      packages: [...f.packages, { type: 'standard', name: '', price: '', ticketCount: 1, allowPromo: true, note: '', url: '' }],
     }));
   const setPackage = (i, key, val) =>
     setForm((f) => ({
@@ -369,6 +370,14 @@ const AdminEventForm = () => {
                   )}
                   <input placeholder="Note (optional)" value={p.note} onChange={(e) => setPackage(i, 'note', e.target.value)} />
                   <input placeholder="Ticket URL (optional)" value={p.url || ''} onChange={(e) => setPackage(i, 'url', e.target.value)} />
+                  <label className="admin-check admin-package-promo">
+                    <input
+                      type="checkbox"
+                      checked={p.allowPromo !== false}
+                      onChange={(e) => setPackage(i, 'allowPromo', e.target.checked)}
+                    />
+                    Allow promo codes
+                  </label>
                   <button type="button" className="admin-icon-btn is-danger" onClick={() => removePackage(i)} aria-label="Remove package">
                     <DeleteOutlined />
                   </button>

@@ -5,6 +5,7 @@
 require __DIR__ . '/_bootstrap.php';
 require __DIR__ . '/_orders.php';
 require __DIR__ . '/_c2b.php';
+require __DIR__ . '/_ticket_groups.php';
 
 route([
     'GET' => function () {
@@ -44,6 +45,7 @@ route([
             // Direct PayBill payments are order-like records for the admin
             // table, while stats.total remains the number of actual orders.
             'orders' => array_values($records),
+            'groups' => ticket_groups_admin($orders),
             'stats'  => [
                 'total'           => count($orders),
                 'paid'            => count($paid),

@@ -35,6 +35,13 @@ function shared_group_member_price(array $package): int
     return intdiv($total, $capacity);
 }
 
+function ticket_package_allows_promo(array $package): bool
+{
+    // Missing means true so every package saved before this control existed
+    // keeps its historical behaviour.
+    return ($package['allowPromo'] ?? true) !== false;
+}
+
 // Ticket prices are stored as either integers (the newer family fields) or as
 // display strings such as "KES 1,200" (legacy/standard packages).
 function ticket_price_to_int($value): int

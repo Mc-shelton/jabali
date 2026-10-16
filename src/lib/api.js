@@ -107,6 +107,11 @@ export const getPaymentStatus = (orderId, { force = false } = {}) =>
 export const fetchTicketGroup = (token) =>
   request(`ticket-groups.php?token=${encodeURIComponent(token)}`);
 
+export const fetchAvailableTicketGroups = (eventSlug, packageName) => {
+  const params = new URLSearchParams({ eventSlug, packageName });
+  return request(`ticket-groups.php?${params.toString()}`);
+};
+
 // ---------------------------------------------------------------- enquiries
 // The contact and join forms. No fallback: unlike a page read, there is nothing
 // useful to substitute for a message that wasn't delivered, so a failure has to

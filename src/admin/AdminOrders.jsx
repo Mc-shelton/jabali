@@ -46,9 +46,83 @@ const EMPTY_FILTERS = {
   to: '',
 };
 
+const AdminGroups = ({ groups }) => {
+  const open = groups.filter((group) => group.state === 'open');
+  const full = groups.filter((group) => group.state === 'full');
+  const paidMembers = groups.reduce((sum, group) => sum + Number(group.paidCount || 0), 0);
+
+  return (
+    <div className="admin-groups-view">
+      <div className="admin-stats">
+        <div className="admin-stat"><span>All groups</span><strong>{groups.length}</strong></div>
+        <div className="admin-stat"><span>Open groups</span><strong>{open.length}</strong></div>
+        <div className="admin-stat"><span>Full groups</span><strong>{full.length}</strong></div>
+        <div className="admin-stat"><span>Paid members</span><strong>{paidMembers}</strong></div>
+      </div>
+
+      {groups.length === 0 ? (
+        <p className="admin-muted">No shared ticket groups yet.</p>
+      ) : (
+        <div className="admin-group-list">
+          {groups.map((group) => (
+            <article className="admin-group-audit" key={group.id || group.token}>
+              <header>
+                <div>
+                  <div className="admin-group-title-line">
+                    <h2>{group.name}</h2>
+                    <span className={`admin-status is-${group.state === 'full' ? 'success' : group.state === 'open' ? 'pending' : 'failed'}`}>
+                      {group.state}
+                    </span>
+                  </div>
+                  <p>{group.eventSlug} · {group.packageName} · created by <strong>{group.createdBy || 'Unknown'}</strong></p>
+                </div>
+                <div className="admin-group-count">
+                  <strong>{group.occupied}/{group.capacity}</strong>
+                  <span>{group.remaining} remaining</span>
+                </div>
+              </header>
+
+              <div className="admin-group-progress" aria-label={`${group.occupied} of ${group.capacity} places occupied`}>
+                <span style={{ width: `${Math.min(100, (group.occupied / Math.max(1, group.capacity)) * 100)}%` }} />
+              </div>
+
+              <div className="admin-group-link">
+                <input value={group.inviteUrl} readOnly onFocus={(e) => e.target.select()} aria-label={`Invite link for ${group.name}`} />
+                <a className="admin-btn admin-btn-ghost" href={group.inviteUrl} target="_blank" rel="noreferrer">Open link</a>
+              </div>
+
+              <details>
+                <summary>Audit composition ({group.members.length} payment {group.members.length === 1 ? 'attempt' : 'attempts'})</summary>
+                <div className="admin-table-wrap">
+                  <table className="admin-table admin-group-members">
+                    <thead><tr><th>Member</th><th>Contact</th><th>Status</th><th>Amount</th><th>Receipt / ticket</th><th>Started</th></tr></thead>
+                    <tbody>
+                      {group.members.map((member, index) => (
+                        <tr key={member.orderId || `${member.name}-${index}`}>
+                          <td className="admin-cell-strong">{member.name || 'Unnamed member'}</td>
+                          <td><div>{member.email || '—'}</div><div className="admin-cell-sub">{member.phone || ''}</div></td>
+                          <td><span className={`admin-status is-${member.status}`}>{member.status}</span></td>
+                          <td>{member.amount ? money(member.amount) : '—'}</td>
+                          <td><div>{member.receipt || '—'}</div><div className="admin-cell-sub">{member.ticketCode || ''}</div></td>
+                          <td className="admin-nowrap">{when(member.paidAt || member.createdAt)}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </details>
+            </article>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+};
+
 const AdminOrders = () => {
   const [data, setData] = useState({
     orders: [],
+    groups: [],
     stats: {
       total: 0,
       paid: 0,
@@ -69,6 +143,7 @@ const AdminOrders = () => {
   // The order shown in the detail dialog, held by id so a reload after
   // reconciling or re-sending refreshes what's on screen.
   const [detailId, setDetailId] = useState('');
+  const [view, setView] = useState('orders');
 
   const load = () =>
     adminFetchOrders()
@@ -80,17 +155,23 @@ const AdminOrders = () => {
     load();
   }, []);
 
-  const { orders } = data;
+  const { orders, groups = [] } = data;
+  const sourceOrders = useMemo(
+    () => view === 'merch'
+      ? orders.filter((order) => orderLines(order).some((line) => line.type === 'merch'))
+      : orders,
+    [orders, view],
+  );
 
   // Dropdown choices come from the orders themselves — no separate config to
   // keep in step.
   const eventOptions = useMemo(
-    () => [...new Set(orders.map((o) => o.eventTitle).filter(Boolean))].sort(),
-    [orders],
+    () => [...new Set(sourceOrders.map((o) => o.eventTitle).filter(Boolean))].sort(),
+    [sourceOrders],
   );
   const itemOptions = useMemo(
-    () => [...new Set(orders.flatMap((o) => orderLines(o).map((line) => line.name)))].sort(),
-    [orders],
+    () => [...new Set(sourceOrders.flatMap((o) => orderLines(o).map((line) => line.name)))].sort(),
+    [sourceOrders],
   );
 
   const setFilter = (key) => (e) => setFilters((f) => ({ ...f, [key]: e.target.value }));
@@ -98,7 +179,7 @@ const AdminOrders = () => {
   const visible = useMemo(() => {
     const q = filters.q.trim().toLowerCase();
 
-    const rows = orders.filter((o) => {
+    const rows = sourceOrders.filter((o) => {
       // Free text covers who bought it and how to identify the transaction.
       // Event and item are deliberately excluded — they have their own
       // dropdowns, and including them made searches ambiguous (searching a
@@ -140,7 +221,7 @@ const AdminOrders = () => {
       if (col.numeric) return (av - bv) * factor;
       return String(av).localeCompare(String(bv)) * factor;
     });
-  }, [orders, filters, sort]);
+  }, [sourceOrders, filters, sort]);
 
   // Stats follow the filter, so a filtered view reports on what's on screen.
   const shownStats = useMemo(() => {
@@ -259,6 +340,19 @@ const AdminOrders = () => {
         </p>
       )}
 
+      <div className="admin-tabs admin-order-tabs" role="tablist" aria-label="Order views">
+        <button type="button" className={`admin-tab ${view === 'orders' ? 'active' : ''}`} onClick={() => setView('orders')}>
+          Orders <span className="admin-count">({orders.length})</span>
+        </button>
+        <button type="button" className={`admin-tab ${view === 'groups' ? 'active' : ''}`} onClick={() => setView('groups')}>
+          Groups <span className="admin-count">({groups.length})</span>
+        </button>
+        <button type="button" className={`admin-tab ${view === 'merch' ? 'active' : ''}`} onClick={() => setView('merch')}>
+          Merchandise <span className="admin-count">({orders.filter((order) => orderLines(order).some((line) => line.type === 'merch')).length})</span>
+        </button>
+      </div>
+
+      {view === 'groups' ? <AdminGroups groups={groups} /> : <>
       <div className="admin-stats">
         <div className="admin-stat">
           <span>{filtersActive ? 'Paid (filtered)' : 'Paid orders'}</span>
@@ -281,8 +375,8 @@ const AdminOrders = () => {
         <div className="admin-stat">
           <span>{filtersActive ? 'Showing' : 'All orders'}</span>
           <strong>
-            {filtersActive ? shownStats.count : Number(data.stats?.total ?? 0)}
-            {filtersActive && <em className="admin-stat-of"> of {orders.length}</em>}
+            {filtersActive || view === 'merch' ? shownStats.count : Number(data.stats?.total ?? 0)}
+            {filtersActive && <em className="admin-stat-of"> of {sourceOrders.length}</em>}
           </strong>
         </div>
       </div>
@@ -357,7 +451,7 @@ const AdminOrders = () => {
         )}
       </div>
 
-      {orders.length === 0 ? (
+      {sourceOrders.length === 0 ? (
         <p className="admin-muted">No orders yet.</p>
       ) : visible.length === 0 ? (
         <p className="admin-muted">No orders match these filters.</p>
@@ -487,6 +581,7 @@ const AdminOrders = () => {
           </table>
         </div>
       )}
+      </>}
 
       {detailOrder && <AdminOrderDetail order={detailOrder} onClose={() => setDetailId('')} />}
     </div>

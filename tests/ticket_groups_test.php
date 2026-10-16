@@ -28,6 +28,7 @@ function check_group(string $name, $condition): void {
 [$group, $slotOne] = ticket_group_reserve('', 'Choir Friends', 'concert', 'Group of 2', 2, 800, 'Alice');
 [$sameGroup, $slotTwo] = ticket_group_reserve($group['token'], '', 'concert', 'Group of 2', 2, 800, 'Bob');
 check_group('creator names a new group', $group['name'] === 'Choir Friends');
+check_group('public group identifies its creator', ticket_group_public($group)['createdBy'] === 'Alice');
 check_group('invite joins the same group', $sameGroup['id'] === $group['id']);
 
 $fullRejected = false;
@@ -46,11 +47,39 @@ $stored = ticket_group_find($group['token']);
 $public = ticket_group_public($stored);
 check_group('paid and pending places both occupy capacity', $public['paidCount'] === 1 && $public['pendingCount'] === 1);
 check_group('full state is derived from occupied places', $public['full'] === true && $public['remaining'] === 0);
-check_group('public invite hides member and slot records', !isset($public['slots']) && !str_contains(json_encode($public), 'Alice'));
+check_group(
+    'public invite hides member and slot records beyond the named creator',
+    !isset($public['slots']) && !str_contains(json_encode($public), 'order-one')
+);
 
 ticket_group_release($group['token'], $slotTwo['id']);
 $public = ticket_group_public(ticket_group_find($group['token']));
 check_group('released payment attempt reopens its place', $public['full'] === false && $public['remaining'] === 1);
+
+// One open group already exists above. Four more reach the per-package limit;
+// another event/package remains independent, and a sixth here is rejected.
+for ($i = 2; $i <= 5; $i++) {
+    ticket_group_reserve('', "Choir Friends $i", 'concert', 'Group of 2', 2, 800, "Creator $i");
+}
+$available = ticket_groups_available('concert', 'Group of 2');
+check_group('five open groups are publicly available', count($available) === MAX_OPEN_TICKET_GROUPS);
+check_group('creation limit is visible before a buyer starts payment', ticket_group_limit_reached('concert', 'Group of 2'));
+
+$limitRejected = false;
+try {
+    ticket_group_reserve('', 'One too many', 'concert', 'Group of 2', 2, 800, 'Sixth Creator');
+} catch (RuntimeException $e) {
+    $limitRejected = str_contains($e->getMessage(), 'already 5 open groups');
+}
+check_group('sixth open group is rejected', $limitRejected);
+
+$otherPackageWorked = true;
+try {
+    ticket_group_reserve('', 'Different tier', 'concert', 'Group of 3', 3, 700, 'Another Creator');
+} catch (RuntimeException $e) {
+    $otherPackageWorked = false;
+}
+check_group('limit is scoped to one event and package', $otherPackageWorked);
 
 foreach (glob($testDir . '/*') ?: [] as $file) unlink($file);
 rmdir($testDir);

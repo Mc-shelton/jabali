@@ -270,6 +270,9 @@ route([
         [$event, $item, $err] = find_event_and_item($slug, $itemType, $itemName);
         if ($err) error_out($err, 404);
 
+        $promoAllowed = $itemType === 'merch' || ticket_package_allows_promo($item);
+        if (!$promoAllowed) $promo = '';
+
         $isFamily = $itemType === 'ticket' && ($item['type'] ?? 'standard') === 'family';
         $isGroup = $itemType === 'ticket' && ($item['type'] ?? 'standard') === 'group';
         if ($isFamily || $isGroup) $purchaseQuantity = 1;
@@ -302,6 +305,19 @@ route([
             }
             $joiningPublic = ticket_group_public($joiningGroup);
             if ($joiningPublic['full']) error_out('This group is full. Please create a new group.', 409);
+        }
+
+        // The checkout normally learns this as soon as it opens. Repeat the
+        // check while quoting so a delayed/failed availability request still
+        // cannot take a sixth creator as far as the payment screen. The locked
+        // check in ticket_group_reserve() remains the final race-safe authority.
+        if (
+            $isGroup
+            && $groupToken === ''
+            && $quoteOnly
+            && ticket_group_limit_reached($slug, $itemName)
+        ) {
+            error_out('There are already 5 open groups for this ticket. Please join one of them instead.', 409);
         }
 
         $ticketsPerPackage = $itemType === 'ticket' && !$isGroup

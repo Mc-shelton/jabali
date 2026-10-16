@@ -13,7 +13,12 @@ import {
   TeamOutlined,
 } from '@ant-design/icons';
 import '../styles/checkout.scss';
-import { getPaymentStatus, initiateTicketPayment, quoteTicketPayment } from '../lib/api';
+import {
+  fetchAvailableTicketGroups,
+  getPaymentStatus,
+  initiateTicketPayment,
+  quoteTicketPayment,
+} from '../lib/api';
 import { beginCheckout, purchase } from '../lib/analytics';
 
 // Poll every 5s for the first 30s. After that we stop polling automatically but
@@ -63,6 +68,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', inviteGroup = null, onCl
   const isMerch = kind === 'merch';
   const isFamily = !isMerch && item.type === 'family';
   const isGroup = !isMerch && item.type === 'group';
+  const promoAllowed = isMerch || item.allowPromo !== false;
   const family = isFamily ? item.family ?? {} : null;
   const familyGroups = family?.groups ?? [];
   const groupCapacity = isGroup ? Math.min(50, Math.max(2, Math.trunc(Number(item.ticketCount) || 2))) : 0;
@@ -76,6 +82,9 @@ const TicketCheckout = ({ event, item, kind = 'ticket', inviteGroup = null, onCl
   // details | extras | payment | processing | waiting | success | failed
   // `waiting` is not a failure — it's "we stopped auto-checking, press Refresh".
   const [activeGroup, setActiveGroup] = useState(inviteGroup);
+  const [availableGroups, setAvailableGroups] = useState([]);
+  const [groupLimitReached, setGroupLimitReached] = useState(false);
+  const [groupsLoading, setGroupsLoading] = useState(false);
   const [stage, setStage] = useState(inviteGroup?.full ? 'group-full' : 'details');
   const [form, setForm] = useState({
     groupName: '',
@@ -219,6 +228,26 @@ const TicketCheckout = ({ event, item, kind = 'ticket', inviteGroup = null, onCl
     setQuote(null);
   };
 
+  const loadAvailableGroups = async () => {
+    if (!isGroup) return;
+    setGroupsLoading(true);
+    try {
+      const data = await fetchAvailableTicketGroups(event.slug, item.name);
+      setAvailableGroups(data.groups ?? []);
+      setGroupLimitReached(Boolean(data.limitReached));
+    } catch {
+      // Availability is checked again atomically when payment starts. A brief
+      // list failure must not break an otherwise valid checkout.
+    } finally {
+      setGroupsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!isGroup || activeGroup) return;
+    loadAvailableGroups();
+  }, [isGroup, activeGroup?.token, event.slug, item.name]);
+
   // Lock scroll + close on Escape (except mid-payment, where closing would be
   // confusing while the phone prompt is live).
   useEffect(() => {
@@ -343,7 +372,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', inviteGroup = null, onCl
         .filter(([, choice]) => choice)
         .map(([name, choice]) => ({ name, choice })),
     })),
-    promoCode: form.promoCode.trim(),
+    promoCode: promoAllowed ? form.promoCode.trim() : '',
     ...(quote ? { expectedAmount: displayedTotal } : {}),
   };
 
@@ -354,6 +383,10 @@ const TicketCheckout = ({ event, item, kind = 'ticket', inviteGroup = null, onCl
     setError('');
     setMpesaPhone((p) => p || form.phone);
 
+    if (isGroup && !activeGroup && groupLimitReached) {
+      setError('Five groups are already open. Please choose one of them below.');
+      return;
+    }
     if (isGroup && !activeGroup && !form.groupName.trim()) {
       setError('Please give your group a name.');
       return;
@@ -378,6 +411,12 @@ const TicketCheckout = ({ event, item, kind = 'ticket', inviteGroup = null, onCl
       if (isGroup && err.status === 409 && /group is full/i.test(err.message)) {
         setActiveGroup((group) => ({ ...(group || {}), full: true }));
         setStage('group-full');
+        return;
+      }
+      if (isGroup && err.status === 409 && /open groups/i.test(err.message)) {
+        await loadAvailableGroups();
+        setError('Five groups are already open. Please join one of them.');
+        setStage('details');
         return;
       }
       setError(err.message || 'Could not verify the promo code. Please try again.');
@@ -412,6 +451,12 @@ const TicketCheckout = ({ event, item, kind = 'ticket', inviteGroup = null, onCl
         setStage('group-full');
         return;
       }
+      if (isGroup && err.status === 409 && /open groups/i.test(err.message)) {
+        await loadAvailableGroups();
+        setError('Five groups are already open. Please join one of them.');
+        setStage('details');
+        return;
+      }
       setError(err.message || 'Could not start the payment.');
       setStage('payment');
     }
@@ -439,6 +484,12 @@ const TicketCheckout = ({ event, item, kind = 'ticket', inviteGroup = null, onCl
     setError('');
     setQuote(null);
     setStage('details');
+  };
+
+  const joinOpenGroup = (group) => {
+    setActiveGroup(group);
+    setError('');
+    setQuote(null);
   };
 
   return (
@@ -496,13 +547,15 @@ const TicketCheckout = ({ event, item, kind = 'ticket', inviteGroup = null, onCl
                   <p>
                     {activeGroup
                       ? `${activeGroup.occupied} of ${activeGroup.capacity} places are taken. Pay for your own place, then share the same link.`
-                      : `Name the group and pay ${money(groupMemberPrice)} for your place. You’ll get a link for ${groupCapacity - 1} friends to pay for theirs.`}
+                      : groupLimitReached
+                        ? 'Five groups are already open. Join one below instead of creating another.'
+                        : `Name the group and pay ${money(groupMemberPrice)} for your place. You’ll get a link for ${groupCapacity - 1} friends to pay for theirs.`}
                   </p>
                 </div>
               </section>
             )}
 
-            {isGroup && !activeGroup && (
+            {isGroup && !activeGroup && !groupLimitReached && (
               <label className="co-field">
                 <span>Group name *</span>
                 <input
@@ -514,6 +567,24 @@ const TicketCheckout = ({ event, item, kind = 'ticket', inviteGroup = null, onCl
                   autoFocus
                 />
               </label>
+            )}
+
+            {isGroup && !activeGroup && (groupsLoading || availableGroups.length > 0) && (
+              <section className="co-open-groups" aria-labelledby="co-open-groups-title">
+                <div>
+                  <strong id="co-open-groups-title">Join an existing group</strong>
+                  <p>{groupsLoading ? 'Checking open groups…' : 'Choose a group with places still available.'}</p>
+                </div>
+                {!groupsLoading && availableGroups.map((group) => (
+                  <button type="button" key={group.token} onClick={() => joinOpenGroup(group)}>
+                    <span>
+                      <strong>{group.name}</strong>
+                      <small>Created by {group.createdBy || 'a ticket buyer'}</small>
+                    </span>
+                    <span>{group.remaining} {group.remaining === 1 ? 'place' : 'places'} left</span>
+                  </button>
+                ))}
+              </section>
             )}
 
             {isFamily && (
@@ -613,6 +684,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', inviteGroup = null, onCl
               </div>
             )}
 
+            {(openAmount || (!isTicketBundle && !isFamily && !isGroup) || promoAllowed) && (
             <div className={`co-grid-2 ${isTicketBundle || isFamily || isGroup ? 'is-single' : ''}`}>
               {openAmount ? (
                 <label className="co-field">
@@ -645,11 +717,12 @@ const TicketCheckout = ({ event, item, kind = 'ticket', inviteGroup = null, onCl
                   />
                 </label>
               ) : null}
-              <label className="co-field">
+              {promoAllowed && <label className="co-field">
                 <span>Promo code</span>
                 <input value={form.promoCode} onChange={setField('promoCode')} placeholder="Optional" />
-              </label>
+              </label>}
             </div>
+            )}
 
             {(isTicketBundle || isFamily || isGroup) && (
               <p className="co-note">
@@ -680,7 +753,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', inviteGroup = null, onCl
               <p className="co-error">Please enter at least {money(openAmount.min ?? 1)}.</p>
             )}
 
-            <button type="submit" className="btn btn-primary co-submit" disabled={amountTooLow || familyInvalid || quoting}>
+            <button type="submit" className="btn btn-primary co-submit" disabled={amountTooLow || familyInvalid || quoting || (isGroup && !activeGroup && groupLimitReached)}>
               {quoting ? (
                 <>
                   <LoadingOutlined />

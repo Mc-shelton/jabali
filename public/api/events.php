@@ -112,6 +112,8 @@ function normalise_event(array $in, array $events, ?array $existing = null): arr
             'type'        => $packageType,
             'name'        => $name,
             'price'       => $price,
+            // Existing packages predate this switch and remain promo-enabled.
+            'allowPromo'  => ($p['allowPromo'] ?? true) !== false,
             // One keeps every package saved before bundles existed working
             // exactly as before.
             'ticketCount' => normalise_ticket_count($p['ticketCount'] ?? 1),

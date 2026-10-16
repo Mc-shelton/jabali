@@ -651,7 +651,7 @@
 
 .admin-package {
   display: grid;
-  grid-template-columns: 0.8fr 1.1fr 0.9fr 0.8fr 1.2fr 1.2fr auto;
+  grid-template-columns: 0.8fr 1.1fr 0.9fr 0.8fr 1.1fr 1.1fr auto auto;
   gap: 8px;
   align-items: center;
 
@@ -669,7 +669,12 @@
 }
 
 .admin-package-card.is-family .admin-package {
-  grid-template-columns: 0.8fr 1.1fr 1.2fr 1.2fr auto;
+  grid-template-columns: 0.8fr 1.1fr 1.2fr 1.2fr auto auto;
+}
+
+.admin-package-promo {
+  min-width: 126px;
+  white-space: nowrap;
 }
 
 .admin-package-count {
@@ -1041,6 +1046,9 @@
   font-size: 0.9rem;
   font-weight: 600;
   text-decoration: none;
+  font-family: inherit;
+  background: transparent;
+  cursor: pointer;
 
   &:hover {
     color: tokens.$ink;
@@ -1226,6 +1234,117 @@
   color: tokens.$ink-muted;
 }
 
+// Shared group audit inside Orders.
+.admin-groups-view,
+.admin-group-list {
+  display: grid;
+  gap: 14px;
+}
+
+.admin-group-audit {
+  display: grid;
+  gap: 13px;
+  padding: 16px;
+  border: 1px solid tokens.$line;
+  border-radius: tokens.$r-md;
+  background: #fff;
+
+  > header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 18px;
+
+    h2,
+    p {
+      margin: 0;
+    }
+
+    h2 {
+      color: tokens.$ink;
+      font-size: 1.05rem;
+    }
+
+    p {
+      margin-top: 4px;
+      color: tokens.$ink-muted;
+      font-size: 0.82rem;
+    }
+  }
+
+  details > summary {
+    color: tokens.$ink;
+    font-size: 0.86rem;
+    font-weight: 700;
+    cursor: pointer;
+  }
+
+  details .admin-table-wrap {
+    margin-top: 12px;
+  }
+}
+
+.admin-group-title-line {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.admin-group-count {
+  display: grid;
+  flex: 0 0 auto;
+  text-align: right;
+
+  strong {
+    color: tokens.$ink;
+    font-size: 1.15rem;
+  }
+
+  span {
+    color: tokens.$ink-muted;
+    font-size: 0.74rem;
+  }
+}
+
+.admin-group-progress {
+  height: 7px;
+  overflow: hidden;
+  border-radius: tokens.$r-pill;
+  background: tokens.$paper-sunk;
+
+  span {
+    display: block;
+    height: 100%;
+    border-radius: inherit;
+    background: tokens.$brass;
+  }
+}
+
+.admin-group-link {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+
+  input {
+    min-width: 0;
+    padding: 10px 12px;
+    border: 1px solid tokens.$line-strong;
+    border-radius: tokens.$r-sm;
+    background: tokens.$paper-sunk;
+    color: tokens.$ink-body;
+    font: inherit;
+    font-size: 0.82rem;
+  }
+
+  .admin-btn {
+    padding-block: 9px;
+  }
+}
+
+.admin-group-members {
+  min-width: 860px;
+}
+
 // Sortable column heading. The whole heading is the control.
 .admin-sort {
   display: inline-flex;
@@ -1266,6 +1385,18 @@
 
   .admin-filter-search {
     grid-column: span 1;
+  }
+
+  .admin-group-audit > header {
+    flex-direction: column;
+  }
+
+  .admin-group-count {
+    text-align: left;
+  }
+
+  .admin-group-link {
+    grid-template-columns: 1fr;
   }
 }
 
