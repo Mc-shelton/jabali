@@ -2,6 +2,7 @@
 // Orders / sales — admin only.
 //   GET  orders.php              → all orders, newest first
 //   POST orders.php?reconcile=1  → re-query every unsettled order against Daraja
+//   POST orders.php?group=ID     → manually open/close a shared ticket group
 require __DIR__ . '/_bootstrap.php';
 require __DIR__ . '/_orders.php';
 require __DIR__ . '/_c2b.php';
@@ -65,6 +66,22 @@ route([
     'POST' => function () {
         require_admin();
         require_csrf();
+
+        if (!empty($_GET['group'])) {
+            $id = strtolower(clean_string($_GET['group'], 24));
+            $body = read_json_body();
+            if (!array_key_exists('closed', $body) || !is_bool($body['closed'])) {
+                error_out('Choose whether the group should be open or closed.', 422);
+            }
+            $group = ticket_group_set_closed($id, $body['closed']);
+            log_info($body['closed'] ? 'Ticket group closed by admin' : 'Ticket group reopened by admin', [
+                'groupId' => $id,
+                'name' => $group['name'] ?? '',
+                'eventSlug' => $group['eventSlug'] ?? '',
+                'packageName' => $group['packageName'] ?? '',
+            ]);
+            json_out(['group' => $group]);
+        }
 
         // Re-send one buyer's confirmation. Separate from reconcile: that asks
         // Daraja whether money arrived, this only re-delivers a message for an

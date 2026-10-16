@@ -65,6 +65,19 @@ $available = ticket_groups_available('concert', 'Group of 2');
 check_group('five open groups are publicly available', count($available) === MAX_OPEN_TICKET_GROUPS);
 check_group('creation limit is visible before a buyer starts payment', ticket_group_limit_reached('concert', 'Group of 2'));
 
+$closed = ticket_group_set_closed($group['id'], true);
+check_group('admin can close a group', $closed['closed'] === true && count(ticket_groups_available('concert', 'Group of 2')) === 4);
+check_group('closed group frees an open-group slot', !ticket_group_limit_reached('concert', 'Group of 2'));
+$closedJoinRejected = false;
+try {
+    ticket_group_reserve($group['token'], '', 'concert', 'Group of 2', 2, 800, 'Closed Joiner');
+} catch (RuntimeException $e) {
+    $closedJoinRejected = str_contains($e->getMessage(), 'closed by the administrator');
+}
+check_group('closed group rejects invite joins', $closedJoinRejected);
+$reopened = ticket_group_set_closed($group['id'], false);
+check_group('admin can reopen a group', $reopened['closed'] === false && ticket_group_limit_reached('concert', 'Group of 2'));
+
 $limitRejected = false;
 try {
     ticket_group_reserve('', 'One too many', 'concert', 'Group of 2', 2, 800, 'Sixth Creator');
@@ -80,6 +93,18 @@ try {
     $otherPackageWorked = false;
 }
 check_group('limit is scoped to one event and package', $otherPackageWorked);
+
+// Closing one group permits a replacement, but the original cannot then be
+// reopened because that would silently take the package above five open groups.
+ticket_group_set_closed($group['id'], true);
+ticket_group_reserve('', 'Replacement group', 'concert', 'Group of 2', 2, 800, 'Replacement Creator');
+$reopenLimitRejected = false;
+try {
+    ticket_group_set_closed($group['id'], false);
+} catch (RuntimeException $e) {
+    $reopenLimitRejected = str_contains($e->getMessage(), '5 other groups are open');
+}
+check_group('reopening cannot exceed the five-group limit', $reopenLimitRejected);
 
 foreach (glob($testDir . '/*') ?: [] as $file) unlink($file);
 rmdir($testDir);

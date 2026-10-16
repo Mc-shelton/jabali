@@ -85,7 +85,9 @@ const TicketCheckout = ({ event, item, kind = 'ticket', inviteGroup = null, onCl
   const [availableGroups, setAvailableGroups] = useState([]);
   const [groupLimitReached, setGroupLimitReached] = useState(false);
   const [groupsLoading, setGroupsLoading] = useState(false);
-  const [stage, setStage] = useState(inviteGroup?.full ? 'group-full' : 'details');
+  const [stage, setStage] = useState(
+    inviteGroup?.closed ? 'group-closed' : inviteGroup?.full ? 'group-full' : 'details',
+  );
   const [form, setForm] = useState({
     groupName: '',
     preferredName: '',
@@ -413,6 +415,11 @@ const TicketCheckout = ({ event, item, kind = 'ticket', inviteGroup = null, onCl
         setStage('group-full');
         return;
       }
+      if (isGroup && err.status === 409 && /closed by the administrator/i.test(err.message)) {
+        setActiveGroup((group) => ({ ...(group || {}), closed: true }));
+        setStage('group-closed');
+        return;
+      }
       if (isGroup && err.status === 409 && /open groups/i.test(err.message)) {
         await loadAvailableGroups();
         setError('Five groups are already open. Please join one of them.');
@@ -449,6 +456,11 @@ const TicketCheckout = ({ event, item, kind = 'ticket', inviteGroup = null, onCl
       if (isGroup && err.status === 409 && /group is full/i.test(err.message)) {
         setActiveGroup((group) => ({ ...(group || {}), full: true }));
         setStage('group-full');
+        return;
+      }
+      if (isGroup && err.status === 409 && /closed by the administrator/i.test(err.message)) {
+        setActiveGroup((group) => ({ ...(group || {}), closed: true }));
+        setStage('group-closed');
         return;
       }
       if (isGroup && err.status === 409 && /open groups/i.test(err.message)) {
@@ -531,7 +543,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', inviteGroup = null, onCl
             <span className={`co-step ${stage !== 'details' ? 'is-on' : ''}`}>Extras</span>
           )}
           <span className={`co-step ${['payment', 'processing', 'waiting', 'success', 'failed'].includes(stage) ? 'is-on' : ''}`}>Payment</span>
-          <span className={`co-step ${['success', 'failed', 'group-full'].includes(stage) ? 'is-on' : ''}`}>Done</span>
+          <span className={`co-step ${['success', 'failed', 'group-full', 'group-closed'].includes(stage) ? 'is-on' : ''}`}>Done</span>
         </div>
 
         {error && stage !== 'failed' && <p className="co-error">{error}</p>}
@@ -1042,7 +1054,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', inviteGroup = null, onCl
               )}{' '}
               A confirmation will follow to <strong>{form.email}</strong>.
             </p>
-            {isGroup && completedGroup && !completedGroup.full && (
+            {isGroup && completedGroup && !completedGroup.full && !completedGroup.closed && (
               <section className="co-share">
                 <div>
                   <strong>Invite people to {completedGroup.name}</strong>
@@ -1060,6 +1072,9 @@ const TicketCheckout = ({ event, item, kind = 'ticket', inviteGroup = null, onCl
             )}
             {isGroup && completedGroup?.full && (
               <p className="co-note">{completedGroup.name} is complete — all {completedGroup.capacity} places are taken.</p>
+            )}
+            {isGroup && completedGroup?.closed && !completedGroup.full && (
+              <p className="co-note">{completedGroup.name} has been closed and is not accepting more members.</p>
             )}
             <button type="button" className="btn btn-primary" onClick={onClose}>
               Done
@@ -1079,6 +1094,22 @@ const TicketCheckout = ({ event, item, kind = 'ticket', inviteGroup = null, onCl
             <div className="co-actions">
               <button type="button" className="btn btn-ghost" onClick={onClose}>Close</button>
               <button type="button" className="btn btn-primary" onClick={startNewGroup}>Create a new group</button>
+            </div>
+          </div>
+        )}
+
+        {/* -------------------------------------------------------- group closed */}
+        {stage === 'group-closed' && (
+          <div className="co-body co-centre">
+            <TeamOutlined className="co-icon is-wait" />
+            <h3>This group is closed</h3>
+            <p className="co-centre-text">
+              {activeGroup?.name ? <><strong>{activeGroup.name}</strong> is not accepting new members. </> : null}
+              You can start another group for the same ticket package.
+            </p>
+            <div className="co-actions">
+              <button type="button" className="btn btn-ghost" onClick={onClose}>Close</button>
+              <button type="button" className="btn btn-primary" onClick={startNewGroup}>Start another group</button>
             </div>
           </div>
         )}

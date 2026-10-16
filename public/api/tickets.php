@@ -304,6 +304,7 @@ route([
                 error_out('This group package has changed. Please create a new group.', 409);
             }
             $joiningPublic = ticket_group_public($joiningGroup);
+            if ($joiningPublic['closed']) error_out('This group has been closed by the administrator.', 409);
             if ($joiningPublic['full']) error_out('This group is full. Please create a new group.', 409);
         }
 

@@ -6,7 +6,12 @@ import {
   SearchOutlined,
   PlusOutlined,
 } from '@ant-design/icons';
-import { adminFetchOrders, reconcileOrders, resendConfirmation } from '../lib/api';
+import {
+  adminFetchOrders,
+  reconcileOrders,
+  resendConfirmation,
+  setTicketGroupClosed,
+} from '../lib/api';
 import PageLoader from '../components/PageLoader';
 import AdminOrderDetail from './AdminOrderDetail';
 import {
@@ -46,7 +51,7 @@ const EMPTY_FILTERS = {
   to: '',
 };
 
-const AdminGroups = ({ groups }) => {
+const AdminGroups = ({ groups, busyGroupId, onSetClosed }) => {
   const open = groups.filter((group) => group.state === 'open');
   const full = groups.filter((group) => group.state === 'full');
   const paidMembers = groups.reduce((sum, group) => sum + Number(group.paidCount || 0), 0);
@@ -89,6 +94,21 @@ const AdminGroups = ({ groups }) => {
               <div className="admin-group-link">
                 <input value={group.inviteUrl} readOnly onFocus={(e) => e.target.select()} aria-label={`Invite link for ${group.name}`} />
                 <a className="admin-btn admin-btn-ghost" href={group.inviteUrl} target="_blank" rel="noreferrer">Open link</a>
+                <button
+                  type="button"
+                  className={`admin-btn ${group.closed ? 'admin-btn-primary' : 'admin-btn-ghost'}`}
+                  disabled={busyGroupId === group.id || group.full}
+                  onClick={() => onSetClosed(group, !group.closed)}
+                  title={group.full ? 'Full groups cannot be reopened' : undefined}
+                >
+                  {busyGroupId === group.id
+                    ? 'Saving…'
+                    : group.closed
+                      ? 'Open group'
+                      : group.full
+                        ? 'Group full'
+                        : 'Close group'}
+                </button>
               </div>
 
               <details>
@@ -144,6 +164,7 @@ const AdminOrders = () => {
   // reconciling or re-sending refreshes what's on screen.
   const [detailId, setDetailId] = useState('');
   const [view, setView] = useState('orders');
+  const [busyGroupId, setBusyGroupId] = useState('');
 
   const load = () =>
     adminFetchOrders()
@@ -298,6 +319,21 @@ const AdminOrders = () => {
     }
   };
 
+  const setGroupClosed = async (group, closed) => {
+    setBusyGroupId(group.id);
+    setReconcileNote('');
+    setError('');
+    try {
+      await setTicketGroupClosed(group.id, closed);
+      await load();
+      setReconcileNote(`${group.name} is now ${closed ? 'closed' : 'open'}.`);
+    } catch (err) {
+      setError(err.message || `Could not ${closed ? 'close' : 'open'} the group.`);
+    } finally {
+      setBusyGroupId('');
+    }
+  };
+
   const filtersActive = Object.values(filters).some(Boolean);
   // Resolved from the current list, so the dialog closes by itself if the order
   // it was showing disappears from a reload.
@@ -352,7 +388,9 @@ const AdminOrders = () => {
         </button>
       </div>
 
-      {view === 'groups' ? <AdminGroups groups={groups} /> : <>
+      {view === 'groups' ? (
+        <AdminGroups groups={groups} busyGroupId={busyGroupId} onSetClosed={setGroupClosed} />
+      ) : <>
       <div className="admin-stats">
         <div className="admin-stat">
           <span>{filtersActive ? 'Paid (filtered)' : 'Paid orders'}</span>

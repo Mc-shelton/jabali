@@ -62,6 +62,7 @@ function ticket_group_public(array $group, ?array $orders = null): array
         'occupied'    => $counts['occupied'],
         'remaining'   => max(0, $capacity - $counts['occupied']),
         'full'        => $counts['occupied'] >= $capacity,
+        'closed'      => !empty($group['adminClosed']),
     ];
 }
 
@@ -75,7 +76,7 @@ function ticket_groups_available(string $eventSlug, string $packageName): array
         // A group whose creator's attempt failed has nobody in it and no shared
         // link in circulation, so it should neither be advertised nor consume
         // one of the five useful open-group positions.
-        if ($public['occupied'] < 1 || $public['full']) continue;
+        if ($public['occupied'] < 1 || $public['full'] || $public['closed']) continue;
         $available[] = $public;
     }
     usort($available, fn($a, $b) => $b['occupied'] <=> $a['occupied']);
@@ -117,7 +118,9 @@ function ticket_groups_admin(array $orderRows): array
         $site = defined('SITE_URL') && SITE_URL !== '' ? rtrim((string) SITE_URL, '/') : '';
         $public['id'] = (string) ($group['id'] ?? '');
         $public['createdAt'] = (string) ($group['createdAt'] ?? '');
-        $public['state'] = $public['occupied'] === 0 ? 'inactive' : ($public['full'] ? 'full' : 'open');
+        $public['state'] = $public['closed']
+            ? 'closed'
+            : ($public['occupied'] === 0 ? 'inactive' : ($public['full'] ? 'full' : 'open'));
         $public['inviteUrl'] = $site . '/events/' . rawurlencode($public['eventSlug'])
             . '?group=' . rawurlencode($public['token']);
         $public['members'] = $members;
@@ -135,6 +138,53 @@ function ticket_group_find(string $token): ?array
         if ($stored !== '' && hash_equals($stored, $token)) return (array) $group;
     }
     return null;
+}
+
+function ticket_group_set_closed(string $id, bool $closed): array
+{
+    if (!preg_match('/^[a-f0-9]{24}$/', $id)) error_out('Group not found.', 404);
+
+    return ticket_groups_mutate(function (&$groups) use ($id, $closed) {
+        $orders = ticket_group_orders_by_id();
+        $index = null;
+        foreach ($groups as $i => $candidate) {
+            if (hash_equals((string) ($candidate['id'] ?? ''), $id)) {
+                $index = $i;
+                break;
+            }
+        }
+        if ($index === null) error_out('Group not found.', 404);
+
+        $group = (array) $groups[$index];
+        $counts = ticket_group_counts($group, $orders);
+        $capacity = (int) ($group['capacity'] ?? 0);
+
+        if (!$closed) {
+            if ($capacity < 1 || $counts['occupied'] >= $capacity) {
+                error_out('A full group cannot be reopened.', 409);
+            }
+
+            $openCount = 0;
+            foreach ($groups as $candidate) {
+                if (($candidate['id'] ?? '') === $id || !empty($candidate['adminClosed'])) continue;
+                if (
+                    ($candidate['eventSlug'] ?? '') !== ($group['eventSlug'] ?? '')
+                    || ($candidate['packageName'] ?? '') !== ($group['packageName'] ?? '')
+                ) continue;
+                $candidateCounts = ticket_group_counts((array) $candidate, $orders);
+                $candidateCapacity = (int) ($candidate['capacity'] ?? 0);
+                if ($candidateCounts['occupied'] > 0 && $candidateCounts['occupied'] < $candidateCapacity) $openCount++;
+            }
+            if ($openCount >= MAX_OPEN_TICKET_GROUPS) {
+                error_out('This group cannot be reopened while 5 other groups are open for this ticket.', 409);
+            }
+        }
+
+        $group['adminClosed'] = $closed;
+        $group['adminClosedAt'] = $closed ? date('c') : null;
+        $groups[$index] = $group;
+        return ticket_group_public($group, $orders);
+    });
 }
 
 // Exclusive read-modify-write for the group store. store_write() protects the
@@ -198,6 +248,7 @@ function ticket_group_reserve(
             $orders = ticket_group_orders_by_id();
             $openCount = 0;
             foreach ($groups as $candidate) {
+                if (!empty($candidate['adminClosed'])) continue;
                 if (
                     ($candidate['eventSlug'] ?? '') !== $eventSlug
                     || ($candidate['packageName'] ?? '') !== $packageName
@@ -230,6 +281,9 @@ function ticket_group_reserve(
         }
 
         $group = (array) $groups[$index];
+        if (!empty($group['adminClosed'])) {
+            error_out('This group has been closed by the administrator.', 409);
+        }
         if (($group['eventSlug'] ?? '') !== $eventSlug || ($group['packageName'] ?? '') !== $packageName) {
             error_out('This group link belongs to a different ticket package.', 409);
         }
