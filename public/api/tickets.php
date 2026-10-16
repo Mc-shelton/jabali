@@ -13,6 +13,7 @@ require __DIR__ . '/_orders.php';
 require __DIR__ . '/_merch.php';
 require __DIR__ . '/_payment_bypass.php';
 require __DIR__ . '/_ticket_packages.php';
+require __DIR__ . '/_ticket_groups.php';
 
 const STORE = 'orders';
 
@@ -207,7 +208,7 @@ function find_event_and_item(string $slug, string $type, string $name): array
 
 function public_order(array $order): array
 {
-    return [
+    $public = [
         'orderId'    => $order['id'],
         'status'     => $order['status'],
         'amount'     => $order['amount'],
@@ -228,6 +229,11 @@ function public_order(array $order): array
         // sensibly ("still waiting") instead of counting its own polls.
         'ageSeconds' => max(0, time() - strtotime($order['createdAt'] ?? 'now')),
     ];
+    if (($order['packageType'] ?? '') === 'group' && !empty($order['groupToken'])) {
+        $group = ticket_group_find((string) $order['groupToken']);
+        if ($group) $public['group'] = ticket_group_public($group);
+    }
+    return $public;
 }
 
 
@@ -265,9 +271,40 @@ route([
         if ($err) error_out($err, 404);
 
         $isFamily = $itemType === 'ticket' && ($item['type'] ?? 'standard') === 'family';
-        if ($isFamily) $purchaseQuantity = 1;
+        $isGroup = $itemType === 'ticket' && ($item['type'] ?? 'standard') === 'group';
+        if ($isFamily || $isGroup) $purchaseQuantity = 1;
 
-        $ticketsPerPackage = $itemType === 'ticket'
+        $groupToken = $isGroup ? strtolower(clean_string($in['groupToken'] ?? '', 32)) : '';
+        $groupName = $isGroup ? clean_string($in['groupName'] ?? '', 80) : '';
+        $groupCapacity = $isGroup ? normalise_ticket_count($item['ticketCount'] ?? 1) : 0;
+        $groupMemberPrice = $isGroup ? shared_group_member_price($item) : 0;
+        if ($isGroup && $groupMemberPrice < 1) {
+            error_out('This shared group package is not configured correctly.', 422);
+        }
+
+        // An invite is bound to one immutable event/package/price combination.
+        // Check it during the preview for a friendly early answer; the atomic
+        // reservation immediately before M-Pesa remains the final authority.
+        if ($isGroup && $groupToken !== '') {
+            $joiningGroup = ticket_group_find($groupToken);
+            if (!$joiningGroup) error_out('This group link is invalid or no longer available.', 404);
+            if (
+                ($joiningGroup['eventSlug'] ?? '') !== $slug
+                || ($joiningGroup['packageName'] ?? '') !== $itemName
+            ) {
+                error_out('This group link belongs to a different ticket package.', 409);
+            }
+            if (
+                (int) ($joiningGroup['capacity'] ?? 0) !== $groupCapacity
+                || (int) ($joiningGroup['memberPrice'] ?? 0) !== $groupMemberPrice
+            ) {
+                error_out('This group package has changed. Please create a new group.', 409);
+            }
+            $joiningPublic = ticket_group_public($joiningGroup);
+            if ($joiningPublic['full']) error_out('This group is full. Please create a new group.', 409);
+        }
+
+        $ticketsPerPackage = $itemType === 'ticket' && !$isGroup
             ? normalise_ticket_count($item['ticketCount'] ?? 1)
             : 1;
         if (
@@ -293,6 +330,13 @@ route([
             $purchaseQuantity = 1;
             $ticketsPerPackage = count($familyTicketMeta);
             $unit = $subtotal;
+        } elseif ($isGroup) {
+            // Every checkout buys exactly the paying member's own admission.
+            // The advertised package total and capacity stay on the group.
+            $purchaseQuantity = 1;
+            $ticketsPerPackage = 1;
+            $unit = $groupMemberPrice;
+            $subtotal = $unit;
         } elseif ($isOpenAmount) {
             // The buyer names the figure (a donation). Quantity is meaningless
             // here, so it's pinned to 1 and the amount is used as-is.
@@ -321,9 +365,10 @@ route([
 
         $quantity = $isFamily
             ? count($familyTicketMeta)
+            : ($isGroup ? 1
             : ($itemType === 'ticket'
             ? ticket_admission_quantity($purchaseQuantity, $ticketsPerPackage)
-            : $purchaseQuantity);
+            : $purchaseQuantity));
         if ($itemType === 'ticket' && $quantity > MAX_TICKETS_PER_ORDER) {
             error_out(
                 'One order can contain at most ' . MAX_TICKETS_PER_ORDER
@@ -365,6 +410,7 @@ route([
                 'promoCode'     => $promo,
                 'quantity'      => $quantity,
                 'familyComposition' => $familyComposition,
+                'group'          => $isGroup && $groupToken !== '' ? $joiningPublic : null,
             ]);
         }
 
@@ -385,6 +431,22 @@ route([
         $bypassPayment = payment_bypass_authorized();
         if (!$bypassPayment && !mpesa_configured()) {
             error_out('Online payment is not set up yet. Please contact us to book.', 503);
+        }
+
+        $reservedGroup = null;
+        $reservedSlot = null;
+        if ($isGroup) {
+            [$reservedGroup, $reservedSlot] = ticket_group_reserve(
+                $groupToken,
+                $groupName,
+                $slug,
+                $itemName,
+                $groupCapacity,
+                $groupMemberPrice,
+                trim($preferredName . ' ' . $otherNames)
+            );
+            $groupToken = (string) $reservedGroup['token'];
+            $groupName = (string) $reservedGroup['name'];
         }
 
         // A unique PayBill account reference is the second reconciliation key.
@@ -409,6 +471,9 @@ route([
         }
 
         if (!$ok) {
+            if ($reservedGroup && $reservedSlot) {
+                ticket_group_release($groupToken, (string) $reservedSlot['id']);
+            }
             error_out($res['error'] ?? 'Could not start the payment. Please try again.', 502);
         }
 
@@ -445,7 +510,7 @@ route([
             'eventVenue'        => $event['venue'] ?? '',
             'itemType'          => $itemType,
             'itemName'          => $itemName,
-            'packageType'       => $isFamily ? 'family' : 'standard',
+            'packageType'       => $isFamily ? 'family' : ($isGroup ? 'group' : 'standard'),
             'unitPrice'         => $unit,
             'options'           => $chosenOptions,   // shown in admin + on the e-ticket
             'openAmount'        => $isOpenAmount,
@@ -456,6 +521,9 @@ route([
             'ticketsPerPackage' => $ticketsPerPackage,
             'quantity'          => $quantity,
             'familyComposition' => $familyComposition,
+            'groupToken'        => $isGroup ? $groupToken : null,
+            'groupName'         => $isGroup ? $groupName : null,
+            'groupCapacity'     => $isGroup ? $groupCapacity : null,
             // The main item's share, so the add-on lines and the total can
             // always be reconciled against each other after the fact.
             'itemAmount'        => $discounted,
@@ -484,8 +552,10 @@ route([
             'lastQueryAt'       => 0,
         ];
 
-        $orders[] = $order;
-        store_write(STORE, $orders);
+        store_append(STORE, $order);
+        if ($reservedSlot) {
+            ticket_group_attach_order($groupToken, (string) $reservedSlot['id'], $orderId);
+        }
 
         json_out(public_order($order), 201);
     },

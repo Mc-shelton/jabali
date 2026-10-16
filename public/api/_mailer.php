@@ -49,6 +49,29 @@ function order_email_html(array $order): string
             . "</td></tr>";
     }
 
+    // Every paid member receives the same durable invite link. It is also shown
+    // in the browser, but putting it in the receipt means closing the tab never
+    // strands someone who wants to forward it later.
+    $groupRows = '';
+    $groupInviteBlock = '';
+    if (($order['packageType'] ?? '') === 'group' && !empty($order['groupToken'])) {
+        $groupName = htmlspecialchars((string) ($order['groupName'] ?? 'Ticket group'));
+        $capacity = max(2, (int) ($order['groupCapacity'] ?? 2));
+        $groupRows = "<tr><td style=\"padding:8px 0;color:#5a6875\">Group</td>"
+            . "<td style=\"padding:8px 0;text-align:right;font-weight:600\">$groupName ($capacity places)</td></tr>";
+
+        $site = defined('SITE_URL') && SITE_URL !== ''
+            ? rtrim((string) SITE_URL, '/')
+            : 'https://jabalichorale.com';
+        $inviteUrl = $site . '/events/' . rawurlencode((string) ($order['eventSlug'] ?? ''))
+            . '?group=' . rawurlencode((string) $order['groupToken']);
+        $safeInviteUrl = htmlspecialchars($inviteUrl, ENT_QUOTES, 'UTF-8');
+        $groupInviteBlock = "<div style=\"margin:22px 0;padding:16px;background:#f3f5f7;border-radius:8px\">"
+            . "<p style=\"margin:0 0 8px;font-weight:700;color:#17497a\">Invite people to $groupName</p>"
+            . "<p style=\"margin:0 0 12px;font-size:14px;line-height:1.5;color:#5a6875\">Share this link so each member can pay for their own place:</p>"
+            . "<a href=\"$safeInviteUrl\" style=\"color:#17497a;word-break:break-all\">$safeInviteUrl</a></div>";
+    }
+
     // Merchandise added to the same order at checkout. Itemised rather than
     // folded into the total: the buyer approved one figure on their phone and
     // needs to be able to see what made it up.
@@ -101,12 +124,14 @@ function order_email_html(array $order): string
         <tr><td style=\"padding:8px 0;color:#5a6875\">Event</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">$event</td></tr>
         <tr><td style=\"padding:8px 0;color:#5a6875\">Order</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">$item</td></tr>
         $familyRows
+        $groupRows
         $optionsRow
         $addOnRows
         <tr><td style=\"padding:8px 0;color:#5a6875\">Amount paid</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">$amount</td></tr>
         " . ($receipt ? "<tr><td style=\"padding:8px 0;color:#5a6875\">M-Pesa receipt</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">$receipt</td></tr>" : '') . "
       </table>
       $codeBlock
+      $groupInviteBlock
       <p style=\"margin-top:28px;font-size:12px;color:#5a6875\">Jabali Chorale · Nairobi, Kenya</p>
     </div>";
 }

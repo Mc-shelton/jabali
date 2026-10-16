@@ -103,6 +103,10 @@ export const quoteTicketPayment = (payload) =>
 export const getPaymentStatus = (orderId, { force = false } = {}) =>
   request(`tickets.php?orderId=${encodeURIComponent(orderId)}${force ? '&force=1' : ''}`);
 
+// Resolve a privacy-safe shared-group invite (capacity and progress only).
+export const fetchTicketGroup = (token) =>
+  request(`ticket-groups.php?token=${encodeURIComponent(token)}`);
+
 // ---------------------------------------------------------------- enquiries
 // The contact and join forms. No fallback: unlike a page read, there is nothing
 // useful to substitute for a message that wasn't delivered, so a failure has to

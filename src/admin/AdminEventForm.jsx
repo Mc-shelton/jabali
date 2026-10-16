@@ -36,7 +36,7 @@ const defaultFamily = () => ({
 
 const packageToForm = (pkg) => ({
   ...pkg,
-  type: pkg.type === 'family' ? 'family' : 'standard',
+  type: ['family', 'group'].includes(pkg.type) ? pkg.type : 'standard',
   family: pkg.type === 'family' ? { ...defaultFamily(), ...pkg.family } : pkg.family,
 });
 
@@ -149,7 +149,7 @@ const AdminEventForm = () => {
         if (type === 'family') {
           return { ...p, type, family: p.family || { ...defaultFamily(), basePrice: String(p.price ?? '').replace(/[^0-9]/g, '') } };
         }
-        return { ...p, type: 'standard' };
+        return { ...p, type: type === 'group' ? 'group' : 'standard' };
       }),
     }));
   const setFamily = (i, key, value) =>
@@ -326,11 +326,12 @@ const AdminEventForm = () => {
         <fieldset className="admin-fieldset">
           <legend>Ticket packages</legend>
           <p className="admin-hint">
-            Leave empty for a free event. Standard packages have one fixed price; family packages calculate from the member mix.
+            Leave empty for a free event. Shared groups let each member claim and pay for one place through the same invite link.
           </p>
 
           {form.packages.map((p, i) => {
             const isFamily = p.type === 'family';
+            const isGroup = p.type === 'group';
             const preview = familyPreview(p.family);
             return (
               <div className={`admin-package-card ${isFamily ? 'is-family' : ''}`} key={i}>
@@ -339,15 +340,21 @@ const AdminEventForm = () => {
                     <span>Package type</span>
                     <select value={p.type || 'standard'} onChange={(e) => setPackageType(i, e.target.value)}>
                       <option value="standard">Standard</option>
+                      <option value="group">Shared group</option>
                       <option value="family">Family</option>
                     </select>
                   </label>
                   <input required placeholder="Name (e.g. Regular)" value={p.name} onChange={(e) => setPackage(i, 'name', e.target.value)} />
                   {!isFamily && (
                     <>
-                      <input required placeholder="Price (e.g. KES 500)" value={p.price} onChange={(e) => setPackage(i, 'price', e.target.value)} />
+                      <input
+                        required
+                        placeholder={isGroup ? 'Total group price (e.g. KES 4,000)' : 'Price (e.g. KES 500)'}
+                        value={p.price}
+                        onChange={(e) => setPackage(i, 'price', e.target.value)}
+                      />
                       <label className="admin-package-count">
-                        <span>Tickets included</span>
+                        <span>{isGroup ? 'Group size' : 'Tickets included'}</span>
                         <input
                           type="number"
                           min="1"
@@ -366,6 +373,16 @@ const AdminEventForm = () => {
                     <DeleteOutlined />
                   </button>
                 </div>
+
+                {isGroup && (
+                  <p className="admin-family-preview">
+                    Each member pays{' '}
+                    <strong>
+                      KES {Math.floor((Number(String(p.price).replace(/[^0-9]/g, '')) || 0) / Math.max(1, Number(p.ticketCount) || 1)).toLocaleString('en-KE')}
+                    </strong>.
+                    The total must divide evenly by the group size.
+                  </p>
+                )}
 
                 {isFamily && (
                   <div className="admin-family-config">

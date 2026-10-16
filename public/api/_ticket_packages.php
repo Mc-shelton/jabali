@@ -24,6 +24,17 @@ function max_ticket_package_purchase_quantity($ticketsPerPackage): int
     return normalise_ticket_count($ticketsPerPackage) > 1 ? 1 : MAX_TICKETS_PER_ORDER;
 }
 
+// A shared group advertises one total package price, but each person pays for
+// exactly one seat. Requiring an exact split avoids silently charging the group
+// more (or less) than the price shown on the event page.
+function shared_group_member_price(array $package): int
+{
+    $capacity = normalise_ticket_count($package['ticketCount'] ?? 1);
+    $total = ticket_price_to_int($package['price'] ?? 0);
+    if ($capacity < 2 || $total < 1 || $total % $capacity !== 0) return 0;
+    return intdiv($total, $capacity);
+}
+
 // Ticket prices are stored as either integers (the newer family fields) or as
 // display strings such as "KES 1,200" (legacy/standard packages).
 function ticket_price_to_int($value): int

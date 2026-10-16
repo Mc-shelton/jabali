@@ -9,6 +9,8 @@ import {
   MobileOutlined,
   ClockCircleOutlined,
   ReloadOutlined,
+  CopyOutlined,
+  TeamOutlined,
 } from '@ant-design/icons';
 import '../styles/checkout.scss';
 import { getPaymentStatus, initiateTicketPayment, quoteTicketPayment } from '../lib/api';
@@ -57,21 +59,26 @@ const initialFamilyCounts = (family) => {
 
 // `kind` is 'ticket' or 'merch'. `item` is a { name, price, note } object — a
 // ticket package or a merch product.
-const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
+const TicketCheckout = ({ event, item, kind = 'ticket', inviteGroup = null, onClose }) => {
   const isMerch = kind === 'merch';
   const isFamily = !isMerch && item.type === 'family';
+  const isGroup = !isMerch && item.type === 'group';
   const family = isFamily ? item.family ?? {} : null;
   const familyGroups = family?.groups ?? [];
-  const ticketsPerPackage = isMerch
+  const groupCapacity = isGroup ? Math.min(50, Math.max(2, Math.trunc(Number(item.ticketCount) || 2))) : 0;
+  const groupMemberPrice = isGroup ? Math.floor(priceToNumber(item.price) / groupCapacity) : 0;
+  const ticketsPerPackage = isMerch || isGroup
     ? 1
     : Math.min(50, Math.max(1, Math.trunc(Number(item.ticketCount) || 1)));
-  const isTicketBundle = !isMerch && !isFamily && ticketsPerPackage > 1;
+  const isTicketBundle = !isMerch && !isFamily && !isGroup && ticketsPerPackage > 1;
   const qtyLabel = isMerch ? 'Quantity' : isTicketBundle ? 'Number of packages' : 'Number of tickets';
   const maxPurchaseQuantity = isMerch ? 20 : isTicketBundle ? 1 : 50;
   // details | extras | payment | processing | waiting | success | failed
   // `waiting` is not a failure — it's "we stopped auto-checking, press Refresh".
-  const [stage, setStage] = useState('details');
+  const [activeGroup, setActiveGroup] = useState(inviteGroup);
+  const [stage, setStage] = useState(inviteGroup?.full ? 'group-full' : 'details');
   const [form, setForm] = useState({
+    groupName: '',
     preferredName: '',
     otherNames: '',
     phone: '',
@@ -158,6 +165,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
   const [quote, setQuote] = useState(null);
   const [order, setOrder] = useState(null);
   const [result, setResult] = useState(null);
+  const [copied, setCopied] = useState(false);
   const pollRef = useRef({ timer: null });
 
   // Mirror of the server's pricing, for display only — tickets.php recomputes
@@ -172,7 +180,9 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
   // have no discount — working unchanged.
   const basePrice = isFamily
     ? Number(family.basePrice) || 0
-    : item.priceFinal ?? priceToNumber(item.price);
+    : isGroup
+      ? groupMemberPrice
+      : item.priceFinal ?? priceToNumber(item.price);
   const familyLines = familyGroups.map((group) => {
     const quantity = familyCounts[group.id] || 0;
     const unitPrice = familyUnitPrice(basePrice, group);
@@ -187,12 +197,12 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
   const unit = isFamily
     ? familySubtotal
     : openAmount ? Number(customAmount) || 0 : basePrice + optionDelta;
-  const qty = isFamily
+  const qty = isFamily || isGroup
     ? 1
     : openAmount
     ? 1
     : Math.min(maxPurchaseQuantity, Math.max(1, Math.trunc(Number(form.quantity) || 1)));
-  const admissionQuantity = isFamily ? familyMemberCount : isMerch ? qty : qty * ticketsPerPackage;
+  const admissionQuantity = isFamily ? familyMemberCount : isMerch ? qty : isGroup ? 1 : qty * ticketsPerPackage;
   const itemTotal = isFamily ? familySubtotal : unit * qty;
   const estTotal = itemTotal + addOnTotal;
   const promoApplied = Boolean(quote?.promoApplied);
@@ -315,6 +325,10 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
     itemType: kind,
     itemName: item.name,
     quantity: qty,
+    ...(isGroup ? {
+      groupToken: activeGroup?.token || '',
+      groupName: activeGroup?.name || form.groupName.trim(),
+    } : {}),
     ...(isFamily ? {
       family: familyLines.map((line) => ({ id: line.id, quantity: line.quantity })),
     } : {}),
@@ -340,7 +354,12 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
     setError('');
     setMpesaPhone((p) => p || form.phone);
 
-    if (!isFamily && !pricingPayload.promoCode) {
+    if (isGroup && !activeGroup && !form.groupName.trim()) {
+      setError('Please give your group a name.');
+      return;
+    }
+
+    if (!isFamily && !isGroup && !pricingPayload.promoCode) {
       setQuote(null);
       setStage(addOnCatalogue.length > 0 ? 'extras' : 'payment');
       return;
@@ -356,6 +375,11 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
       setQuote(verified);
       setStage(addOnCatalogue.length > 0 ? 'extras' : 'payment');
     } catch (err) {
+      if (isGroup && err.status === 409 && /group is full/i.test(err.message)) {
+        setActiveGroup((group) => ({ ...(group || {}), full: true }));
+        setStage('group-full');
+        return;
+      }
       setError(err.message || 'Could not verify the promo code. Please try again.');
     } finally {
       setQuoting(false);
@@ -383,12 +407,39 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
       // so there is no M-Pesa result to wait and poll for.
       if (res.status === 'success') applyStatus(res);
     } catch (err) {
+      if (isGroup && err.status === 409 && /group is full/i.test(err.message)) {
+        setActiveGroup((group) => ({ ...(group || {}), full: true }));
+        setStage('group-full');
+        return;
+      }
       setError(err.message || 'Could not start the payment.');
       setStage('payment');
     }
   };
 
   const amount = order?.amount ?? displayedTotal;
+  const completedGroup = result?.group || order?.group || activeGroup;
+  const groupInviteUrl = completedGroup?.token
+    ? `${typeof window !== 'undefined' ? window.location.origin : ''}/events/${encodeURIComponent(event.slug)}?group=${encodeURIComponent(completedGroup.token)}`
+    : '';
+
+  const copyGroupLink = async () => {
+    if (!groupInviteUrl) return;
+    try {
+      await navigator.clipboard.writeText(groupInviteUrl);
+      setCopied(true);
+    } catch {
+      setCopied(false);
+    }
+  };
+
+  const startNewGroup = () => {
+    setActiveGroup(null);
+    setForm((current) => ({ ...current, groupName: '' }));
+    setError('');
+    setQuote(null);
+    setStage('details');
+  };
 
   return (
     <div className="co-overlay" role="presentation" onClick={() => stage !== 'processing' && onClose()}>
@@ -404,6 +455,8 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
                 ' · promo applied'
               ) : isFamily ? (
                 ` · ${item.price || 'build your package'}`
+              ) : isGroup ? (
+                ` · ${money(groupMemberPrice)} per person`
               ) : (
                 <>
                   {' · '}
@@ -427,7 +480,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
             <span className={`co-step ${stage !== 'details' ? 'is-on' : ''}`}>Extras</span>
           )}
           <span className={`co-step ${['payment', 'processing', 'waiting', 'success', 'failed'].includes(stage) ? 'is-on' : ''}`}>Payment</span>
-          <span className={`co-step ${['success', 'failed'].includes(stage) ? 'is-on' : ''}`}>Done</span>
+          <span className={`co-step ${['success', 'failed', 'group-full'].includes(stage) ? 'is-on' : ''}`}>Done</span>
         </div>
 
         {error && stage !== 'failed' && <p className="co-error">{error}</p>}
@@ -435,6 +488,34 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
         {/* ---------------------------------------------------------- details */}
         {stage === 'details' && (
           <form className="co-body" onSubmit={goToExtras}>
+            {isGroup && (
+              <section className="co-group-card">
+                <TeamOutlined />
+                <div>
+                  <strong>{activeGroup ? activeGroup.name : `Create a group of ${groupCapacity}`}</strong>
+                  <p>
+                    {activeGroup
+                      ? `${activeGroup.occupied} of ${activeGroup.capacity} places are taken. Pay for your own place, then share the same link.`
+                      : `Name the group and pay ${money(groupMemberPrice)} for your place. You’ll get a link for ${groupCapacity - 1} friends to pay for theirs.`}
+                  </p>
+                </div>
+              </section>
+            )}
+
+            {isGroup && !activeGroup && (
+              <label className="co-field">
+                <span>Group name *</span>
+                <input
+                  value={form.groupName}
+                  onChange={setField('groupName')}
+                  placeholder="e.g. The Harmonies"
+                  maxLength="80"
+                  required
+                  autoFocus
+                />
+              </label>
+            )}
+
             {isFamily && (
               <section className="co-family" aria-labelledby="co-family-title">
                 <div className="co-family-head">
@@ -484,7 +565,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
             <div className="co-grid-2">
               <label className="co-field">
                 <span>Preferred name *</span>
-                <input value={form.preferredName} onChange={setField('preferredName')} required autoFocus={!isFamily} />
+                <input value={form.preferredName} onChange={setField('preferredName')} required autoFocus={!isFamily && !isGroup} />
               </label>
               <label className="co-field">
                 <span>Other names</span>
@@ -532,7 +613,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
               </div>
             )}
 
-            <div className={`co-grid-2 ${isTicketBundle || isFamily ? 'is-single' : ''}`}>
+            <div className={`co-grid-2 ${isTicketBundle || isFamily || isGroup ? 'is-single' : ''}`}>
               {openAmount ? (
                 <label className="co-field">
                   <span>Amount (KES) *</span>
@@ -550,7 +631,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
                   />
                   <small>Minimum {money(openAmount.min ?? 1)}.</small>
                 </label>
-              ) : !isTicketBundle && !isFamily ? (
+              ) : !isTicketBundle && !isFamily && !isGroup ? (
                 <label className="co-field">
                   <span>{qtyLabel} *</span>
                   <input
@@ -570,10 +651,12 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
               </label>
             </div>
 
-            {(isTicketBundle || isFamily) && (
+            {(isTicketBundle || isFamily || isGroup) && (
               <p className="co-note">
                 {isFamily
                   ? `Your current family mix includes ${familyMemberCount} individually scannable tickets.`
+                  : isGroup
+                    ? `You are paying for one place. The complete group costs ${money(priceToNumber(item.price))} for ${groupCapacity} people.`
                   : `This package includes ${ticketsPerPackage} individually scannable tickets.`}
               </p>
             )}
@@ -601,7 +684,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
               {quoting ? (
                 <>
                   <LoadingOutlined />
-                  {isFamily ? 'Checking total…' : 'Verifying promo…'}
+                  {isFamily || isGroup ? 'Checking availability…' : 'Verifying promo…'}
                 </>
               ) : (
                 <>
@@ -877,8 +960,7 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
             <CheckCircleFilled className="co-icon is-ok" />
             <h3>Payment received</h3>
             <p className="co-centre-text">
-              Thank you! Your purchase for {result?.quantity ?? admissionQuantity}{' '}
-              {(result?.quantity ?? admissionQuantity) === 1 ? 'ticket' : 'tickets'} to {event.title} is confirmed.
+              Thank you! {isGroup ? 'Your place' : `Your purchase for ${result?.quantity ?? admissionQuantity} ${(result?.quantity ?? admissionQuantity) === 1 ? 'ticket' : 'tickets'}`} to {event.title} is confirmed.
               {result?.receipt && (
                 <>
                   {' '}
@@ -887,9 +969,44 @@ const TicketCheckout = ({ event, item, kind = 'ticket', onClose }) => {
               )}{' '}
               A confirmation will follow to <strong>{form.email}</strong>.
             </p>
+            {isGroup && completedGroup && !completedGroup.full && (
+              <section className="co-share">
+                <div>
+                  <strong>Invite people to {completedGroup.name}</strong>
+                  <p>
+                    {completedGroup.occupied} of {completedGroup.capacity} places are taken. Anyone with this link can pay for one of the remaining {completedGroup.remaining}.
+                  </p>
+                </div>
+                <div className="co-share-link">
+                  <input value={groupInviteUrl} readOnly aria-label="Group invite link" onFocus={(e) => e.target.select()} />
+                  <button type="button" className="btn btn-ghost" onClick={copyGroupLink}>
+                    <CopyOutlined /> {copied ? 'Copied' : 'Copy link'}
+                  </button>
+                </div>
+              </section>
+            )}
+            {isGroup && completedGroup?.full && (
+              <p className="co-note">{completedGroup.name} is complete — all {completedGroup.capacity} places are taken.</p>
+            )}
             <button type="button" className="btn btn-primary" onClick={onClose}>
               Done
             </button>
+          </div>
+        )}
+
+        {/* ---------------------------------------------------------- group full */}
+        {stage === 'group-full' && (
+          <div className="co-body co-centre">
+            <TeamOutlined className="co-icon is-wait" />
+            <h3>This group is full</h3>
+            <p className="co-centre-text">
+              {activeGroup?.name ? <><strong>{activeGroup.name}</strong> has no places left. </> : null}
+              You can start a new group for the same ticket package and invite your friends there.
+            </p>
+            <div className="co-actions">
+              <button type="button" className="btn btn-ghost" onClick={onClose}>Close</button>
+              <button type="button" className="btn btn-primary" onClick={startNewGroup}>Create a new group</button>
+            </div>
           </div>
         )}
 

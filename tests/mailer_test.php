@@ -102,6 +102,21 @@ check(
 );
 check('email explains independent tickets', str_contains(order_email_html($multi), 'used independently'), true);
 
+$groupOrder = $order + [
+    'packageType' => 'group',
+    'groupName' => 'The Harmonies',
+    'groupCapacity' => 5,
+    'groupToken' => '0123456789abcdef0123456789abcdef',
+    'eventSlug' => 'jabali-5',
+];
+$groupHtml = order_email_html($groupOrder);
+check('group receipt names the group', str_contains($groupHtml, 'The Harmonies (5 places)'), true);
+check(
+    'group receipt carries the durable invite link',
+    str_contains($groupHtml, '/events/jabali-5?group=0123456789abcdef0123456789abcdef'),
+    true
+);
+
 // The SMTP line-length limit is 1000 octets including CRLF. base64 + chunk_split
 // keeps every line at 76; an 8bit HTML part blew past it on the styled markup.
 $longest = 0;

@@ -68,6 +68,8 @@ foreach ($orders as $i => $order) {
     }
 
     $orders[$i]['status'] = $paid ? 'success' : 'failed';
+    $orders[$i]['resultCode'] = (string) $resultCode;
+    $orders[$i]['mpesaResultDesc'] = $resultDesc;
     $orders[$i]['resultDesc'] = $resultDesc;
     $orders[$i]['receipt'] = $receipt;
     $orders[$i]['paidAt'] = date('c');

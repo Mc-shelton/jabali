@@ -321,6 +321,36 @@
   font-size: 0.78rem;
 }
 
+// Shared-group context: who the invite belongs to and how many places remain.
+.co-group-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px;
+  border: 1px solid rgba(23, 73, 122, 0.18);
+  border-radius: tokens.$r-sm;
+  background: rgba(23, 73, 122, 0.055);
+  color: tokens.$ink;
+
+  > svg {
+    flex: 0 0 auto;
+    margin-top: 2px;
+    color: tokens.$brass;
+    font-size: 22px;
+  }
+
+  strong {
+    font-size: 0.94rem;
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: tokens.$ink-muted;
+    font-size: 0.8rem;
+    line-height: 1.5;
+  }
+}
+
 // ---------------------------------------------------------------- totals
 .co-total,
 .co-summary > div {
@@ -451,6 +481,50 @@
   font-size: 0.86rem;
 }
 
+.co-share {
+  display: grid;
+  width: 100%;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid tokens.$line-strong;
+  border-radius: tokens.$r-sm;
+  background: tokens.$paper-sunk;
+  text-align: left;
+
+  strong {
+    color: tokens.$ink;
+  }
+
+  p {
+    margin: 4px 0 0;
+    color: tokens.$ink-muted;
+    font-size: 0.82rem;
+    line-height: 1.5;
+  }
+}
+
+.co-share-link {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+
+  input {
+    min-width: 0;
+    padding: 10px 11px;
+    border: 1px solid tokens.$line-strong;
+    border-radius: tokens.$r-sm;
+    background: tokens.$paper;
+    color: tokens.$ink-body;
+    font: inherit;
+    font-size: 0.78rem;
+  }
+
+  .btn {
+    margin: 0;
+    white-space: nowrap;
+  }
+}
+
 // Three buttons fit on the failed screen; let them wrap rather than squash.
 .co-actions {
   flex-wrap: wrap;
@@ -520,6 +594,15 @@
 @media (max-width: 480px) {
   .co-grid-2 {
     grid-template-columns: 1fr;
+  }
+
+  .co-share-link {
+    grid-template-columns: 1fr;
+
+    .btn {
+      width: 100%;
+      justify-content: center;
+    }
   }
 }
 

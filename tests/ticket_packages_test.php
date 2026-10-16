@@ -34,6 +34,14 @@ else { $fail++; echo "  FAIL bundle purchase limit\n"; }
 if (max_ticket_package_purchase_quantity(1) === 50) echo "  ok   single tickets retain multi-buy\n";
 else { $fail++; echo "  FAIL single-ticket purchase limit\n"; }
 
+if (shared_group_member_price(['price' => 'KES 4,000', 'ticketCount' => 5]) === 800) {
+    echo "  ok   shared group total is split per member\n";
+} else { $fail++; echo "  FAIL shared group member price\n"; }
+
+if (shared_group_member_price(['price' => 'KES 1,001', 'ticketCount' => 5]) === 0) {
+    echo "  ok   uneven shared group split is rejected\n";
+} else { $fail++; echo "  FAIL uneven shared group split\n"; }
+
 echo "\n-- family package composition --\n";
 $family = [
     'type' => 'family',
@@ -74,5 +82,5 @@ else { $fail++; echo "  FAIL family minimum validation\n"; }
 if ($unknown === 'That family member category is no longer available.') echo "  ok   unknown categories are rejected\n";
 else { $fail++; echo "  FAIL unknown family category\n"; }
 
-echo (count($cases) + 9 - $fail) . " passed, $fail failed\n";
+echo (count($cases) + 11 - $fail) . " passed, $fail failed\n";
 exit($fail === 0 ? 0 : 1);

@@ -78,6 +78,7 @@ function refresh_order_status(array $order, bool $force = false): array
     $q = mpesa_stk_query($order['checkoutRequestId']);
     $order['lastQueryAt'] = time();
     $order['lastQueryCode'] = $q['code'];
+    if (!empty($q['rawDesc'])) $order['mpesaResultDesc'] = $q['rawDesc'];
 
     if ($q['status'] === 'success') {
         // May be correcting an order previously marked failed — the whole reason
@@ -100,6 +101,7 @@ function refresh_order_status(array $order, bool $force = false): array
         ]);
     } elseif ($q['status'] === 'failed' && ($order['status'] ?? '') === 'pending') {
         $order['status'] = 'failed';
+        $order['resultCode'] = $q['code'];
         $order['resultDesc'] = $q['desc'];
         $order['settledBy'] = 'query';
 

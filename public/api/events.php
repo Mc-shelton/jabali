@@ -96,13 +96,15 @@ function normalise_event(array $in, array $events, ?array $existing = null): arr
     }
 
     // Standard packages keep the original fixed-price shape. Family packages
-    // add a base member price and configurable member groups.
+    // add a base member price and configurable member groups. Shared groups
+    // split one advertised package total evenly between their members.
     $packages = [];
     foreach ((array) ($in['packages'] ?? []) as $p) {
         if (!is_array($p)) continue;
         $name = clean_string($p['name'] ?? '', 80);
         $price = clean_string($p['price'] ?? '', 40);
-        $packageType = ($p['type'] ?? 'standard') === 'family' ? 'family' : 'standard';
+        $sentType = $p['type'] ?? 'standard';
+        $packageType = in_array($sentType, ['family', 'group'], true) ? $sentType : 'standard';
         if ($name === '' && $price === '' && $packageType !== 'family') continue;
         if ($name === '') error_out('Every ticket package needs a name.', 422);
         $url = clean_string($p['url'] ?? '', 500);
@@ -175,6 +177,14 @@ function normalise_event(array $in, array $events, ?array $existing = null): arr
                 'maxMembers' => $maxMembers,
                 'groups'     => $groups,
             ];
+        } elseif ($packageType === 'group') {
+            $capacity = normalise_ticket_count($p['ticketCount'] ?? 1);
+            $total = ticket_price_to_int($price);
+            if ($capacity < 2) error_out("$name needs at least two group members.", 422);
+            if ($total < 1) error_out("$name needs a valid total group price.", 422);
+            if ($total % $capacity !== 0) {
+                error_out("$name's total price must divide evenly between its $capacity members.", 422);
+            }
         }
 
         $packages[] = $package;

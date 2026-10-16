@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { Link, useParams, useSearchParams } from 'react-router-dom';
 import {
   ArrowLeftOutlined,
   ArrowRightOutlined,
@@ -17,13 +17,17 @@ import PageLoader from '../components/PageLoader';
 import TicketCheckout from '../components/TicketCheckout';
 import Price from '../components/Price';
 import Seo from '../components/Seo';
+import { fetchTicketGroup } from '../lib/api';
 
 const EventDetail = () => {
   const { slug } = useParams();
+  const [searchParams] = useSearchParams();
   const { event, loading } = useEvent(slug);
   const [activeImage, setActiveImage] = useState(null);
   // { item, kind } for the open checkout, or null.
   const [checkout, setCheckout] = useState(null);
+  const [groupInviteError, setGroupInviteError] = useState('');
+  const handledGroupToken = useRef('');
 
   const closeLightbox = useCallback(() => setActiveImage(null), []);
 
@@ -31,6 +35,24 @@ const EventDetail = () => {
   useEffect(() => {
     if (event) viewItem({ id: event.slug, name: event.title }, 'event');
   }, [event]);
+
+  // A shared link lands on the normal event page and opens the matching group
+  // checkout. The token is resolved by the server; package names and capacity
+  // from the URL are never trusted.
+  useEffect(() => {
+    const token = searchParams.get('group') || '';
+    if (!event || !token || handledGroupToken.current === token) return;
+    handledGroupToken.current = token;
+    setGroupInviteError('');
+    fetchTicketGroup(token)
+      .then((group) => {
+        if (group.eventSlug !== event.slug) throw new Error('This group link belongs to a different event.');
+        const item = event.packages.find((pkg) => pkg.type === 'group' && pkg.name === group.packageName);
+        if (!item) throw new Error('That group ticket is no longer available.');
+        setCheckout({ item, kind: 'ticket', group });
+      })
+      .catch((err) => setGroupInviteError(err.message || 'This group link is not available.'));
+  }, [event, searchParams]);
 
   useEffect(() => {
     if (!activeImage) return undefined;
@@ -136,12 +158,17 @@ const EventDetail = () => {
               <>
                 <span className="evd-ticket-label">Ticket packages</span>
 
+                {groupInviteError && <p className="evd-ticket-sub">{groupInviteError}</p>}
+
                 <ul className="evd-packages">
                   {event.packages.map((pkg) => {
                     // A package with its own checkout URL links out; otherwise the
                     // card opens the in-page M-Pesa checkout.
                     const external = Boolean(pkg.url);
                     const isFamily = pkg.type === 'family';
+                    const isGroup = pkg.type === 'group';
+                    const groupSize = Math.max(1, Number(pkg.ticketCount) || 1);
+                    const groupMemberPrice = Math.floor(Number(String(pkg.price).replace(/[^0-9]/g, '')) / groupSize);
                     const inner = (
                       <>
                         <span className="evd-package-head">
@@ -152,6 +179,10 @@ const EventDetail = () => {
                           <span className="evd-package-note">
                             Build your family package · {pkg.family?.minMembers}–{pkg.family?.maxMembers} tickets
                           </span>
+                        ) : isGroup ? (
+                          <span className="evd-package-note">
+                            Create or join a group of {groupSize} · KES {groupMemberPrice.toLocaleString('en-KE')} per person
+                          </span>
                         ) : (Number(pkg.ticketCount) || 1) > 1 && (
                           <span className="evd-package-note">
                             Includes {Number(pkg.ticketCount)} tickets
@@ -159,7 +190,7 @@ const EventDetail = () => {
                         )}
                         {pkg.note && <span className="evd-package-note">{pkg.note}</span>}
                         <span className="evd-package-action">
-                          Get tickets
+                          {isGroup ? 'Start a group' : 'Get tickets'}
                           <ArrowRightOutlined />
                         </span>
                       </>
@@ -181,7 +212,7 @@ const EventDetail = () => {
                           <button
                             type="button"
                             className="evd-package"
-                            onClick={() => setCheckout({ item: pkg, kind: 'ticket' })}
+                            onClick={() => setCheckout({ item: pkg, kind: 'ticket', group: null })}
                             aria-label={`Buy ${pkg.name} tickets, ${pkg.price}`}
                           >
                             {inner}
@@ -303,6 +334,7 @@ const EventDetail = () => {
           event={event}
           item={checkout.item}
           kind={checkout.kind}
+          inviteGroup={checkout.group}
           onClose={() => setCheckout(null)}
         />
       )}

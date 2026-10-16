@@ -119,6 +119,37 @@ function store_write(string $name, $data): void
     fclose($fp);
 }
 
+// Append one record without the read/write race of `store_read()` followed by
+// `store_write()`. Shared ticket links make simultaneous checkouts much more
+// likely; both orders must survive even when their M-Pesa requests start in the
+// same instant.
+function store_append(string $name, $record): void
+{
+    if (!is_dir(DATA_DIR) && !mkdir(DATA_DIR, 0775, true) && !is_dir(DATA_DIR)) {
+        error_out('Data directory is not writable.', 500);
+    }
+    $path = store_path($name);
+    $fp = fopen($path, 'c+');
+    if ($fp === false || !flock($fp, LOCK_EX)) {
+        if (is_resource($fp)) fclose($fp);
+        error_out('Could not lock data file.', 500);
+    }
+
+    rewind($fp);
+    $raw = stream_get_contents($fp);
+    $records = json_decode($raw ?: '[]', true);
+    if (!is_array($records)) $records = [];
+    $records[] = $record;
+
+    $json = json_encode($records, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
+    ftruncate($fp, 0);
+    rewind($fp);
+    fwrite($fp, $json);
+    fflush($fp);
+    flock($fp, LOCK_UN);
+    fclose($fp);
+}
+
 // ---------------------------------------------------------------- auth + csrf
 // Roles and credential checks live in _access.php so they can be tested without
 // a session, headers, or config.php.
