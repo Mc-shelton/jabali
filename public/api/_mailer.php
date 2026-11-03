@@ -7,6 +7,7 @@ declare(strict_types=1);
 function order_email_html(array $order): string
 {
     $isTicket = ($order['itemType'] ?? 'ticket') !== 'merch';
+    $isComplimentary = ($order['billingType'] ?? '') === 'complimentary';
     $name = htmlspecialchars($order['customer']['preferredName'] ?? 'there');
     $event = htmlspecialchars($order['eventTitle'] ?? '');
     // An open-amount order (a donation) has no meaningful quantity.
@@ -26,7 +27,9 @@ function order_email_html(array $order): string
     } else {
         $item = htmlspecialchars(($order['quantity'] ?? 1) . ' × ' . ($order['itemName'] ?? ''));
     }
-    $amount = 'KES ' . number_format((int) ($order['amount'] ?? 0));
+    $amount = $isComplimentary
+        ? 'Complimentary — no payment required'
+        : 'KES ' . number_format((int) ($order['amount'] ?? 0));
 
     // Chosen variant (Size: XL · Colour: Gold), so the buyer has a record of
     // exactly what they ordered.
@@ -101,9 +104,16 @@ function order_email_html(array $order): string
 
     $lead = $isTicket
         ? ($ticketCount > 1
-            ? "Your tickets for <strong>$event</strong> are confirmed. The $ticketCount attached PDF tickets each have a unique QR code and can be used independently."
-            : "Your ticket for <strong>$event</strong> is confirmed. Your PDF ticket is attached — present its QR code at entry.")
+            ? ($isComplimentary
+                ? "Your $ticketCount complimentary tickets for <strong>$event</strong> have been issued. The attached PDF tickets each have a unique QR code and can be used independently."
+                : "Your tickets for <strong>$event</strong> are confirmed. The $ticketCount attached PDF tickets each have a unique QR code and can be used independently.")
+            : ($isComplimentary
+                ? "Your complimentary ticket for <strong>$event</strong> has been issued. Your PDF ticket is attached — present its QR code at entry."
+                : "Your ticket for <strong>$event</strong> is confirmed. Your PDF ticket is attached — present its QR code at entry."))
         : "Thanks for your order from <strong>$event</strong>. We'll be in touch about collection/delivery.";
+
+    $heading = $isComplimentary ? 'Your ticket is ready' : 'Payment received';
+    $amountLabel = $isComplimentary ? 'Charge' : 'Amount paid';
 
     $codeBlock = '';
     if ($isTicket && $codes) {
@@ -118,7 +128,7 @@ function order_email_html(array $order): string
 
     return "<div style=\"max-width:520px;margin:0 auto;font-family:Arial,sans-serif;color:#2a3a4d\">
       <p style=\"font:700 20px/1 Arial;color:#17497a;margin:0 0 4px\">Jabali Chorale</p>
-      <h1 style=\"font-size:22px;color:#0e1b2a;margin:8px 0 16px\">Payment received</h1>
+      <h1 style=\"font-size:22px;color:#0e1b2a;margin:8px 0 16px\">$heading</h1>
       <p style=\"line-height:1.6\">Hi $name, $lead</p>
       <table style=\"width:100%;border-collapse:collapse;margin:20px 0;font-size:14px\">
         <tr><td style=\"padding:8px 0;color:#5a6875\">Event</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">$event</td></tr>
@@ -127,7 +137,7 @@ function order_email_html(array $order): string
         $groupRows
         $optionsRow
         $addOnRows
-        <tr><td style=\"padding:8px 0;color:#5a6875\">Amount paid</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">$amount</td></tr>
+        <tr><td style=\"padding:8px 0;color:#5a6875\">$amountLabel</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">$amount</td></tr>
         " . ($receipt ? "<tr><td style=\"padding:8px 0;color:#5a6875\">M-Pesa receipt</td><td style=\"padding:8px 0;text-align:right;font-weight:600\">$receipt</td></tr>" : '') . "
       </table>
       $codeBlock
@@ -297,7 +307,11 @@ function build_mime(
 function order_mime(array $order, $pdfs = null): array
 {
     $isTicket = ($order['itemType'] ?? 'ticket') !== 'merch';
-    $subject = ($isTicket ? 'Your tickets — ' : 'Your order — ') . ($order['eventTitle'] ?? 'Jabali Chorale');
+    $isComplimentary = ($order['billingType'] ?? '') === 'complimentary';
+    $subject = ($isComplimentary
+        ? 'Your complimentary tickets — '
+        : ($isTicket ? 'Your tickets — ' : 'Your order — '))
+        . ($order['eventTitle'] ?? 'Jabali Chorale');
 
     $legacyPdf = is_string($pdfs) ? $pdfs : null;
     $attachments = is_array($pdfs) ? $pdfs : [];

@@ -190,6 +190,8 @@ export const adminFetchJabali5 = () => request('jabali5.php?raw=1');
 export const saveJabali5 = (data) => request('jabali5.php', { method: 'PUT', body: data });
 
 export const adminFetchOrders = () => request('orders.php');
+export const createComplimentaryTickets = (data) =>
+  request('orders.php?complimentary=1', { method: 'POST', body: data });
 export const setTicketGroupClosed = (groupId, closed) =>
   request(`orders.php?group=${encodeURIComponent(groupId)}`, {
     method: 'POST',

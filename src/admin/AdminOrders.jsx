@@ -8,12 +8,15 @@ import {
 } from '@ant-design/icons';
 import {
   adminFetchOrders,
+  adminFetchEvents,
   reconcileOrders,
   resendConfirmation,
   setTicketGroupClosed,
 } from '../lib/api';
 import PageLoader from '../components/PageLoader';
 import AdminOrderDetail from './AdminOrderDetail';
+import AdminComplimentaryTicketForm from './AdminComplimentaryTicketForm';
+import AdminMultiSelect from './AdminMultiSelect';
 import {
   buyerName,
   itemText,
@@ -44,9 +47,9 @@ const COLUMNS = [
 
 const EMPTY_FILTERS = {
   q: '',
-  event: '',
-  item: '',
-  status: '',
+  event: [],
+  item: [],
+  status: [],
   from: '',
   to: '',
 };
@@ -165,10 +168,15 @@ const AdminOrders = () => {
   const [detailId, setDetailId] = useState('');
   const [view, setView] = useState('orders');
   const [busyGroupId, setBusyGroupId] = useState('');
+  const [events, setEvents] = useState({ upcoming: [], past: [] });
+  const [issuing, setIssuing] = useState(false);
 
   const load = () =>
-    adminFetchOrders()
-      .then(setData)
+    Promise.all([adminFetchOrders(), adminFetchEvents()])
+      .then(([ordersData, eventsData]) => {
+        setData(ordersData);
+        setEvents(eventsData);
+      })
       .catch((err) => setError(err.message))
       .finally(() => setLoading(false));
 
@@ -196,6 +204,7 @@ const AdminOrders = () => {
   );
 
   const setFilter = (key) => (e) => setFilters((f) => ({ ...f, [key]: e.target.value }));
+  const setMultiFilter = (key) => (values) => setFilters((f) => ({ ...f, [key]: values }));
 
   const visible = useMemo(() => {
     const q = filters.q.trim().toLowerCase();
@@ -221,10 +230,21 @@ const AdminOrders = () => {
           .toLowerCase();
         if (!haystack.includes(q)) return false;
       }
-      if (filters.event && o.eventTitle !== filters.event) return false;
-      if (filters.item && !orderLines(o).some((line) => line.name === filters.item)) return false;
-      if (filters.status === 'direct' && o.recordType !== 'direct') return false;
-      if (filters.status && filters.status !== 'direct' && o.status !== filters.status) return false;
+      if (filters.event.length > 0 && !filters.event.includes(o.eventTitle)) return false;
+      if (
+        filters.item.length > 0
+        && !orderLines(o).some((line) => filters.item.includes(line.name))
+      ) return false;
+      if (filters.status.length > 0) {
+        const category = o.recordType === 'direct'
+          ? 'direct'
+          : o.billingType === 'complimentary'
+            ? 'complimentary'
+            : o.status === 'success'
+              ? 'paid'
+              : o.status;
+        if (!filters.status.includes(category)) return false;
+      }
 
       // Date bounds are inclusive of the whole `to` day.
       if (filters.from && (o.createdAt ?? '') < filters.from) return false;
@@ -248,12 +268,19 @@ const AdminOrders = () => {
   const shownStats = useMemo(() => {
     // A direct C2B payment is successful, but is not an online order and has
     // its own amount/count card rather than inflating paid-order revenue.
-    const paid = visible.filter((o) => o.status === 'success' && o.recordType !== 'direct');
+    const complimentary = visible.filter((o) => o.billingType === 'complimentary');
+    const paid = visible.filter((o) =>
+      o.status === 'success'
+      && o.recordType !== 'direct'
+      && o.billingType !== 'complimentary'
+    );
     const direct = visible.filter((o) => o.recordType === 'direct');
     return {
       count: visible.length,
       paid: paid.length,
       revenue: paid.reduce((sum, o) => sum + Number(o.amount ?? 0), 0),
+      complimentary: complimentary.length,
+      complimentaryTickets: complimentary.reduce((sum, o) => sum + Number(o.quantity ?? 0), 0),
       direct: direct.length,
       directAmount: direct.reduce((sum, o) => sum + Number(o.amount ?? 0), 0),
     };
@@ -334,7 +361,19 @@ const AdminOrders = () => {
     }
   };
 
-  const filtersActive = Object.values(filters).some(Boolean);
+  const filtersActive = Object.values(filters).some((value) =>
+    Array.isArray(value) ? value.length > 0 : Boolean(value)
+  );
+
+  const onTicketsCreated = async (order) => {
+    await load();
+    setIssuing(false);
+    setReconcileNote(
+      order.emailOk
+        ? `${order.quantity} complimentary ticket${order.quantity === 1 ? '' : 's'} issued and emailed to ${order.customer.email}.`
+        : `${order.quantity} complimentary ticket${order.quantity === 1 ? '' : 's'} issued, but the email could not be sent. Use Re-send on the new order.`,
+    );
+  };
   // Resolved from the current list, so the dialog closes by itself if the order
   // it was showing disappears from a reload.
   const detailOrder = orders.find((o) => o.id === detailId);
@@ -354,15 +393,20 @@ const AdminOrders = () => {
           <h1>Orders</h1>
           <p>Ticket and merchandise sales. Click a column heading to sort by it.</p>
         </div>
-        <button
-          type="button"
-          className="admin-btn admin-btn-ghost"
-          onClick={runReconcile}
-          disabled={reconciling}
-          title="Re-check unsettled orders against M-Pesa"
-        >
-          <ReloadOutlined /> {reconciling ? 'Checking…' : 'Re-check with M-Pesa'}
-        </button>
+        <div className="admin-page-actions">
+          <button type="button" className="admin-btn admin-btn-primary" onClick={() => setIssuing(true)}>
+            <PlusOutlined /> Issue tickets
+          </button>
+          <button
+            type="button"
+            className="admin-btn admin-btn-ghost"
+            onClick={runReconcile}
+            disabled={reconciling}
+            title="Re-check unsettled orders against M-Pesa"
+          >
+            <ReloadOutlined /> {reconciling ? 'Checking…' : 'Re-check with M-Pesa'}
+          </button>
+        </div>
       </header>
 
       {error && <p className="admin-error">{error}</p>}
@@ -400,6 +444,13 @@ const AdminOrders = () => {
           <span>{filtersActive ? 'Revenue (filtered)' : 'Revenue'}</span>
           <strong>{money(shownStats.revenue)}</strong>
         </div>
+        <div className="admin-stat" title="Non-billable tickets issued directly by an administrator">
+          <span>{filtersActive ? 'Complimentary (filtered)' : 'Complimentary'}</span>
+          <strong>{shownStats.complimentaryTickets}</strong>
+          <em className="admin-stat-detail">
+            {shownStats.complimentary} issuance{shownStats.complimentary === 1 ? '' : 's'}
+          </em>
+        </div>
         <div
           className="admin-stat"
           title="Completed PayBill payments not linked to an online order"
@@ -433,40 +484,35 @@ const AdminOrders = () => {
           </div>
         </label>
 
-        <label className="admin-field">
-          <span>Event</span>
-          <select value={filters.event} onChange={setFilter('event')}>
-            <option value="">All events</option>
-            {eventOptions.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <AdminMultiSelect
+          label="Event"
+          values={filters.event}
+          options={eventOptions.map((name) => ({ value: name, label: name }))}
+          placeholder="All events"
+          onChange={setMultiFilter('event')}
+        />
 
-        <label className="admin-field">
-          <span>Item</span>
-          <select value={filters.item} onChange={setFilter('item')}>
-            <option value="">All items</option>
-            {itemOptions.map((name) => (
-              <option key={name} value={name}>
-                {name}
-              </option>
-            ))}
-          </select>
-        </label>
+        <AdminMultiSelect
+          label="Item"
+          values={filters.item}
+          options={itemOptions.map((name) => ({ value: name, label: name }))}
+          placeholder="All items"
+          onChange={setMultiFilter('item')}
+        />
 
-        <label className="admin-field">
-          <span>Status</span>
-          <select value={filters.status} onChange={setFilter('status')}>
-            <option value="">Any status</option>
-            <option value="success">Paid</option>
-            <option value="direct">Direct payments</option>
-            <option value="pending">Pending</option>
-            <option value="failed">Failed</option>
-          </select>
-        </label>
+        <AdminMultiSelect
+          label="Status"
+          values={filters.status}
+          options={[
+            { value: 'paid', label: 'Paid' },
+            { value: 'complimentary', label: 'Complimentary' },
+            { value: 'direct', label: 'Direct payments' },
+            { value: 'pending', label: 'Pending' },
+            { value: 'failed', label: 'Failed' },
+          ]}
+          placeholder="Any status"
+          onChange={setMultiFilter('status')}
+        />
 
         <label className="admin-field">
           <span>From</span>
@@ -577,9 +623,13 @@ const AdminOrders = () => {
                       </div>
                     </td>
                     <td>{isDirect ? '—' : totalUnits(o)}</td>
-                    <td className="admin-nowrap">{money(o.amount)}</td>
+                    <td className="admin-nowrap">
+                      {o.billingType === 'complimentary' ? 'Complimentary' : money(o.amount)}
+                    </td>
                     <td>
-                      <span className={`admin-status is-${o.status}`}>{o.status}</span>
+                      <span className={`admin-status is-${o.billingType === 'complimentary' ? 'issued' : o.status}`}>
+                        {o.billingType === 'complimentary' ? 'issued' : o.status}
+                      </span>
                       {/* Flags an order that polling had wrongly marked failed. */}
                       {o.correctedFrom === 'failed' && o.status === 'success' && (
                         <div className="admin-cell-sub" title="This order was wrongly marked failed and has been corrected">
@@ -622,6 +672,13 @@ const AdminOrders = () => {
       </>}
 
       {detailOrder && <AdminOrderDetail order={detailOrder} onClose={() => setDetailId('')} />}
+      {issuing && (
+        <AdminComplimentaryTicketForm
+          events={events}
+          onClose={() => setIssuing(false)}
+          onCreated={onTicketsCreated}
+        />
+      )}
     </div>
   );
 };

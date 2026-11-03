@@ -117,7 +117,11 @@ function pdf_ticket(array $order): string
     }
     if ($optionBits) $rows[] = ['OPTIONS', implode('   ·   ', $optionBits)];
 
-    $rows[] = ['AMOUNT PAID', 'KES ' . number_format((int) ($order['amount'] ?? 0))];
+    if (($order['billingType'] ?? '') === 'complimentary') {
+        $rows[] = ['TICKET TYPE', 'Complimentary - no payment required'];
+    } else {
+        $rows[] = ['AMOUNT PAID', 'KES ' . number_format((int) ($order['amount'] ?? 0))];
+    }
 
     $buyer = trim(($order['customer']['preferredName'] ?? '') . ' ' . ($order['customer']['otherNames'] ?? ''));
     if ($buyer !== '') $rows[] = ['ISSUED TO', $buyer];

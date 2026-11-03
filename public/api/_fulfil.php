@@ -1,6 +1,7 @@
 <?php
-// Runs once when an order settles as paid: generate the e-ticket (tickets only)
-// and email the buyer their confirmation. Idempotent via the `emailed` flag.
+// Runs once when an order settles as paid or is issued by an administrator:
+// generate the e-ticket (tickets only) and email the recipient their
+// confirmation. Idempotent via the `emailed` flag.
 
 declare(strict_types=1);
 
@@ -11,17 +12,16 @@ require_once __DIR__ . '/_ticket_records.php';
 function fulfil_order(array &$order): void
 {
     if (!empty($order['emailed'])) return;                 // already done
-    if (($order['status'] ?? '') !== 'success') return;    // only paid orders
+    if (($order['status'] ?? '') !== 'success') return;    // only valid issued orders
 
     // Mark as attempted BEFORE trying — one attempt only, so a flaky mailer
     // can't trigger repeated sends on every status poll.
     $order['emailed'] = true;
     $order['emailedAt'] = date('c');
 
-    // Fulfilment is a side effect of a payment that has already happened. It
-    // must never be able to undo one: an exception escaping this function
-    // unwinds the caller before it saves, so a paid order would be written back
-    // as unpaid — the mail server deciding whether the money counts.
+    // Fulfilment is a side effect of a payment or authorised issuance that has
+    // already happened. It must never be able to undo one: a mail fault cannot
+    // be allowed to erase a valid ticket.
     //
     // So everything here is contained, recorded, and reported as a flag.
     try {
@@ -79,8 +79,8 @@ function fulfil_order(array &$order): void
 // the emailOk flag.
 function resend_confirmation(array &$order): bool
 {
-    // Only a settled payment has anything to confirm. Re-sending for a pending
-    // or failed order would tell the buyer they had paid when they had not.
+    // Only a settled payment or completed admin issuance has anything to
+    // confirm. Pending and failed orders have no valid ticket to deliver.
     if (($order['status'] ?? '') !== 'success') return false;
 
     $order['emailed'] = false;

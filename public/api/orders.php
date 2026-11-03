@@ -1,12 +1,14 @@
 <?php
 // Orders / sales — admin only.
 //   GET  orders.php              → all orders, newest first
+//   POST orders.php?complimentary=1 → issue non-billable tickets + email
 //   POST orders.php?reconcile=1  → re-query every unsettled order against Daraja
 //   POST orders.php?group=ID     → manually open/close a shared ticket group
 require __DIR__ . '/_bootstrap.php';
 require __DIR__ . '/_orders.php';
 require __DIR__ . '/_c2b.php';
 require __DIR__ . '/_ticket_groups.php';
+require __DIR__ . '/_complimentary_tickets.php';
 
 route([
     'GET' => function () {
@@ -16,7 +18,13 @@ route([
         // Newest first.
         usort($orders, fn($a, $b) => strcmp($b['createdAt'] ?? '', $a['createdAt'] ?? ''));
 
-        $paid = array_filter($orders, fn($o) => ($o['status'] ?? '') === 'success');
+        $paid = array_filter($orders, fn($o) =>
+            ($o['status'] ?? '') === 'success'
+            && ($o['billingType'] ?? 'paid') !== 'complimentary'
+        );
+        $complimentary = array_filter($orders, fn($o) =>
+            ($o['billingType'] ?? '') === 'complimentary'
+        );
         $revenue = array_sum(array_map(fn($o) => (int) ($o['amount'] ?? 0), $paid));
         // Replay is idempotent and repairs any callback that reached the durable
         // inbox while the materialised payment store was temporarily broken.
@@ -51,6 +59,11 @@ route([
                 'total'           => count($orders),
                 'paid'            => count($paid),
                 'revenue'         => $revenue,
+                'complimentary'   => count($complimentary),
+                'complimentaryTickets' => array_sum(array_map(
+                    fn($o) => (int) ($o['quantity'] ?? 0),
+                    $complimentary
+                )),
                 'direct'          => count($directPayments),
                 'directAmount'    => $directAmount,
                 'c2bNeedsReview'  => $replay['invalid']
@@ -66,6 +79,40 @@ route([
     'POST' => function () {
         require_admin();
         require_csrf();
+
+        if (!empty($_GET['complimentary'])) {
+            try {
+                $resolved = resolve_complimentary_ticket_request(
+                    read_json_body(),
+                    store_read('events', [])
+                );
+            } catch (OutOfBoundsException $e) {
+                error_out($e->getMessage(), 404);
+            } catch (DomainException $e) {
+                error_out($e->getMessage(), 422);
+            }
+
+            $orders = store_read('orders', []);
+            $order = make_complimentary_order($resolved, $orders);
+
+            // The existing fulfilment is the source of truth for both paid and
+            // complimentary tickets: one PDF/QR per admission, one email, and
+            // the same contained failure behavior. Persist the attempt either
+            // way so the admin can use the normal Re-send action if mail fails.
+            fulfil_order($order);
+            store_append('orders', $order);
+
+            log_info('Complimentary tickets issued by admin', [
+                'orderId' => $order['id'],
+                'eventSlug' => $order['eventSlug'],
+                'packageName' => $order['itemName'],
+                'quantity' => $order['quantity'],
+                'to' => $order['customer']['email'],
+                'emailOk' => $order['emailOk'] ?? false,
+            ]);
+
+            json_out(['order' => $order], 201);
+        }
 
         if (!empty($_GET['group'])) {
             $id = strtolower(clean_string($_GET['group'], 24));
@@ -98,7 +145,7 @@ route([
                 error_out('Order not found.', 404);
             }
             if (($orders[$idx]['status'] ?? '') !== 'success') {
-                error_out('Only a paid order can be confirmed.', 400);
+                error_out('Only an issued or paid order can be confirmed.', 400);
             }
 
             $ok = resend_confirmation($orders[$idx]);

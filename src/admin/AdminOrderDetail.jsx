@@ -27,6 +27,7 @@ const AdminOrderDetail = ({ order, onClose }) => {
 
   const lines = orderLines(order);
   const isDirect = order.recordType === 'direct';
+  const isComplimentary = order.billingType === 'complimentary';
   const individualTickets = Array.isArray(order.tickets) ? order.tickets : [];
 
   // Only the facts this order actually carries — an empty row reads as missing
@@ -45,7 +46,7 @@ const AdminOrderDetail = ({ order, onClose }) => {
       ]
     : [
         ['Placed', when(order.createdAt)],
-        ['Paid', when(order.paidAt)],
+        [isComplimentary ? 'Issued' : 'Paid', when(isComplimentary ? order.issuedAt : order.paidAt)],
         ['Event', order.eventTitle],
         ['Venue', order.eventVenue],
         ['Email', order.customer?.email],
@@ -61,6 +62,9 @@ const AdminOrderDetail = ({ order, onClose }) => {
         ['Packages bought', order.ticketsPerPackage > 1 ? order.packageQuantity : null],
         ['Tickets per package', order.ticketsPerPackage > 1 ? order.ticketsPerPackage : null],
         ['Promo code', order.promoCode],
+        ['Billing', isComplimentary ? 'Complimentary (non-billable)' : null],
+        ['Issued by', isComplimentary ? order.issuedBy : null],
+        ['Internal note', order.issuedNote],
         ['Admitted', when(order.admittedAt)],
       ]).filter(([, value]) => value);
 
@@ -87,7 +91,9 @@ const AdminOrderDetail = ({ order, onClose }) => {
             </p>
           </div>
           <div className="admin-modal-head-right">
-            <span className={`admin-status is-${order.status}`}>{order.status}</span>
+            <span className={`admin-status is-${isComplimentary ? 'issued' : order.status}`}>
+              {isComplimentary ? 'issued' : order.status}
+            </span>
             <button
               type="button"
               className="admin-modal-close"
@@ -129,7 +135,9 @@ const AdminOrderDetail = ({ order, onClose }) => {
                       </span>
                       <span className="admin-line-qty">× {line.quantity}</span>
                       {line.amount != null && (
-                        <span className="admin-detail-line-amount">{money(line.amount)}</span>
+                        <span className="admin-detail-line-amount">
+                          {isComplimentary ? 'Complimentary' : money(line.amount)}
+                        </span>
                       )}
                     </div>
                     {/* One row per choice rather than a run-on line — this is what
@@ -148,8 +156,8 @@ const AdminOrderDetail = ({ order, onClose }) => {
                 ))}
               </ul>
               <p className="admin-detail-total">
-                <span>Order total</span>
-                <strong>{money(order.amount)}</strong>
+                <span>{isComplimentary ? 'Ticket charge' : 'Order total'}</span>
+                <strong>{isComplimentary ? 'Complimentary' : money(order.amount)}</strong>
               </p>
               {order.familyComposition?.length > 0 && (
                 <dl className="admin-detail-options">
