@@ -49,6 +49,9 @@ concurrency:
 jobs:
   deploy:
     runs-on: ubuntu-latest
+    # A hosting/network outage must not hold the production concurrency lock
+    # indefinitely. Normal runs finish in about two minutes.
+    timeout-minutes: 12
 
     steps:
       - uses: actions/checkout@v4
@@ -106,33 +109,34 @@ jobs:
           echo "Build contains:"
           find dist -maxdepth 2 -type d | sed 's/^/  /'
 
-      # Read-only. Prints where the FTP account actually lands and what it can
-      # see, which is the only reliable way to know what FTP_PATH should be —
-      # a cPanel FTP account's home is often NOT the web root, and the 550 that
-      # results ("Can't change directory") names a masked secret, so the logs
-      # alone can't tell you whether the path or the account is wrong.
-      - name: Show remote layout
+      # Read-only connectivity preflight. This used to list several remote
+      # directories without any timeout; when cPanel's FTP port stopped
+      # answering, lftp retried indefinitely and held every later deploy behind
+      # the production concurrency lock. `timeout` is the hard outer bound;
+      # lftp's settings make the error useful before that bound is reached.
+      - name: Check FTPS connection
+        timeout-minutes: 1
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USER }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
         run: |
           set -euo pipefail
-          lftp -c "
+          timeout 45s lftp -c "
+            set cmd:fail-exit true;
             set ftp:ssl-force true;
             set ftp:ssl-protect-data true;
             set ssl:verify-certificate no;
+            set net:max-retries 2;
+            set net:timeout 10;
+            set net:reconnect-interval-base 2;
             open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
-            echo '--- login lands in: ---'; pwd;
-            echo '--- contents here: ---'; ls;
-            echo '--- is public_html reachable from here? ---';
-            ls public_html || echo '(no public_html in this directory)';
-            echo '--- one level up: ---';
-            ls .. || echo '(cannot go up — account is chrooted)';
+            echo 'FTPS connected; account lands in:'; pwd;
             bye
-          " || echo "(diagnostic could not connect)"
+          "
 
       - name: Sync to cPanel over FTPS
+        timeout-minutes: 5
         env:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USER }}
@@ -149,12 +153,14 @@ jobs:
         run: |
           set -euo pipefail
 
-          lftp -c "
+          timeout 240s lftp -c "
+            set cmd:fail-exit true;
             set ftp:ssl-force true;
             set ftp:ssl-protect-data true;
             set ssl:verify-certificate no;
-            set net:max-retries 3;
-            set net:timeout 20;
+            set net:max-retries 2;
+            set net:timeout 15;
+            set net:reconnect-interval-base 2;
             open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
             mirror --reverse --continue --parallel=4 $PRUNE $DRY_RUN \
               --exclude-glob api/config.php \
@@ -185,11 +191,11 @@ jobs:
           fi
           sleep 5
 
-          code=$(curl -sS -o /dev/null -w '%{http_code}' "$SITE/")
+          code=$(curl -sS --connect-timeout 10 --max-time 20 -o /dev/null -w '%{http_code}' "$SITE/")
           echo "homepage: $code"
           [ "$code" = "200" ] || { echo "::error::Homepage returned $code"; exit 1; }
 
-          body=$(curl -sS "$SITE/api/content.php")
+          body=$(curl -sS --connect-timeout 10 --max-time 20 "$SITE/api/content.php")
           echo "content.php returned: $(echo "$body" | head -c 160)"
 
           # A healthy response lists the stored sections. If api/data had been
