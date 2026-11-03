@@ -125,6 +125,14 @@
   }
 }
 
+.admin-sidebar-mobile-head {
+  display: contents;
+}
+
+.admin-menu-toggle {
+  display: none;
+}
+
 .admin-nav {
   display: grid;
   gap: 2px;
@@ -1005,22 +1013,91 @@
 // ---------------------------------------------------------------- responsive
 @media (max-width: 760px) {
   .admin-shell {
-    grid-template-columns: 1fr;
+    display: block;
   }
 
   .admin-sidebar {
-    position: static;
+    position: sticky;
+    z-index: 50;
+    top: 0;
     height: auto;
-    flex-direction: row;
-    flex-wrap: wrap;
-    align-items: center;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    padding: max(10px, env(safe-area-inset-top)) 14px 10px;
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.1);
   }
 
+  .admin-sidebar-mobile-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    min-height: 42px;
+  }
+
+  .admin-sidebar-brand {
+    display: flex;
+    align-items: baseline;
+    gap: 5px;
+    padding: 0;
+    font-size: 1rem;
+
+    span {
+      margin: 0 0 0 4px;
+      font-size: 0.58rem;
+    }
+  }
+
+  .admin-menu-toggle {
+    display: grid;
+    place-items: center;
+    width: 42px;
+    height: 42px;
+    flex: none;
+    padding: 0;
+    border: 1px solid rgba(255, 255, 255, 0.16);
+    border-radius: tokens.$r-sm;
+    background: rgba(255, 255, 255, 0.06);
+    color: #fff;
+    font-size: 1.1rem;
+    cursor: pointer;
+  }
+
+  .admin-nav,
   .admin-sidebar-foot {
-    margin: 0 0 0 auto;
-    border-top: 0;
-    padding-top: 0;
-    grid-auto-flow: column;
+    display: none;
+  }
+
+  .admin-sidebar.is-open {
+    gap: 10px;
+
+    .admin-nav {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 4px;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+
+    .admin-sidebar-foot {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 4px;
+      margin: 0;
+      padding-top: 8px;
+      border-top: 1px solid rgba(255, 255, 255, 0.12);
+    }
+  }
+
+  .admin-nav-link {
+    min-height: 44px;
+    padding: 9px 10px;
+    font-size: 0.82rem;
+  }
+
+  .admin-main {
+    padding: 18px 14px calc(24px + env(safe-area-inset-bottom));
   }
 
   .admin-grid-2,
@@ -1813,6 +1890,8 @@
 }
 
 .admin-modal-body {
+  flex: 1;
+  min-height: 0;
   display: grid;
   gap: 26px;
   padding: 20px 22px 24px;
@@ -1834,10 +1913,11 @@
 }
 
 .admin-issue-actions {
+  flex: none;
   display: flex;
   justify-content: flex-end;
   gap: 8px;
-  padding-top: 4px;
+  padding: 0 22px 20px;
 }
 
 .admin-modal-heading {
@@ -1953,6 +2033,65 @@
     border-radius: 0;
   }
 
+  .admin-issue-modal {
+    height: 100dvh;
+
+    .admin-modal-head {
+      flex: none;
+      position: sticky;
+      z-index: 2;
+      top: 0;
+      padding: max(16px, env(safe-area-inset-top)) 16px 14px;
+      background: tokens.$paper-raised;
+
+      h2 {
+        font-size: 1.05rem;
+      }
+
+      p {
+        max-width: 290px;
+        font-size: 0.78rem;
+        line-height: 1.4;
+      }
+    }
+
+    .admin-modal-close {
+      width: 40px;
+      height: 40px;
+    }
+
+    .admin-issue-form {
+      gap: 16px;
+      padding: 16px 16px 0;
+      overscroll-behavior: contain;
+    }
+
+    .admin-field input,
+    .admin-field select,
+    .admin-field textarea {
+      min-height: 48px;
+      // iOS zooms the whole page when a focused field is smaller than 16px.
+      font-size: 16px;
+    }
+
+    .admin-issue-quantity {
+      width: 100%;
+    }
+
+    .admin-issue-actions {
+      z-index: 2;
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      border-top: 1px solid tokens.$line;
+      background: tokens.$paper-raised;
+
+      .admin-btn {
+        flex: 1;
+        min-height: 48px;
+        justify-content: center;
+      }
+    }
+  }
+
   .admin-page-head {
     flex-direction: column;
   }
@@ -1975,15 +2114,59 @@
 
 .admin-scan-video {
   width: 100%;
+  height: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.admin-scan-camera {
+  position: relative;
+  width: 100%;
   aspect-ratio: 4 / 3;
+  overflow: hidden;
   border-radius: tokens.$r-md;
   background: tokens.$navy-deep;
-  object-fit: cover;
 
-  // Before the camera starts there is no stream, so the element would collapse
-  // to nothing and the layout would jump when it begins.
   &.is-idle {
-    opacity: 0.35;
+    background: linear-gradient(145deg, tokens.$navy-deep, tokens.$navy);
+  }
+}
+
+.admin-scan-camera-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  justify-items: center;
+  gap: 10px;
+  padding: 24px;
+  color: rgba(255, 255, 255, 0.7);
+  text-align: center;
+
+  .anticon {
+    font-size: 2rem;
+  }
+}
+
+.admin-scan-guide {
+  position: absolute;
+  inset: 17%;
+  border: 3px solid rgba(255, 255, 255, 0.9);
+  border-radius: 18px;
+  box-shadow: 0 0 0 999px rgba(7, 22, 37, 0.24);
+  pointer-events: none;
+
+  &::after {
+    content: 'Hold QR inside frame';
+    position: absolute;
+    top: calc(100% + 12px);
+    left: 50%;
+    transform: translateX(-50%);
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    white-space: nowrap;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.6);
   }
 }
 
@@ -2073,10 +2256,97 @@
   width: 100%;
 }
 
+.admin-verdict-next {
+  width: 100%;
+  justify-content: center;
+  margin-top: 12px;
+  background: rgba(255, 255, 255, 0.72);
+}
+
 // A phone held at a door is the common case, not the exception.
 @media (max-width: 820px) {
+  .admin-scan-page .admin-page-head {
+    gap: 14px;
+    margin-bottom: 16px;
+
+    h1 {
+      font-size: 1.4rem;
+    }
+
+    p {
+      line-height: 1.45;
+    }
+  }
+
+  .admin-scan-camera-toggle {
+    width: 100%;
+    min-height: 48px;
+    justify-content: center;
+  }
+
   .admin-scan-grid {
     grid-template-columns: 1fr;
+    gap: 16px;
+  }
+
+  .admin-scan-reader,
+  .admin-scan-result {
+    scroll-margin-top: 76px;
+  }
+
+  .admin-scan-camera {
+    aspect-ratio: 1 / 1;
+    max-height: 52dvh;
+
+    &.is-idle {
+      aspect-ratio: 16 / 7;
+      max-height: 180px;
+    }
+  }
+
+  .admin-scan-manual {
+    input {
+      min-height: 48px;
+      font-size: 16px;
+    }
+
+    .admin-btn {
+      min-height: 48px;
+    }
+  }
+
+  .admin-verdict {
+    padding: 18px;
+  }
+
+  .admin-verdict-title {
+    font-size: clamp(1.8rem, 10vw, 2.5rem);
+  }
+
+  .admin-verdict-action,
+  .admin-verdict-next {
+    min-height: 52px;
+    font-size: 1rem;
+  }
+
+  .admin-verdict-facts > div {
+    align-items: flex-start;
+
+    dd {
+      max-width: 68%;
+      overflow-wrap: anywhere;
+    }
+  }
+}
+
+@media (max-width: 420px) {
+  .admin-scan-manual {
+    display: grid;
+    grid-template-columns: 1fr;
+
+    .admin-btn {
+      justify-content: center;
+    }
   }
 }
 

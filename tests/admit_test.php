@@ -104,6 +104,11 @@ check('code is echoed back', $view['code'], 'JC-A1B2C3D4E5');
 check('not yet admitted',    $view['admittedAt'], null);
 $familyView = admit_view($individual, 'ok', order_ticket_record_at($individual, 1));
 check('door sees family category', [$familyView['memberLabel'], $familyView['ageLabel']], ['Child', '3-12']);
+$complimentaryView = admit_view(ticket([
+    'billingType' => 'complimentary',
+    'amount' => 0,
+]), 'ok');
+check('door identifies complimentary tickets', $complimentaryView['complimentary'], true);
 
 // On a duplicate the original timestamp must come back, so staff can say when
 // the ticket was already used rather than merely that it was.

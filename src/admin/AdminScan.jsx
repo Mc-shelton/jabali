@@ -28,6 +28,12 @@ const AdminScan = () => {
 
   const videoRef = useRef(null);
   const streamRef = useRef(null);
+  const scannerRef = useRef(null);
+  const resultRef = useRef(null);
+  // Once a code is found, freeze detection until the operator deliberately
+  // chooses Scan next. Otherwise a second QR in the camera can replace the
+  // verdict while the first person is being admitted.
+  const reviewingRef = useRef(false);
   // Guards against the camera firing the same code dozens of times a second
   // while it stays in frame.
   const lastSeen = useRef({ code: '', at: 0 });
@@ -36,6 +42,7 @@ const AdminScan = () => {
     const value = (raw || '').trim();
     if (!value) return;
 
+    reviewingRef.current = true;
     setBusy(true);
     setError('');
     try {
@@ -43,6 +50,7 @@ const AdminScan = () => {
     } catch (err) {
       setError(err.message || 'Could not check that code.');
       setResult(null);
+      reviewingRef.current = false;
     } finally {
       setBusy(false);
     }
@@ -91,6 +99,16 @@ const AdminScan = () => {
     }
   };
 
+  const scanNext = () => {
+    reviewingRef.current = false;
+    setResult(null);
+    setError('');
+    setCode('');
+    window.requestAnimationFrame(() => {
+      scannerRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  };
+
   // Poll the video for a QR while the camera is on.
   useEffect(() => {
     if (!scanning) return undefined;
@@ -107,7 +125,11 @@ const AdminScan = () => {
         // Ignore a repeat of the same code within two seconds, so one ticket
         // held in frame does not hammer the server or flicker the verdict.
         const now = Date.now();
-        if (value && !(value === lastSeen.current.code && now - lastSeen.current.at < 2000)) {
+        if (
+          value
+          && !reviewingRef.current
+          && !(value === lastSeen.current.code && now - lastSeen.current.at < 2000)
+        ) {
           lastSeen.current = { code: value, at: now };
           setCode(value);
           look(value);
@@ -125,6 +147,20 @@ const AdminScan = () => {
   // the indicator light on and drains the phone.
   useEffect(() => stopCamera, [stopCamera]);
 
+  // On a phone the result sits below the camera. Bring it into view as soon as
+  // a lookup completes and provide a small haptic cue without depending on it.
+  useEffect(() => {
+    if (!result) return;
+    if (window.matchMedia('(max-width: 820px)').matches) {
+      window.requestAnimationFrame(() => {
+        resultRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+    }
+    if ('vibrate' in navigator) {
+      navigator.vibrate(result.status === 'ok' ? 60 : [100, 60, 100]);
+    }
+  }, [result]);
+
   // A freshly admitted ticket comes back as 'ok' WITH a timestamp, which reads
   // identically to one not yet used. Separating the two stops the button
   // inviting a second press on a ticket already let through.
@@ -134,7 +170,7 @@ const AdminScan = () => {
     : null;
 
   return (
-    <section className="admin-page">
+    <section className="admin-page admin-scan-page">
       <header className="admin-page-head">
         <div>
           <h1>Door check-in</h1>
@@ -144,11 +180,11 @@ const AdminScan = () => {
           </p>
         </div>
         {scanning ? (
-          <button type="button" className="admin-btn" onClick={stopCamera}>
+          <button type="button" className="admin-btn admin-scan-camera-toggle" onClick={stopCamera}>
             <StopOutlined /> Stop camera
           </button>
         ) : (
-          <button type="button" className="admin-btn admin-btn-primary" onClick={startCamera}>
+          <button type="button" className="admin-btn admin-btn-primary admin-scan-camera-toggle" onClick={startCamera}>
             <CameraOutlined /> Start camera
           </button>
         )}
@@ -158,13 +194,22 @@ const AdminScan = () => {
       {cameraMsg && <p className="admin-note">{cameraMsg}</p>}
 
       <div className="admin-scan-grid">
-        <div>
-          <video
-            ref={videoRef}
-            className={`admin-scan-video${scanning ? '' : ' is-idle'}`}
-            muted
-            playsInline
-          />
+        <div ref={scannerRef} className="admin-scan-reader">
+          <div className={`admin-scan-camera${scanning ? ' is-live' : ' is-idle'}`}>
+            <video
+              ref={videoRef}
+              className="admin-scan-video"
+              muted
+              playsInline
+            />
+            {scanning && <span className="admin-scan-guide" aria-hidden="true" />}
+            {!scanning && (
+              <div className="admin-scan-camera-empty">
+                <CameraOutlined />
+                <span>Start the camera to scan a QR code</span>
+              </div>
+            )}
+          </div>
 
           <form
             className="admin-scan-manual"
@@ -184,7 +229,7 @@ const AdminScan = () => {
           </form>
         </div>
 
-        <div>
+        <div ref={resultRef} className="admin-scan-result">
           {!result && <p className="admin-empty">No ticket checked yet.</p>}
 
           {result && verdict && (
@@ -212,6 +257,9 @@ const AdminScan = () => {
                   {result.item && (
                     <div><dt>Admits</dt><dd>{result.quantity} × {result.item}</dd></div>
                   )}
+                  {result.complimentary && (
+                    <div><dt>Ticket type</dt><dd>Complimentary</dd></div>
+                  )}
                   {result.buyer && <div><dt>Buyer</dt><dd>{result.buyer}</dd></div>}
                 </dl>
               )}
@@ -228,6 +276,16 @@ const AdminScan = () => {
               )}
 
               {done && <p className="admin-verdict-when">Admitted {at(result.admittedAt)}</p>}
+
+              {(done || result.status !== 'ok') && (
+                <button
+                  type="button"
+                  className="admin-btn admin-btn-ghost admin-verdict-next"
+                  onClick={scanNext}
+                >
+                  <CameraOutlined /> Scan next ticket
+                </button>
+              )}
             </div>
           )}
         </div>

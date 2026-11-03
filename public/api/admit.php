@@ -45,6 +45,8 @@ function admit_view(?array $order, string $status, ?array $ticket = null): array
         'ageLabel'     => $ticket['ageLabel'] ?? null,
         'buyer'      => trim(($order['customer']['preferredName'] ?? '') . ' ' . ($order['customer']['otherNames'] ?? '')),
         'amount'     => (int) ($order['amount'] ?? 0),
+        'billingType'=> $order['billingType'] ?? 'paid',
+        'complimentary' => ($order['billingType'] ?? '') === 'complimentary',
         'admittedAt' => $ticket['admittedAt'] ?? $order['admittedAt'] ?? null,
     ];
 }

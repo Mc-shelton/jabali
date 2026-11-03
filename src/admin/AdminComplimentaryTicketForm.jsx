@@ -89,7 +89,7 @@ const AdminComplimentaryTicketForm = ({ events, onClose, onCreated }) => {
         if (e.target === e.currentTarget && !saving) onClose();
       }}
     >
-      <div className="admin-modal" role="dialog" aria-modal="true" aria-label="Issue complimentary tickets">
+      <div className="admin-modal admin-issue-modal" role="dialog" aria-modal="true" aria-label="Issue complimentary tickets">
         <header className="admin-modal-head">
           <div>
             <h2>Issue complimentary tickets</h2>
@@ -107,7 +107,11 @@ const AdminComplimentaryTicketForm = ({ events, onClose, onCreated }) => {
           </button>
         </header>
 
-        <form className="admin-modal-body admin-issue-form" onSubmit={submit}>
+        <form
+          id="complimentary-ticket-form"
+          className="admin-modal-body admin-issue-form"
+          onSubmit={submit}
+        >
           {error && <p className="admin-error">{error}</p>}
 
           <div className="admin-grid-2">
@@ -187,15 +191,20 @@ const AdminComplimentaryTicketForm = ({ events, onClose, onCreated }) => {
             />
           </label>
 
-          <div className="admin-issue-actions">
-            <button type="button" className="admin-btn admin-btn-ghost" onClick={onClose} disabled={saving}>
-              Cancel
-            </button>
-            <button type="submit" className="admin-btn admin-btn-primary" disabled={saving || ticketEvents.length === 0}>
-              {saving ? 'Issuing and emailing…' : 'Issue tickets'}
-            </button>
-          </div>
         </form>
+        <div className="admin-issue-actions">
+          <button type="button" className="admin-btn admin-btn-ghost" onClick={onClose} disabled={saving}>
+            Cancel
+          </button>
+          <button
+            type="submit"
+            form="complimentary-ticket-form"
+            className="admin-btn admin-btn-primary"
+            disabled={saving || ticketEvents.length === 0}
+          >
+            {saving ? 'Issuing and emailing…' : 'Issue tickets'}
+          </button>
+        </div>
       </div>
     </div>
   );
