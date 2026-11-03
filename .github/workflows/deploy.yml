@@ -120,18 +120,23 @@ jobs:
           FTP_HOST: ${{ secrets.FTP_HOST }}
           FTP_USER: ${{ secrets.FTP_USER }}
           FTP_PASSWORD: ${{ secrets.FTP_PASSWORD }}
+          FTP_PATH: ${{ vars.FTP_PATH }}
         run: |
           set -euo pipefail
           timeout 45s lftp -c "
             set cmd:fail-exit true;
             set ftp:ssl-force true;
             set ftp:ssl-protect-data true;
+            set ftp:passive-mode true;
+            set ftp:use-epsv false;
             set ssl:verify-certificate no;
             set net:max-retries 2;
             set net:timeout 10;
             set net:reconnect-interval-base 2;
             open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
-            echo 'FTPS connected; account lands in:'; pwd;
+            cd '$FTP_PATH';
+            echo 'FTPS control and data channels connected; target is:'; pwd;
+            cls -1;
             bye
           "
 
@@ -153,16 +158,20 @@ jobs:
         run: |
           set -euo pipefail
 
+          # One data connection is slower but compatible with cPanel servers
+          # that cap or intermittently reject parallel passive connections.
           timeout 240s lftp -c "
             set cmd:fail-exit true;
             set ftp:ssl-force true;
             set ftp:ssl-protect-data true;
+            set ftp:passive-mode true;
+            set ftp:use-epsv false;
             set ssl:verify-certificate no;
-            set net:max-retries 2;
+            set net:max-retries 3;
             set net:timeout 15;
             set net:reconnect-interval-base 2;
             open -u '$FTP_USER','$FTP_PASSWORD' '$FTP_HOST';
-            mirror --reverse --continue --parallel=4 $PRUNE $DRY_RUN \
+            mirror --reverse --continue --parallel=1 $PRUNE $DRY_RUN \
               --exclude-glob api/config.php \
               --exclude-glob api/data/ \
               --exclude-glob api/data/** \
